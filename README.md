@@ -10,6 +10,8 @@ The output is then analysed in R with DESeq2 using the following script:
 
 **_DESeqAnalysis_JulieData_SALMON.R_**
 
+
+
 For comparison I also run similar scripts with the STAR output, or with QuasR:
 
 **_DESeqAnalysis_JulieData_STAR.R_**
@@ -21,7 +23,10 @@ and then compared the output of the different methods using:
 _**compareAligners.R**_
 
 Finally I compared the output of Salmon with other publically available datasets of genes with:
+
 _**compareDatasets.R**_
+
+
 
 These datasets were retrieved manually:
 
