@@ -2,6 +2,8 @@
 
 Code for processing RNAseq data from Julie with strains 493 (dpy-26::TEVcs;hs::TEV) vs 500 (hs::TEV).
 
+The pipeline performs genomic alignment with STAR so that we can get bigwig files, and transcriptome alignment with Salmon in order to get better gene-level counts. Signficance is evaluated with DESeq2.
+
 ## Pipeline
 
 On the server the data is mapped with the script:
