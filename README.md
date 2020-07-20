@@ -6,7 +6,7 @@ Code for processing RNAseq data from Julie with strains 493 (dpy-26::TEVcs;hs::T
 
 On the server the data is mapped with the script:
 
-_**mapRNAreads.sh3*_ using STAR and Salmon. 
+_**mapRNAreads.sh3**_ using STAR and Salmon. 
 
 The output is then analysed in R with DESeq2 using the following script:
 
