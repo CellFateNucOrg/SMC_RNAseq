@@ -8,6 +8,8 @@ On the server the data is mapped with the script:
 
 _**mapRNAreads.sh**_ using STAR and Salmon. 
 
+This requires a file fastqList.txt (like fastqList_example.txt) with three columns: fileName (full path), sampleName and repeatNum. processed files will be named using the sampleName and repeatNum.
+
 The output is then analysed in R with DESeq2 using the following script:
 
 **_DESeqAnalysis_JulieData_SALMON.R_**
