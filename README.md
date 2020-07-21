@@ -6,6 +6,8 @@ The pipeline performs genomic alignment with STAR so that we can get bigwig file
 
 ## Pipeline
 
+When running the pipeline for the first time (use ubelix), the _**indexGenomeTranscripts.sh**_ needs to be run to index both the genome for STAR and the transcriptome for salmon.
+
 On the server the data is mapped with the script:
 
 _**mapRNAreads.sh**_ using STAR and Salmon. 
