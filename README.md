@@ -20,13 +20,15 @@ The output is then analysed in R with DESeq2 using the following script:
 
 ## Comparison with other aligners
 
-For comparison I also run similar scripts with the STAR output, or with QuasR:
+For comparison i also mapped data with QuasR using **_Analysis-d-all-fast_QUASR.R_** (adapted from Peter's script).
+
+Then i ran DESeq2 on the STAR and QuasR outputs:
 
 **_DESeqAnalysis_JulieData_STAR.R_**
 
 **_DESeqAnalysis_JulieData_QUASR.R_**
 
-and then compared the output of the different methods using:
+The outputs of the different methods were compared using:
 
 _**compareAligners.R**_
 
