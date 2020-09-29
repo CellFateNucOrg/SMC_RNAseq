@@ -1,6 +1,6 @@
-# Dpy26csRNAseq
+# SMC_RNAseq
 
-Code for processing RNAseq data from Julie with strains 493 (dpy-26::TEVcs;hs::TEV) vs 500 (hs::TEV).
+Code for processing RNAseq data from Moushumi with strains wPM382 (dpy-26::TEVcs;hs::TEV), wPM784 (scc-1::TEVcs;hs::TEV) and wPM775 (kle-2::TEVcs;hs::TEV) vs 366 (hs::TEV).
 
 The pipeline performs genomic alignment with STAR so that we can get bigwig files, and transcriptome alignment with Salmon in order to get better gene-level counts. Signficance is evaluated with DESeq2.
 
