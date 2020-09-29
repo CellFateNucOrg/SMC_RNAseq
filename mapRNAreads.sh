@@ -16,10 +16,20 @@ module add UHTS/Analysis/samtools/1.10;
 export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2.1-1.ubuntu18.sif"
 module add R/3.6.1;
 
+echo "current date"
+date
+
+echo "current git branch"
+git branch
+
+echo "current git version"
+git log -1 --format="%H"
+
 fastqFileList=./fastqList.txt
 fastqFile=(`cut -f1 $fastqFileList`)
-sampleName=(`cut -f2 $fastqFileList`)
-repeatNum=(`cut -f3 $fastqFileList`)
+sampleNames=(`cut -f2 $fastqFileList`)
+repeatNums=(`cut -f3 $fastqFileList`)
+laneNums=(`cut -f4 $fastqFileList`)
 
 i=${SLURM_ARRAY_TASK_ID}
 
@@ -33,8 +43,10 @@ i=${SLURM_ARRAY_TASK_ID}
 
 
 fastqFile=${fastqFile[$i]}
-sampleName=${sampleName[$i]}
-repeatNum=${repeatNum[$i]}
+sampleName=${sampleNames[$i]}
+repeatNum=${repeatNums[$i]}
+laneNum=${laneNums[$i]}
+
 nThreads=${SLURM_CPUS_PER_TASK}
 
 genomeVer=WS275
@@ -62,7 +74,7 @@ WORK_DIR=$PWD
 QC_DIR=${WORK_DIR}/qc
 
 #FASTQ_DIR=`dirname ${fastqFile}`
-baseName=${sampleName}_${repeatNum}
+baseName=${sampleName}_${repeatNum}_${laneNum}
 
 #######################################################
 ## get initial read stats                            ##
