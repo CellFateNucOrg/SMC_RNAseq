@@ -14,10 +14,12 @@ library(tidyr)
 library(EnhancedVolcano)
 library(affy)
 library("gplots")
+library(ggpubr)
+
 #library(REBayes)
 # get funciton for converting gene names from WBID to publicID
 source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
-
+source("functions.R")
 ###############################################################
 ### some variables
 ###############################################################
@@ -33,36 +35,30 @@ seqnames(wbseqinfo)<-c(gsub("chr","",seqnames(Celegans)))
 seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
 
-dir.create(paste0(outPath,"/rds/"),recursive=T)
-dir.create(paste0(outPath,"/plots/"),recursive=T)
-dir.create(paste0(outPath,"/txt/"),recursive=T)
-dir.create(paste0(outPath,"/tracks/"),recursive=T)
+makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-#bamList<-list.files(path="bamSTAR",pattern="Aligned.out.bam$",
-#                       full.names=TRUE)
-
-#sampleNames<-gsub("bam/","",bamList)
-#sampleNames<-gsub("Aligned.out.bam","",sampleNames)
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
 
-sampleNames<-paste(fileList$sampleName,fileList$repeatNum,sep="_")
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum, sep="_")
 
 fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
 # extract the technical replicate variable
-#sampleTable$replicate<-as.factor(gsub("^[0-9]{3}_", "",sampleTable$sampleName))
 sampleTable$replicate=fileList$repeatNum
+sampleTable$lane=fileList$laneNum
 
 # extract the strain variable
-#sampleTable$strain<-factor(gsub("_HS[1-3]$", "",sampleTable$sampleName),levels=c("500","493"))
-sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("500","493"))
-sampleTable$dpy26<-sampleTable$strain
-levels(sampleTable$dpy26)[levels(sampleTable$dpy26)=="493"]<-"TEVcs"
-levels(sampleTable$dpy26)[levels(sampleTable$dpy26)=="500"]<-"wt"
+sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("366","382","775","784"))
+sampleTable$SMC<-sampleTable$strain
+levels(sampleTable$SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
+
+controlGrp<-levels(sampleTable$SMC)[1] # control group
+groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to control
+
 
 ###############################################################
 ### create metadata
@@ -100,7 +96,7 @@ k <- keys(txdb, keytype = "TXNAME")
 tx2gene <- AnnotationDbi::select(txdb, k, "GENEID", "TXNAME")
 
 srcref <- src_organism("TxDb.Celegans.UCSC.ce11.refGene")
-srcens <- src_organism("TxDb.Celegans.UCSC.ce11.ensGene")
+#srcens <- src_organism("TxDb.Celegans.UCSC.ce11.ensGene")
 
 #src_tbls(srcref)
 #tbl(srcref, "id")
@@ -122,8 +118,9 @@ metadata<-inner_join(tbl(srcref, "id"), tbl(srcref, "ranges_gene")) %>%
 txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
 
 # read samples into DESeq2
-dds <- DESeqDataSetFromTximport(txi=txi, colData=sampleTable,
-                                design=~replicate+dpy26)
+dds <- DESeqDataSetFromTximport(txi=txi,
+                                colData=sampleTable,
+                          design=~replicate+lane+SMC)
 
 
 
@@ -156,60 +153,13 @@ dds<-DESeq(dds)
 
 
 
-
-###############################################################
-### get significant genes
-###############################################################
-
-Threshold=0.05
-
-res<-results(dds)
-sink(file=paste0(outPath,"/txt/",fileNamePrefix,"logfile.txt"), append=TRUE,
-     type="output")
-cat("Number of genes that change expression at different padj cutoffs:\n")
-print(summary(res))
-print(summary(res,alpha=0.05))
-print(summary(res,alpha=0.01))
-sink()
-
-### add metadata
-res$wormbase<-rownames(res)
-idx<-match(rownames(res),metadata$wormbase)
-res$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
-res$start<-as.vector(start(metadata))[idx]
-res$end<-as.vector(end(metadata))[idx]
-res$strand<-as.vector(strand(metadata))[idx]
-
-# shrink LFC estimates
-#resultsNames(dds) # to get names of coefficients
-resLFC<-lfcShrink(dds,coef="dpy26_TEVcs_vs_wt",type="apeglm",res=res)
-class(resLFC)
-### add metadata
-resLFC$wormbase<-rownames(resLFC)
-idx<-match(rownames(resLFC),metadata$wormbase)
-resLFC$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
-resLFC$start<-as.vector(start(metadata))[idx]
-resLFC$end<-as.vector(end(metadata))[idx]
-resLFC$strand<-as.vector(strand(metadata))[idx]
-saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix,
-                           "DESeq2_fullResults.rds"))
-
-#export csv with ordered results
-write.csv(resLFC[order(resLFC$padj),],
-          file=paste0(outPath,"/txt/", fileNamePrefix,"DESeq2_resultsTable.csv"),
-          quote=F,row.names=F)
-
-# remove NAs
-res<-na.omit(res)
-resLFC<-na.omit(resLFC)
-
-
-#################
+######################################################
 #### Basic sample stats
-#################
+######################################################
 
 ## basic sample stats
-sink(file=paste0(outPath,"/txt/", fileNamePrefix,"logfile.txt"),
+sink(file=paste0(outPath,"/txt/", fileNamePrefix,
+                 "all_logfile.txt"),
      append=FALSE, type="output")
 statsPerSample<-data.frame(t(apply(counts(dds),2,summary)))
 rownames(statsPerSample)<-colData(dds)$sampleName
@@ -219,57 +169,38 @@ statsPerSample$percZeros <- round(100*statsPerSample$zeros/nrow(counts(dds)),1)
 print(statsPerSample)
 sink()
 
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"sampleQC.pdf"), width=8,height=8,paper="a4")
+pdf(file=paste0(outPath,"/plots/",fileNamePrefix,
+                "sampleQC.pdf"), width=8,height=8,paper="a4")
 
 #########
 ## sample counts summary: boxplots and density plots
 ########
 ## box plots
 epsilon <- 1 # pseudo-count to avoid problems with log(0)
-boxplot(log2(counts(dds) + epsilon), col=c("blue","red")[as.factor(colData(dds)$strain)], pch=".",
+#df<-as.data.frame(log2(counts(dds) + epsilon))
+#colnames(df)<-colData(dds)$sampleName
+#ldf<-gather(df,key=sampleName,value=log2Counts)
+#ldf$strain<-gsub("_.*$","",ldf$sampleName)
+#p<-ggplot(ldf,aes(x=logFC,y=sampleName))+geom_boxplot(aes(fill=strain))
+par(mar=c(5,7,4,2))
+boxplot(log2(counts(dds) + epsilon), col=c("grey","blue","red","darkgreen")[as.factor(colData(dds)$strain)], pch=".",
         horizontal=TRUE, cex.axis=1,
-        las=1, ylab=NULL, names=colData(dds)$sampleName, xlab="log2(counts +1)")
-
+        las=1, ylab=NULL, names=colData(dds)$sampleName,
+        xlab=paste0("log2(counts ","+",epsilon,")"))
+par(mar=c(5,4,4,2))
 
 ## density plots
-plotDensity(log2(counts(dds) + epsilon), lty=1, col=as.factor(colData(dds)$sampleName), lwd=2)
+plotDensity(log2(counts(dds) + epsilon), lty=1, col=as.factor(colData(dds)$sampleName), lwd=2, xlab="log2 counts per gene")
 grid()
-legend("topright", legend=colData(dds)$sampleName, col=as.factor(colData(dds)$sampleName), lwd=2)
+legend("topright", legend=colData(dds)$sampleName, col=as.factor(colData(dds)$sampleName), lwd=2,cex=0.8)
 
-##########
-## pairwise correlation between genes in different samples
-##########
-#Define a function to draw a scatter plot for a pair of variables (samples) with density colors
-plotFun <- function(x,y){
-  dns <- densCols(x,y);
-  points(x,y, col=dns, pch=".", panel.first=grid());
-  #  abline(a=0, b=1, col="brown")
-}
 
-corFun <- function(x,y){
-  par(usr = c(0, 1, 0, 1))
-  txt <- as.character(format(cor(x, y), digits=2))
-  text(0.5, 0.5, txt, cex = 1.5*cor(x, y))
-}
-
-pairs(log2(counts(dds) + epsilon),
-      panel=plotFun, lower.panel=corFun, labels=colData(dds)$sampleName)
 
 #########
 ## plot dispersion estimates
 #########
 plotDispEsts(dds)
 
-#######
-## plot results filtering threshold
-#######
-plot(metadata(resLFC)$filterNumRej,
-     type="b", ylab="number of rejections",
-     xlab="quantiles of filter",main="Threshold for independant filtering of results")
-lines(metadata(resLFC)$lo.fit, col="red")
-abline(v=metadata(resLFC)$filterTheta)
-legend("topright",legend=paste0("Read count \nthreshold: ",
-                                round(metadata(resLFC)$filterThreshold,2)))
 
 #########
 ### sample to sample heatmap
@@ -290,454 +221,585 @@ pheatmap(sampleDistMatrix,
 ## Heatmap of most highly expressed genes
 #########
 select <- order(rowMeans(counts(dds,normalized=TRUE)),
-                decreasing=TRUE)[1:200]
-df <- as.data.frame(colData(dds)[,c("strain","replicate")])
+                decreasing=TRUE)[1:500]
+df <- as.data.frame(colData(dds)[,c("strain","replicate","lane")])
 rownames(df)<-colData(dds)$sampleName
-pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 200 expressed genes")
+pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 500 expressed genes - no clustering")
 
-##########
-## heirarchical clustering of most significantly changed genes
-##########
-# select gene names based on FDR (5%)
-gene.kept <- rownames(resLFC)[resLFC$padj <= Threshold & !is.na(resLFC$padj)]
+pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=TRUE, annotation_col=df, main="Top 500 expressed genes - clustered by columns")
 
-# Retrieve the normalized counts for gene of interest
-countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
-dim(countTable.kept)
-colnames(countTable.kept)<-colData(dds)$sampleName
-
-# Perform the hierarchical clustering with
-# A distance based on Pearson-correlation coefficient
-# and average linkage clustering as agglomeration criteria
-heatmap.2(as.matrix(countTable.kept),
-          scale="row",
-          hclust=function(x) hclust(x,method="average"),
-          distfun=function(x) as.dist((1-cor(t(x)))/2),
-          trace="none",
-          density="none",
-          labRow="",
-          #labCol = names(countTable.kept),
-          cexCol=1,
-          main=paste0("Significantly changed genes (p<",Threshold,")"))
 
 
 ###########
 ## pca
 ###########
-plotPCA(vsd, intgroup=c("strain", "replicate"))
-
+p1<-plotPCA(vsd, intgroup=c("strain"))
+print(p1)
+p2<-plotPCA(vsd, intgroup=c("replicate"))
+print(p2)
+p3<-plotPCA(vsd, intgroup=c("lane"))
+print(p3)
+p4<-plotPCA(vsd, intgroup=c("strain", "replicate"))
+print(p4)
 dev.off()
 
 
-##########
-## plot individual genes
-##########
 
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"topGenes_normCounts.pdf"), width=8,height=11,paper="a4")
-par(mfrow=c(5,2))
-selectedGenes <- rownames(resLFC)[order(resLFC$padj)][1:20]
-for (g in selectedGenes) {
-  barplot(counts(dds, normalized=TRUE)[g,],
-          col=colData(dds)$dpy26,
-          main=g, las=2, cex.names=1,names.arg=colData(dds)$sampleName)
-  legend("topleft",legend=levels(colData(dds)$dpy26),fill=c(1,2), cex=0.7)
+##########
+## pairwise correlation between genes in different replicates
+##########
+#Define a function to draw a scatter plot for a pair of variables (samples) with density colors
+plotFun <- function(x,y){
+   dns <- densCols(x,y);
+   points(x,y, col=dns, pch=".", panel.first=grid());
+   #  abline(a=0, b=1, col="brown")
 }
-dev.off()
 
+corFun <- function(x,y){
+   par(usr = c(0, 1, 0, 1))
+   txt <- as.character(format(cor(x, y), digits=2))
+   text(0.5, 0.5, txt, cex = 1.5*cor(x, y))
+}
 
-##########
-# make GRanges for LogFoldChanges for bigwig and bed
-##########
-#remove nas
-resGR<-GenomicRanges::GRanges(seqnames=resLFC$chr,
-                              IRanges::IRanges(start=resLFC$start,
-                                               end=resLFC$end),
-                              strand=resLFC$strand)
-seqlengths(resGR)<-seqlengths(Celegans)[1:6]
-mcols(resGR)<-resLFC[,c("wormbase","log2FoldChange","padj")]
-
-names(mcols(resGR))[names(mcols(resGR))=="log2FoldChange"]<-"score"
-resGR<-sort(resGR,ignore.strand=TRUE)
-
-#https://github.com/hochwagenlab/hwglabr2/wiki/Apply-function-to-GRanges-scores-in-genomic-tiles
-#######
-### make bed file for significant genes
-#######
-idx<-which(resGR$padj<0.05)
-forBed<-resGR[idx]
-mcols(forBed)<-forBed$score
-names(mcols(forBed))<-"score"
-export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,"TEVcs_wt_lfc_p",gsub("^0.","",Threshold),".bed"),format="bed")
-
-
-###########
-# MAplot ALL genes
-############
-
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"MAplots_results.pdf"), width=5,height=5,paper="a4")
-
-
-plotMA(res, main="DESeq2", ylim=c(-3,3),alpha=Threshold)
-#plotCounts(dds, gene=which.min(res$padj), intgroup="sampleType")
-plotMA(resLFC, main="DESeq2", ylim=c(-3,3),alpha=Threshold)
-#plotCounts(dds, gene=which.min(res$padj), intgroup="sampleType")
-
-
-#############
-# MAplot X chr genes
-#############
-sink(file=paste0(outPath,"/txt/",fileNamePrefix,"logfile.txt"),append=TRUE, type="output")
-
-chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
-chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
-
-chrXres05<-chrXres[chrXres$padj<Threshold,]
-
-cat("Using any log2FoldChange and padj smaller than",Threshold,":\n")
-
-cat("Number of chrX genes with a significant increase in expression: ")
-cat(sum(chrXres05$log2FoldChange>0),"\n")
-#274
-cat("Number of chrX genes with a significant decrease in expression: ")
-cat(sum(chrXres05$log2FoldChange<0),"\n")
-#40
-
-upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
-write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix,"DCCgenes_JulieRNAseq_upOnX_p",Threshold,".csv"),
-            row.names=FALSE,col.names=FALSE)
-
-plotMA(chrXres,main="chrX genes",ylim=c(-4,4),alpha=Threshold)
-#idx <- identify(res$baseMean, res$log2FoldChange)
-#rownames(res)[idx]
-
-
-#############
-# MAplotautosomal genes
-#############
-
-autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
-autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
-
-autosomalRes05<- autosomalRes[autosomalRes$padj<Threshold,]
-
-cat("Number of autosomal genes with a significant increase in expression: ")
-cat(sum(autosomalRes05$log2FoldChange>0),"\n")
-#309
-cat("Number of autosomal genes with a significant decrease in expression: ")
-cat(sum(autosomalRes05$log2FoldChange<0), "\n")
-#695
-
-plotMA(autosomalRes,main="Autosomal genes",ylim=c(-4,4),alpha=Threshold)
-#idx <- identify(res$baseMean, res$log2FoldChange)
-#rownames(res)[idx]
-dev.off()
-
-#############
-# Fisher test of number of up and down genes on X v autosomes
-#############
-
-upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                          sum(chrXres05$log2FoldChange<0),
-                          sum(autosomalRes05$log2FoldChange>0),
-                          sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
-
-cat("\nFisher Test, up v down:\n")
-print(upVdownXvA)
-print(fisher.test(upVdownXvA))
-
-
-#############
-# Fisher test of number of differentially expressed genes on X v autosomes
-#############
-
-testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
-                     dim(autosomalRes)[1],
-                     dim(autosomalRes05)[1]),
-                   nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-cat("\nFisher Test, enrichment of differentially expressed genes:\n")
-print(testEnrich)
-print(fisher.test(testEnrich))
-sink()
-
-#############
-# Box plot by X v autosomes
-#############
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
-
-chrType<-factor(rownames(resLFC) %in% chrXgenes)
-levels(chrType)<-c("Autosomal","X chr")
-geneCounts<-table(chrType)
-
-boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-        main="Expression changes after cleavage of dpy-26", col="grey", ylab="log2 Fold Change",
-        xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-#stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-abline(h=0,lty=2,col="blue")
-dev.off()
-
-
-#############
-# Box plot by chromosome
-#############
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"boxPlots_expnByChr.pdf"), width=8,height=5,paper="a4")
-chrName<-factor(resLFC$chr)
-geneCounts<-table(chrName)
-
-boxplot(log2FoldChange~chrName,data=resLFC,varwidth=TRUE,outline=FALSE,notch=TRUE,
-        main="Expression changes after cleavage of dpy-26", ylab="log2 Fold Change",
-        col=c(rep("grey",5),"purple"),xlab="chromosome (number of genes)",
-        names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-#stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-abline(h=0,lty=2,col="blue")
-dev.off()
-
-
-#############
-# Volcano plot
-#############
-# https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html
-
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"volcanoPlot_allBlack.pdf"), width=8,height=6,paper="a4")
-EnhancedVolcano(resLFC,
-                lab=rownames(resLFC),
-                x="log2FoldChange",y="padj",
-                selectLab=rownames(resLFC)[12366],
-                xlim=c(-5.5,5.5),
-                ylim=c(0,65),
-                title= "TEVcs vs wildtype dpy-26",
-                subtitle=NULL,
-                caption = paste0(nrow(resLFC), ' expressed genes'),
-                captionLabSize = 12,
-                pCutoff=Threshold,
-                pLabellingCutoff=10e-6,
-                FCcutoff=1.0,
-                xlab=bquote(~Log[2]~'fold change TEV+DPY-26cs / TEV+DPY-26wt'),
-                ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                transcriptPointSize = 1.5,
-                transcriptLabSize = 0,
-                legendPosition = 'right',
-                legendLabSize = 12,
-                legendIconSize = 5.0,
-                axisLabSize=14,
-                col = c("grey20", "grey20", "grey20", "grey20"),
-                colAlpha=0.8)
-dev.off()
+df<-as.data.frame(log2(counts(dds) + epsilon))
+colnames(df)<-colData(dds)$sampleName
+for (grp in c(controlGrp,groupsOI)){
+   png(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.png"),
+       width=8,height=8,units="in",res=150)
+   idx<-colData(dds)$SMC %in% c(grp)
+   pairs(df[,idx], panel=plotFun, lower.panel=corFun, labels=colnames(df)[idx], main=grp)
+   dev.off()
+}
 
 
 
-
-
-resByChr<-resLFC[order(resLFC$chr),]
-# create custom key-value pairs for 'low', 'chrX', 'autosome' expression by fold-change
-# set the base colour as 'black'
-keyvals <- rep('black', nrow(resByChr))
-# set the base name/label as 'NS'
-names(keyvals) <- rep('NS', nrow(resByChr))
-# modify keyvals for variables with fold change > 2.5
-keyvals[which(resByChr$chr=="chrX")] <- 'red2'
-names(keyvals)[which(resByChr$chr=="chrX")] <- 'chrX'
-
-# modify keyvals for variables with fold change < -2.5
-keyvals[which(resByChr$chr!="chrX")] <- 'royalblue'
-names(keyvals)[which(resByChr$chr!="chrX")] <- 'autosomes'
-
-# modify keyvals for variables with fold change < -2.5
-#keyvals[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'grey10'
-#names(keyvals)[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'NS'
-
-
-
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"volcanoPlot_expnByChr.pdf"), width=8,height=6,paper="a4")
-EnhancedVolcano(resByChr,
-                lab=rownames(resByChr),
-                x="log2FoldChange",y="padj",
-                selectLab=rownames(resByChr)[12366],
-                xlim=c(-5.5,5.5),
-                ylim=c(0,65),
-                title= "TEVcs vs wildtype dpy-26",
-                subtitle=NULL,
-                caption = paste0(nrow(resByChr), ' expressed genes'),
-                captionLabSize = 12,
-                pCutoff=Threshold,
-                pLabellingCutoff=10e-6,
-                FCcutoff=1.0,
-                xlab=bquote(~Log[2]~'fold change TEV+DPY-26cs / TEV+DPY-26wt'),
-                ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                transcriptPointSize = 1.5,
-                transcriptLabSize = 0,
-                legendPosition = 'right',
-                legendLabSize = 12,
-                legendIconSize = 5.0,
-                axisLabSize=14,
-                colCustom=keyvals,
-                colAlpha=0.8)
-dev.off()
-
-idx<-resByChr$chr=="chrX"
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
-EnhancedVolcano(resByChr[idx,],
-                lab=rownames(resByChr[idx,]),
-                x="log2FoldChange",y="padj",
-                selectLab=rownames(resByChr)[12366],
-                xlim=c(-5.5,5.5),
-                ylim=c(0,65),
-                title= "TEVcs vs wildtype dpy-26 - chrX genes",
-                subtitle=NULL,
-                caption = paste0(nrow(resByChr[idx,]), ' expressed genes'),
-                captionLabSize = 12,
-                pCutoff=Threshold,
-                pLabellingCutoff=10e-6,
-                FCcutoff=1.0,
-                xlab=bquote(~Log[2]~'fold change TEV+DPY-26cs / TEV+DPY-26wt'),
-                ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                transcriptPointSize = 1.5,
-                transcriptLabSize = 0,
-                legendPosition = 'right',
-                legendLabSize = 12,
-                legendIconSize = 5.0,
-                axisLabSize=14,
-                colCustom=keyvals[idx],
-                colAlpha=0.8)
-dev.off()
-
-
-
-idx<-resByChr$chr!="chrX"
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
-EnhancedVolcano(resByChr[idx,],
-                lab=rownames(resByChr[idx,]),
-                x="log2FoldChange",y="padj",
-                selectLab=rownames(resByChr)[12366],
-                xlim=c(-5.5,5.5),
-                ylim=c(0,65),
-                title= "TEVcs vs wildtype dpy-26 - chrX genes",
-                subtitle=NULL,
-                caption = paste0(nrow(resByChr[idx,]), ' expressed genes'),
-                captionLabSize = 12,
-                pCutoff=Threshold,
-                pLabellingCutoff=10e-6,
-                FCcutoff=1.0,
-                xlab=bquote(~Log[2]~'fold change TEV+DPY-26cs / TEV+DPY-26wt'),
-                ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                transcriptPointSize = 1.5,
-                transcriptLabSize = 0,
-                legendPosition = 'right',
-                legendLabSize = 12,
-                legendIconSize = 5.0,
-                axisLabSize=14,
-                colCustom=keyvals[idx],
-                colAlpha=0.8)
-dev.off()
+##############################################################
+### get significant genes
+###############################################################
 
 
 pThresh=0.05
 LFCthresh=0
-summaryByChr<-function(resLFC,pThresh,LFCthresh) {
-  up<-resLFC[resLFC$padj < pThresh & resLFC$log2FoldChange > LFCthresh,]
-  down<-resLFC[resLFC$padj < pThresh & resLFC$log2FoldChange < -LFCthresh, ]
-  allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
-  allChr$autosomes<-rowSums(allChr[,1:5])
-  allChr$total<-rowSums(allChr[,1:6])
-  rownames(allChr)<-paste0(rownames(allChr),"_p",pThresh,"_lfc",LFCthresh)
-  return(allChr)
+#res=list()
+#resLFC=list()
+
+for(grp in groupsOI){
+   res<-results(dds,contrast=c("SMC",grp,controlGrp))
+   sink(file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                    "_logfile.txt"), append=TRUE,
+        type="output")
+   cat(paste0("Number of genes that change expression in ",grp," at different padj cutoffs:\n"))
+   print(summary(res))
+   print(summary(res,alpha=0.05))
+   print(summary(res,alpha=0.01))
+   sink()
+
+   ### add metadata
+   res$wormbase<-rownames(res)
+   idx<-match(rownames(res),metadata$wormbase)
+   res$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
+   res$start<-as.vector(start(metadata))[idx]
+   res$end<-as.vector(end(metadata))[idx]
+   res$strand<-as.vector(strand(metadata))[idx]
+
+   # shrink LFC estimates
+   #resultsNames(dds) # to get names of coefficients
+   resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
+   class(resLFC)
+   ### add metadata
+   resLFC$wormbase<-rownames(resLFC)
+   idx<-match(rownames(resLFC),metadata$wormbase)
+   resLFC$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
+   resLFC$start<-as.vector(start(metadata))[idx]
+   resLFC$end<-as.vector(end(metadata))[idx]
+   resLFC$strand<-as.vector(strand(metadata))[idx]
+   saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
+                              "_DESeq2_fullResults.rds"))
+
+   #export csv with ordered results
+   write.csv(resLFC[order(resLFC$padj),],
+             file=paste0(outPath,"/txt/", fileNamePrefix,grp,
+                         "_DESeq2_resultsTable.csv"),
+             quote=F,row.names=F)
+
+   # remove NAs
+   res<-na.omit(res)
+   resLFC<-na.omit(resLFC)
+
+
+
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                   "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
+
+   #######
+   ## plot results filtering threshold
+   #######
+   plot(metadata(resLFC)$filterNumRej,
+        type="b", ylab="number of rejections",
+        xlab="quantiles of filter",main="Threshold for independant filtering of results")
+   lines(metadata(resLFC)$lo.fit, col="red")
+   abline(v=metadata(resLFC)$filterTheta)
+   legend("topright",legend=paste0("Read count \nthreshold: ",
+                                   round(metadata(resLFC)$filterThreshold,2)))
+
+
+   ##########
+   ## heirarchical clustering of most significantly changed genes
+   ##########
+   # select gene names based on FDR (5%)
+   gene.kept <- rownames(resLFC)[resLFC$padj <= pThresh & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>0.5]
+
+   # Retrieve the normalized counts for gene of interest
+   countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
+   dim(countTable.kept)
+   colnames(countTable.kept)<-colData(dds)$sampleName
+
+   # Perform the hierarchical clustering with
+   # A distance based on Pearson-correlation coefficient
+   # and average linkage clustering as agglomeration criteria
+   heatmap.2(as.matrix(countTable.kept),
+             scale="row",
+             hclust=function(x) hclust(x,method="average"),
+             distfun=function(x) as.dist((1-cor(t(x)))/2),
+             margin=c(6,0),
+             trace="none",
+             density="none",
+             labRow="",
+             #labCol = names(countTable.kept),
+             cexCol=1,
+             main=paste0(grp," changed genes (p<",pThresh,", lfc>0.5)"))
+
+   dev.off()
+
+
+   ##########
+   ## plot individual genes
+   ##########
+
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                   "_topGenes_normCounts.pdf"), width=8,height=11,paper="a4")
+   par(mfrow=c(5,2))
+   selectedGenes <- rownames(resLFC)[order(resLFC$padj)][1:20]
+   for (g in selectedGenes) {
+      barplot(counts(dds, normalized=TRUE)[g,],
+              col=colData(dds)$SMC,
+              main=g, las=2, cex.names=1,names.arg=colData(dds)$sampleName)
+      legend("topleft",legend=levels(colData(dds)$SMC),fill=c(1,2), cex=0.7)
+   }
+   dev.off()
+
+
+   ##########
+   # make GRanges for LogFoldChanges for bigwig and bed
+   ##########
+   #remove nas
+   resGR<-GenomicRanges::GRanges(seqnames=resLFC$chr,
+                                 IRanges::IRanges(start=resLFC$start,
+                                                  end=resLFC$end),
+                                 strand=resLFC$strand)
+   seqlengths(resGR)<-seqlengths(Celegans)[1:6]
+   mcols(resGR)<-resLFC[,c("wormbase","log2FoldChange","padj")]
+
+   names(mcols(resGR))[names(mcols(resGR))=="log2FoldChange"]<-"score"
+   resGR<-sort(resGR,ignore.strand=TRUE)
+
+   #https://github.com/hochwagenlab/hwglabr2/wiki/Apply-function-to-GRanges-scores-in-genomic-tiles
+   #######
+   ### make bed file for significant genes
+   #######
+   idx<-which(resGR$padj<0.05)
+   forBed<-resGR[idx]
+   mcols(forBed)<-forBed$score
+   names(mcols(forBed))<-"score"
+   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+                        "_wt_lfc_p",gsub("^0.","",pThresh),".bed"),format="bed")
+
+
+   ###########
+   # MAplot ALL genes
+   ############
+
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                   "_MAplots_results.pdf"), width=5,height=5,paper="a4")
+
+
+   plotMA(res, main=paste0(grp," uncorrected LFC, threshold=", pThresh), ylim=c(-3,3), alpha=pThresh)
+   plotMA(resLFC, main=paste0(grp," apeglm shrunk LFC, threshold=", pThresh), ylim=c(-3,3), alpha=pThresh)
+   #plotCounts(dds, gene=which.min(res$padj), intgroup="sampleType")
+
+   #############
+   # MAplot X chr genes
+   #############
+
+   chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
+   chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
+
+   chrXres05<-chrXres[chrXres$padj<pThresh,]
+
+
+   upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
+   write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                            "_upOnX_p",pThresh,".csv"),
+               row.names=FALSE,col.names=FALSE)
+
+   plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", pThresh),ylim=c(-4,4),alpha=pThresh)
+
+
+
+   #############
+   # MAplotautosomal genes
+   #############
+
+   autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
+   autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
+
+   autosomalRes05<- autosomalRes[autosomalRes$padj<pThresh,]
+
+   plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",pThresh),ylim=c(-4,4),alpha=pThresh)
+
+   dev.off()
+
+   #############
+   # Fisher test of number of up and down genes on X v autosomes
+   #############
+
+   sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                    "_logfile.txt"),append=TRUE, type="output")
+   upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
+                             sum(chrXres05$log2FoldChange<0),
+                             sum(autosomalRes05$log2FoldChange>0),
+                             sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
+
+   cat("\nFisher Test, up v down:\n")
+   print(upVdownXvA)
+   print(fisher.test(upVdownXvA))
+
+
+   #############
+   # Fisher test of number of differentially expressed genes on X v autosomes
+   #############
+
+   testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
+                        dim(autosomalRes)[1],
+                        dim(autosomalRes05)[1]),
+                      nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
+   cat("\nFisher Test, enrichment of differentially expressed genes:\n")
+   print(testEnrich)
+   print(fisher.test(testEnrich))
+   sink()
+
+   #############
+   # Box plot by X v autosomes
+   #############
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                   "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+
+   chrType<-factor(rownames(resLFC) %in% chrXgenes)
+   levels(chrType)<-c("Autosomal","X chr")
+   geneCounts<-table(chrType)
+
+   boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
+           main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
+           xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
+   #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
+   abline(h=0,lty=2,col="blue")
+   dev.off()
+
+
+   #############
+   # Box plot by chromosome
+   #############
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                   "_boxPlots_expnByChr.pdf"), width=8,height=5,paper="a4")
+   chrName<-factor(resLFC$chr)
+   geneCounts<-table(chrName)
+
+   boxplot(log2FoldChange~chrName,data=resLFC,varwidth=TRUE,outline=FALSE,notch=TRUE,
+           main=paste0("Expression changes after cleavage of ", grp), ylab="log2 Fold Change",
+           col=c(rep("grey",5),"purple"),xlab="chromosome (number of genes)",
+           names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
+   #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
+   abline(h=0,lty=2,col="blue")
+   dev.off()
+
+
+   #############
+   # Volcano plot
+   #############
+   #https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html
+   #all black plot for manual changing of colours.
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #                "_volcanoPlot_allGenes.pdf"), width=8,height=6,paper="a4")
+   keyvals<-rep('black', nrow(resLFC))
+   names(keyvals)<-rep('NS',nrow(resLFC))
+   keyvals[which(resLFC$padj<pThresh & abs(resLFC$log2FoldChange)>1)]<-'red'
+   names(keyvals)[which(resLFC$padj<pThresh & abs(resLFC$log2FoldChange)>1)]<-paste0('p<',pThresh,' |lfc|>1')
+   sigUp<-sum(resLFC$padj<pThresh & resLFC$log2FoldChange>1)
+   sigDown<-sum(resLFC$padj<pThresh & resLFC$log2FoldChange< -1)
+   p1<-EnhancedVolcano(resLFC,
+                   lab=rownames(resLFC),
+                   labSize=0.5,
+                   labCol="#11111100",
+                   x="log2FoldChange",
+                   y="padj",
+                   selectLab=rownames(resLFC)[12366],
+                   xlim=c(-5.5,5.5),
+                   ylim=c(0,65),
+                   title= paste0(grp," vs ", controlGrp),
+                   subtitle=NULL,
+                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   captionLabSize = 12,
+                   pCutoff=pThresh,
+                   FCcutoff=1.0,
+                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                   #.legend=c('NS','P & Log2 FC'),
+                   #legendLabels=c('NS', expression(p-value<pThresh~and~log[2]~FC>1)),
+                   legendPosition = 'top',
+                   legendLabSize = 12,
+                   legendIconSize = 3.0,
+                   axisLabSize=14,
+                   colCustom=keyvals,
+                   #col = c("black", "red"),
+                   colAlpha=0.5,
+                   pointSize = 1.0)
+   #dev.off()
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                          "_volcanoPlot_allGenes.png"), plot=p1,
+          device="png",path=outPath, width=12,height=12,units="cm")
+
+
+   resByChr<-resLFC[order(resLFC$chr),]
+   # create custom key-value pairs for 'low', 'chrX', 'autosome' expression by fold-change
+   # set the base colour as 'black'
+   keyvals <- rep('black', nrow(resByChr))
+   # set the base name/label as 'NS'
+   names(keyvals) <- rep('NS', nrow(resByChr))
+   # modify keyvals for variables with fold change > 2.5
+   keyvals[which(resByChr$chr=="chrX")] <- 'red2'
+   names(keyvals)[which(resByChr$chr=="chrX")] <- 'chrX'
+
+   # modify keyvals for variables with fold change < -2.5
+   keyvals[which(resByChr$chr!="chrX")] <- 'royalblue'
+   names(keyvals)[which(resByChr$chr!="chrX")] <- 'autosomes'
+
+   # modify keyvals for variables with fold change < -2.5
+   #keyvals[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'grey10'
+   #names(keyvals)[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'NS'
+
+
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #                "_volcanoPlot_expnByChr.pdf"), width=8,height=6,paper="a4")
+   sigUp<-sum(resByChr$padj<pThresh & resByChr$log2FoldChange>1)
+   sigDown<-sum(resByChr$padj<pThresh & resByChr$log2FoldChange< -1)
+   p2<-EnhancedVolcano(resByChr,
+                   lab=rownames(resByChr),
+                   labSize=0.5,
+                   labCol="#11111100",
+                   x="log2FoldChange",y="padj",
+                   selectLab=rownames(resByChr)[12366],
+                   xlim=c(-5.5,5.5),
+                   ylim=c(0,65),
+                   title= paste0(grp," vs ",controlGrp),
+                   subtitle=NULL,
+                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   captionLabSize = 12,
+                   pCutoff=pThresh,
+                   FCcutoff=1.0,
+                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                   legendPosition = 'top',
+                   legendLabSize = 12,
+                   legendIconSize = 3.0,
+                   axisLabSize=14,
+                   colCustom=keyvals,
+                   colAlpha=0.5,
+                   pointSize = 1.0)
+   #dev.off()
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                          "_volcanoPlot_autVchrX.png"), plot=p2,
+          device="png",path=outPath,width=12,height=12,units="cm")
+
+   idx<-resByChr$chr=="chrX"
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
+   sigUp<-sum(resByChr$padj[idx]<pThresh & resByChr$log2FoldChange[idx]>1)
+   sigDown<-sum(resByChr$padj[idx]<pThresh & resByChr$log2FoldChange[idx]< -1)
+   p3<-EnhancedVolcano(resByChr[idx,],
+                   lab=rownames(resByChr[idx,]),
+                   x="log2FoldChange",y="padj",
+                   selectLab=rownames(resByChr)[12366],
+                   xlim=c(-5.5,5.5),
+                   ylim=c(0,65),
+                   title= paste0(grp," vs ",controlGrp,": chrX genes"),
+                   subtitle=NULL,
+                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   captionLabSize = 12,
+                   pCutoff=pThresh,
+                   FCcutoff=1.0,
+                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                   legendPosition = 'top',
+                   legendLabSize = 12,
+                   legendIconSize = 3.0,
+                   axisLabSize=14,
+                   colCustom=keyvals[idx],
+                   colAlpha=0.5,
+                   pointSize=1.0)
+   #dev.off()
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   "_volcanoPlot_chrX.png"), plot=p3,
+   device="png",path=outPath,width=12,height=12,units="cm")
+
+
+
+   idx<-resByChr$chr!="chrX"
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #                "_volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
+   sigUp<-sum(resByChr$padj[idx]<pThresh & resByChr$log2FoldChange[idx]>1)
+   sigDown<-sum(resByChr$padj[idx]<pThresh & resByChr$log2FoldChange[idx]< -1)
+   p4<-EnhancedVolcano(resByChr[idx,],
+                   lab=rownames(resByChr[idx,]),
+                   labSize=0.5,
+                   labCol="#11111100",
+                   x="log2FoldChange",y="padj",
+                   selectLab=rownames(resByChr)[12366],
+                   xlim=c(-5.5,5.5),
+                   ylim=c(0,65),
+                   title= paste0(grp," vs ",controlGrp,": autosomal genes"),
+                   subtitle=NULL,
+                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   captionLabSize = 12,
+                   pCutoff=pThresh,
+                   FCcutoff=1.0,
+                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                   legendPosition = 'top',
+                   legendLabSize = 12,
+                   legendIconSize = 3.0,
+                   axisLabSize=14,
+                   colCustom=keyvals[idx],
+                   colAlpha=0.5,
+                   pointSize=1.0)
+   #dev.off()
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                      "_volcanoPlot_autosomes.png"), plot=p4,
+          device="png",path=outPath,width=12,height=12,units="cm")
+
+
+
+   summaryByChr<-function(resLFC,pThresh,LFCthresh) {
+      up<-resLFC[resLFC$padj < pThresh & resLFC$log2FoldChange > LFCthresh,]
+      down<-resLFC[resLFC$padj < pThresh & resLFC$log2FoldChange < -LFCthresh, ]
+      allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
+      allChr$autosomes<-rowSums(allChr[,1:5])
+      allChr$total<-rowSums(allChr[,1:6])
+      rownames(allChr)<-paste0(rownames(allChr),"_p",pThresh,"_lfc",LFCthresh)
+      return(allChr)
+   }
+
+
+   sink(file=paste0(outPath,"/txt/", fileNamePrefix, grp,
+                    "_logfile.txt"),append=TRUE, type="output")
+   cat("Summary by Chr: \n")
+   cat("\np=0.05, LFC=0: \n")
+   print(summaryByChr(resLFC,pThres=0.05,LFCthresh=0))
+   cat("\np=0.05, LFC=0.5: \n")
+   print(summaryByChr(resLFC,pThres=0.05,LFCthresh=0.5))
+   cat("\np=0.05, LFC=1: \n")
+   print(summaryByChr(resLFC,pThres=0.05,LFCthresh=1))
+
+   cat("\np=0.01, LFC=0: \n")
+   print(summaryByChr(resLFC,pThres=0.01,LFCthresh=0))
+   cat("\np=0.01, LFC=0.5: \n")
+   print(summaryByChr(resLFC,pThres=0.01,LFCthresh=0.5))
+   cat("\np=0.01, LFC=1: \n")
+   print(summaryByChr(resLFC,pThres=0.01,LFCthresh=1))
+
+   sink()
+   #summary(resLFC,alpha=0.05)
+
+   #######
+   # average bw tracks
+   ######
+
+   #biolSamples<-unique(sampleTable$SMC)
+   biolSamples<-c(controlGrp,grp)
+   avrFiles<-c()
+   for (biolSample in biolSamples) {
+      idx<-which(sampleTable$SMC==biolSample)
+      bwFiles<-paste0(outPath, "/tracks/",
+                      sampleTable$sampleName[idx],
+                      "_rpm.bw")
+      wigFile<-paste0(outPath, "/tracks/", unique(sampleTable$SMC[idx]),
+                      "_",unique(sampleTable$strain[idx]) ,"_rpm_Avr.wig")
+      logwigFile<-gsub("_Avr","_logAvr", wigFile )
+
+      if(!file.exists(paste0(outPath,"/tracks/",fileNamePrefix, "lfc_", grp, "_", controlGrp, ".bw"))){
+         system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
+                       " > ", wigFile ))
+
+         system(paste0("wiggletools offset 1 ", wigFile, " | wiggletools log 2 - >",
+                       logwigFile))
+
+         #wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
+         #             dest=gsub("\\.wig$","\\.bw",wigFile))
+         #wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
+         #            dest=gsub("\\.wig$","\\.bw",logwigFile))
+         file.remove(wigFile)
+      }
+      avrFiles<-c(avrFiles,logwigFile)
+   }
+
+   # single log fold change track
+   if(!file.exists(paste0(outPath,"/tracks/",fileNamePrefix, "lfc_", grp, "_", controlGrp, ".bw"))){
+   system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
+                 paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig")))
+   wigToBigWig(x=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"),
+               seqinfo=wbseqinfo,
+               dest=paste0(outPath,"/tracks/",fileNamePrefix,"lfc_",grp,"_",controlGrp,".bw"))
+   file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
+   file.remove(logwigFile)
+   }
+
+   #system(paste0("wiggletools diff ",
+   #              gsub("_logAvr","_Avr", paste0(avrFiles,collapse=" "))," > ",
+   #              paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig")))
+
+   #wigToBigWig(x=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"),
+   #            seqinfo=wbseqinfo,
+   #            dest=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.bw"))
+   #file.remove(paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"))
+
+
+   ##### create filtered tables of gene names
+   results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
+                           "_DESeq2_fullResults.rds"))
+
+
+
+   nrow(filterResults(results,padj=0.05,lfc=0,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.05,lfc=0.5,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.05,lfc=0.75,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.05,lfc=1,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.01,lfc=0,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.01,lfc=0.5,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.01,lfc=0.75,"both","all", writeTable=F))
+   nrow(filterResults(results,padj=0.01,lfc=1,"both","all", writeTable=F))
+
+
+   salmondc<-filterResults(results,padj=0.05,lfc=0.5,"gt","chrX", writeTable=F)
+   salmondcgr<-metadata[metadata$wormbase %in% salmondc$wormbase]
+   mcols(salmondcgr)<-cbind(mcols(salmondcgr),
+                            salmondc[match(salmondcgr$wormbase,
+                                           salmondc$wormbase),c(1:3)])
+   salmondcgr
+   lfcVal=0.5 # >log2(1.4) and <log2(1.5)
+   padjVal=0.05
+   saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
+                                  "_chrXup_lfc",
+                                  formatC(lfcVal,format="e",digits=0),"_p",
+                                  formatC(padjVal,format="e",digits=0),
+                                  "_gr.rds"))
 }
-
-
-sink(file=paste0(outPath,"/txt/", fileNamePrefix,"logfile.txt"),append=TRUE, type="output")
-cat("Summary by Chr: \n")
-cat("\np=0.05, LFC=0: \n")
-print(summaryByChr(resLFC,pThres=0.05,LFCthresh=0))
-cat("\np=0.05, LFC=0.5: \n")
-print(summaryByChr(resLFC,pThres=0.05,LFCthresh=0.5))
-cat("\np=0.05, LFC=1: \n")
-print(summaryByChr(resLFC,pThres=0.05,LFCthresh=1))
-
-cat("\np=0.01, LFC=0: \n")
-print(summaryByChr(resLFC,pThres=0.01,LFCthresh=0))
-cat("\np=0.01, LFC=0.5: \n")
-print(summaryByChr(resLFC,pThres=0.01,LFCthresh=0.5))
-cat("\np=0.01, LFC=1: \n")
-print(summaryByChr(resLFC,pThres=0.01,LFCthresh=1))
-
-sink()
-#summary(resLFC,alpha=0.05)
-
-#######
-# average bw tracks
-######
-
-biolSamples<-unique(sampleTable$dpy26)
-avrFiles<-c()
-for (biolSample in biolSamples) {
-  idx<-which(sampleTable$dpy26==biolSample)
-  bwFiles<-paste0(outPath, "/tracks/",
-                  sampleTable$sampleName[idx],
-                  "_rpm.bw")
-  wigFile<-paste0(outPath, "/tracks/dpy26", unique(sampleTable$dpy26[idx]),
-                  "_",unique(sampleTable$strain[idx]) ,"_rpm_Avr.wig")
-  system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
-                " > ", wigFile ))
-
-  logwigFile<-gsub("_Avr","_logAvr", wigFile )
-  system(paste0("wiggletools offset 1 ", wigFile, " | wiggletools log 2 - >",
-                logwigFile))
-
-  wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
-              dest=gsub("\\.wig$","\\.bw",wigFile))
-  wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
-              dest=gsub("\\.wig$","\\.bw",logwigFile))
-  avrFiles<-c(avrFiles,logwigFile)
-  file.remove(wigFile)
-  file.remove(logwigFile)
-}
-
-# single log fold change track
-system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
-              paste0(outPath,"/tracks/lfc_dpy26cs_dpy26wt.wig")))
-wigToBigWig(x=paste0(outPath,"/tracks/lfc_dpy26cs_dpy26wt.wig"),
-            seqinfo=wbseqinfo,
-            dest=paste0(outPath,"/tracks/lfc_dpy26cs_dpy26wt.bw"))
-file.remove(paste0(outPath,"/tracks/lfc_dpy26cs_dpy26wt.wig"))
-
-
-#system(paste0("wiggletools diff ",
-#              gsub("_logAvr","_Avr", paste0(avrFiles,collapse=" "))," > ",
-#              paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig")))
-
-#wigToBigWig(x=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"),
-#            seqinfo=wbseqinfo,
-#            dest=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.bw"))
-#file.remove(paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"))
-
-
-##### create filtered tables of gene names
-outPath="."
-fileNamePrefix="salmon"
-results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,"_DESeq2_fullResults.rds"))
-
-source("functions.R")
-
-
-nrow(filterResults(results,padj=0.05,lfc=0,"both","all"))
-nrow(filterResults(results,padj=0.05,lfc=0.5,"both","all"))
-nrow(filterResults(results,padj=0.05,lfc=0.75,"both","all"))
-nrow(filterResults(results,padj=0.05,lfc=1,"both","all"))
-nrow(filterResults(results,padj=0.01,lfc=0,"both","all"))
-nrow(filterResults(results,padj=0.01,lfc=0.5,"both","all"))
-nrow(filterResults(results,padj=0.01,lfc=0.75,"both","all"))
-nrow(filterResults(results,padj=0.01,lfc=1,"both","all"))
-
-
-salmondc<-filterResults(results,padj=0.05,lfc=0.5,"gt","chrX")
-salmondcgr<-metadata[metadata$wormbase %in% salmondc$wormbase]
-mcols(salmondcgr)<-cbind(mcols(salmondcgr),
-                         salmondc[match(salmondcgr$wormbase,
-                                        salmondc$wormbase),c(1:3)])
-salmondcgr
-saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix,
-                               "JulieData_chrXup_lfc",
-                                formatC(lfcVal,format="e",digits=0),"_p",
-                                formatC(padjVal,format="e",digits=0),
-                                "_gr.rds"))
-
 

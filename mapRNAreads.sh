@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --partition=all
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=1-6
+#SBATCH --array=1-31%8
 
 module add vital-it
 module add UHTS/Quality_control/fastqc/0.11.7;
