@@ -16,21 +16,9 @@ This requires a file **fastqList.txt** (adapt the **fastqList_example.txt** file
 
 The output is then analysed in R with DESeq2 using the following script:
 
-**_DESeqAnalysis_JulieData_SALMON.R_**
+**_DESeqAnalysis_SALMON.R_**
 
-## Comparison with other aligners
 
-For comparison i also mapped data with QuasR using **_Analysis-d-all-fast_QUASR.R_** (adapted from Peter's script).
-
-Then i ran DESeq2 on the STAR and QuasR outputs:
-
-**_DESeqAnalysis_JulieData_STAR.R_**
-
-**_DESeqAnalysis_JulieData_QUASR.R_**
-
-The outputs of the different methods were compared using:
-
-_**compareAligners.R**_
 
 ## Comparison with other datasets
 
