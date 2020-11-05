@@ -2,8 +2,8 @@ library(DESeq2)
 library(Organism.dplyr)
 library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
-library("TxDb.Celegans.UCSC.ce11.refGene")
-library("TxDb.Celegans.UCSC.ce11.ensGene")
+#library("TxDb.Celegans.UCSC.ce11.refGene")
+#library("TxDb.Celegans.UCSC.ce11.ensGene")
 library(tximport)
 library(GenomicFeatures)
 library(ggplot2)
@@ -38,6 +38,7 @@ ce11seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
+wierdGenes<-c("WBGene00013172")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -96,19 +97,29 @@ txdb<-loadDb(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.", genomeVer,
 k <- keys(txdb, keytype = "TXNAME")
 tx2gene <- AnnotationDbi::select(txdb, k, "GENEID", "TXNAME")
 
-srcref <- src_organism("TxDb.Celegans.UCSC.ce11.refGene")
-#srcens <- src_organism("TxDb.Celegans.UCSC.ce11.ensGene")
+columns(txdb)
+keytypes(txdb)
+TxptByGene<-transcriptsBy(txdb, by = "gene")
+length(TxptByGene)
 
-#src_tbls(srcref)
-#tbl(srcref, "id")
-#columns(srcref)
-#supportedFilters(srcref)
-#wbgenes<-WormbaseFilter("WBGene","startsWith")
+geneGR<-unlist(range(TxptByGene))
+mcols(geneGR)$wormbase<-names(geneGR)
+genedf<-as.data.frame(geneGR)
 
-metadata<-inner_join(tbl(srcref, "id"), tbl(srcref, "ranges_gene")) %>%
-  dplyr::select(wormbase,alias,genename,gene_chrom,gene_start, gene_end, gene_strand) %>%
+
+# download gene id data from simplemine: https://wormbase.org/tools/mine/simplemine.cgi
+geneIDs<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/simplemine_WS278_geneID.txt")
+
+metadata<-inner_join(geneIDs, genedf,by=c("WormBase.Gene.ID"="wormbase")) %>%
+  dplyr::select(WormBase.Gene.ID,Public.Name,Sequence.Name,seqnames,start, end, strand) %>%
   collect %>% GenomicRanges::GRanges()
 
+names(mcols(metadata))<-c("wormbaseID","publicID","sequenceID")
+
+#seqinfo(metadata)<-wbseqinfo
+seqlevelsStyle(metadata)<-"ucsc"
+seqinfo(metadata)<-ce11seqinfo
+metadata<-sort(metadata)
 
 
 ###############################################################
@@ -137,7 +148,7 @@ dds <- DESeqDataSetFromTximport(txi=txi,
 #   3. Negative Binomial GLM fitting and Wald statistics: nbinomWaldTest
 #   returns a DESeqDataSet object
 
-idx<-match(rownames(dds),metadata$wormbase)
+idx<-match(rownames(dds),metadata$wormbaseID)
 # add gene and chormosome names as metadata
 featureData <- data.frame(gene=rownames(dds),
                           chr=as.vector(seqnames(metadata))[idx]) #,
@@ -163,8 +174,9 @@ sink(file=paste0(outPath,"/txt/", fileNamePrefix,
                  "all_logfile.txt"),
      append=FALSE, type="output")
 statsPerSample<-data.frame(t(apply(counts(dds),2,summary)))
+statsPerSample$totalCounts<-colSums(counts(dds))
 rownames(statsPerSample)<-colData(dds)$sampleName
-colnames(statsPerSample)<-c("min", "Q1", "median", "mean", "Q3", "max")
+colnames(statsPerSample)<-c("min", "Q1", "median", "mean", "Q3", "max","totalCounts")
 statsPerSample$zeros <- apply(counts(dds)==0, 2, sum)
 statsPerSample$percZeros <- round(100*statsPerSample$zeros/nrow(counts(dds)),1)
 print(statsPerSample)
@@ -296,8 +308,8 @@ for(grp in groupsOI){
    sink()
 
    ### add metadata
-   res$wormbase<-rownames(res)
-   idx<-match(rownames(res),metadata$wormbase)
+   res$wormbaseID<-rownames(res)
+   idx<-match(rownames(res),metadata$wormbaseID)
    res$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
    res$start<-as.vector(start(metadata))[idx]
    res$end<-as.vector(end(metadata))[idx]
@@ -308,8 +320,8 @@ for(grp in groupsOI){
    resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
    class(resLFC)
    ### add metadata
-   resLFC$wormbase<-rownames(resLFC)
-   idx<-match(rownames(resLFC),metadata$wormbase)
+   resLFC$wormbaseID<-rownames(resLFC)
+   idx<-match(rownames(resLFC),metadata$wormbaseID)
    resLFC$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
    resLFC$start<-as.vector(start(metadata))[idx]
    resLFC$end<-as.vector(end(metadata))[idx]
@@ -399,25 +411,35 @@ for(grp in groupsOI){
                                                   end=resLFC$end),
                                  strand=resLFC$strand)
    seqlengths(resGR)<-seqlengths(Celegans)[1:6]
-   mcols(resGR)<-resLFC[,c("wormbase","log2FoldChange","padj")]
+   mcols(resGR)<-resLFC[,c("wormbaseID","log2FoldChange","padj")]
 
    names(mcols(resGR))[names(mcols(resGR))=="log2FoldChange"]<-"score"
    resGR<-sort(resGR,ignore.strand=TRUE)
 
    #https://github.com/hochwagenlab/hwglabr2/wiki/Apply-function-to-GRanges-scores-in-genomic-tiles
+   forBG<-resGR
+   mcols(forBG)<-mcols(forBG)[,c("wormbaseID","score")]
+   colnames(mcols(forBG))<-c("name","score")
+   seqinfo(forBG)<-ce11seqinfo
+   export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+                        "_wt_lfc.bedGraph"),
+          format="bedGraph")
+
    #######
    ### make bed file for significant genes
    #######
+
    idx<-which(resGR$padj<0.05)
    forBed<-resGR[idx]
-   mcols(forBed)<-mcols(forBed)[,c("wormbase","score")]
+   mcols(forBed)<-mcols(forBed)[,c("wormbaseID","score")]
    colnames(mcols(forBed))<-c("name","score")
    seqinfo(forBed)<-ce11seqinfo
-   NaIdx<-is.na(forBed$score)
-   forBed$score[NaIdx]<-0
+   #NaIdx<-is.na(forBed$score)
+   #forBed$score[NaIdx]<-0
    export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
                         "_wt_lfc_p",gsub("^0.","",pThresh),".bedGraph"),
           format="bedGraph")
+
 
    export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
                         "_wt_lfc_p",gsub("^0.","",pThresh),".bed"),
@@ -809,10 +831,10 @@ for(grp in groupsOI){
 
 
    salmondc<-filterResults(results,padj=0.05,lfc=0.5,"gt","chrX", writeTable=F)
-   salmondcgr<-metadata[metadata$wormbase %in% salmondc$wormbase]
+   salmondcgr<-metadata[metadata$wormbaseID %in% salmondc$wormbaseID]
    mcols(salmondcgr)<-cbind(mcols(salmondcgr),
-                            salmondc[match(salmondcgr$wormbase,
-                                           salmondc$wormbase),c(1:3)])
+                            salmondc[match(salmondcgr$wormbaseID,
+                                           salmondc$wormbaseID),c(1:3)])
    salmondcgr
    lfcVal=0.5 # >log2(1.4) and <log2(1.5)
    padjVal=0.05
