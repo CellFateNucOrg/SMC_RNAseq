@@ -38,7 +38,6 @@ ce11seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-wierdGenes<-c("WBGene00013172")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -121,6 +120,7 @@ seqlevelsStyle(metadata)<-"ucsc"
 seqinfo(metadata)<-ce11seqinfo
 metadata<-sort(metadata)
 
+saveRDS(metadata,paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 ###############################################################
 ### get samples into DESeq2
@@ -425,6 +425,17 @@ for(grp in groupsOI){
                         "_wt_lfc.bedGraph"),
           format="bedGraph")
 
+
+   forBW<-disjoin(forBG,ignore.strand=T)
+   oldf<-as.data.frame(findOverlaps(forBW,forBG,ignore.strand=T))
+   oldf$scorePerSubBp<-forBG$score[oldf$subjectHits]/width(forBG)[oldf$subjectHits]
+   oldf$scorePerQuery<-width(forBW)[oldf$queryHits]*oldf$scorePerSubBp
+   score<-oldf %>% group_by(queryHits) %>% summarise(score=mean(scorePerQuery))
+   forBW$score<-score$score
+   export(forBW,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+                       "_wt_lfc.bw"),
+          format="bigwig")
+
    #######
    ### make bed file for significant genes
    #######
@@ -614,6 +625,10 @@ for(grp in groupsOI){
            names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
    abline(h=0,lty=2,col="blue")
+
+
+
+
    dev.off()
 
 
@@ -817,7 +832,7 @@ for(grp in groupsOI){
    ##### create filtered tables of gene names
    results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
                            "_DESeq2_fullResults.rds"))
-
+   #results<-na.omit(results)
 
 
    nrow(filterResults(results,padj=0.05,lfc=0,"both","all", writeTable=F))

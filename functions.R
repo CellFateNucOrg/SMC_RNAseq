@@ -30,26 +30,10 @@ makeDirs<-function(path,dirNameList=c()) {
 filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
                         chr="all", outPath=".", filenamePrefix="",
                         writeTable=T) {
-  if(direction=="both") {
-    idx<-!is.na(resultsTable$padj) & resultsTable$padj<padj & abs(resultsTable$log2FoldChange)>lfc
-  } else if(direction=="gt") {
-    idx<-!is.na(resultsTable$padj) & resultsTable$padj<padj & resultsTable$log2FoldChange>lfc
-  } else if(direction=="lt") {
-    idx<-!is.na(resultsTable$padj) & resultsTable$padj<padj & resultsTable$log2FoldChange<lfc
-  } else {
-    print("direction must be 'both' to get both tails, \n'gt' to get lfc larger than a specific value, \nor 'lt' to get lfc less than a certain value")
-  }
-  if(chr=="all"){
-    idx<-idx
-  } else if(chr=="chrX"){
-    idx<-idx & !is.na(resultsTable$chr) & resultsTable$chr=="chrX"
-  } else if(chr=="autosomes"){
-    idx<-idx & !is.na(resultsTable$chr) & resultsTable$chr!="chrX"
-  } else {
-    print("chr must be one of 'all', 'chrX' or 'autosomes'")
-  }
+  sigGenes<-getSignificantGenes(resultsTable,padj,lfc,direction=direction,chr=chr)
+  idx<-resultsTable$wormbaseID %in% sigGenes$wormbaseID
   filtTable<-resultsTable[idx,c("baseMean","log2FoldChange","padj",
-                                "wormbase","chr","start","end","strand")]
+                                "wormbaseID","chr","start","end","strand")]
   if(writeTable){
     if(!dir.exists(paste0(outPath,"/txt"))){
       dir.create(paste0(outPath,"/txt"))
@@ -61,3 +45,49 @@ filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
   }
   return(filtTable)
 }
+
+
+
+
+#' Get significant genes from  RNAseq results
+#'
+#' @param resultsTable Table of DESeq results
+#' @param padj Adjusted p value threshold
+#' @param lfc Log fold change threshold
+#' @param namePadjCol Name of column with adjusted P values
+#' @param nameLFCcol Name of column with log fold change values
+#' @param direction Whether to find genes that are less than (lt), or greater than (gt) the log fold change threshold, or both extreme tails ("both")
+#' @param chr Include all genes in genome ("all") only those on the X chromosome ("chrX"), or only autosomes ("autosomes")
+#' @param nameChrCol Name of column with chromosome names.
+#' @return Filtered table of significant genes at a certain log fold change and adjusted p value.
+#' @export
+getSignificantGenes<-function(resultsTable, padj=0.05, lfc=0, namePadjCol="padj",
+                              nameLfcCol="log2FoldChange", direction="both",
+                              chr="all", nameChrCol="chr", outPath="."){
+  if(direction=="both") {
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & abs(resultsTable[,nameLfcCol])>lfc
+  } else if(direction=="gt") {
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]>lfc
+  } else if(direction=="lt") {
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]<lfc
+  } else {
+    print("direction must be 'both' to get both tails, \n'gt' to get lfc larger than a specific value, \nor 'lt' to get lfc less than a certain value")
+  }
+  if(chr=="all"){
+    idx<-idx
+  } else if(chr=="chrX"){
+    idx<-idx & !is.na(resultsTable[,nameChrCol]) & resultsTable[,nameChrCol]=="chrX"
+  } else if(chr=="autosomes"){
+    idx<-idx & !is.na(resultsTable[,nameChrCol]) & resultsTable[,nameChrCol]!="chrX"
+  } else {
+    print("chr must be one of 'all', 'chrX' or 'autosomes'")
+  }
+  filtTable<-resultsTable[idx,]
+  return(filtTable)
+}
+
+
+prettyGeneName<-function(geneName){
+  gsub("([[:digit:]]+)","-\\1",geneName)
+}
+
