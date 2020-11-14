@@ -6,6 +6,7 @@ library(zoo)
 library(dplyr)
 library(ggpubr)
 library(genomation)
+library(seqplots)
 
 source("functions.R")
 
@@ -182,19 +183,253 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcomp_LFC_padj",
 
 
 
+# #####################
+# ## anchors
+# #####################
+#
+# loops<-import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),format="bedpe")
+#
+# anchors<-zipup(loops)
+# anchors<-unlist(anchors)
+# strand(anchors)[seq(1,length(anchors),by=2)]<-"+"
+# strand(anchors)[seq(2,length(anchors),by=2)]<-"-"
+#
+# anchors<-reduce(sort(anchors))
+# #anchors$region<-1:length(anchors)
+# anchors$chr<-seqnames(anchors)
+# keepAnchors<-anchors
+# flankSize<-10000
+# par(mfrow=c(3,1))
+# for (grp in groupsOI){
+#   anchors<-keepAnchors
+#   smcRNAseq<-import(paste0(outPath,"/tracks/salmon_",grp,
+#                            "_wt_lfc.bw"),
+#                            format="bigwig")
+#   pdf(file=paste0(outPath,"/plots/anchors_",grp,".pdf"),
+#       width=11, height=29,paper="a4")
+#   upstream<-trim(flank(anchors,width=flankSize))
+#   downstream<-trim(flank(anchors,width=flankSize,start=F))
+#
+#   upstream<-upstream[order(upstream$region)]
+#   downstream<-downstream[order(downstream$region)]
+#
+#   up2<-trim(flank(upstream,width=flankSize))
+#   down2<-trim(flank(downstream,width=flankSize,start=F))
+#
+#
+#   sm<-ScoreMatrixBin(target=smcRNAseq,windows=anchors,
+#                      bin.num=100,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigWig")
+#   smup<-ScoreMatrix(target=smcRNAseq,windows=upstream,
+#                     strand.aware=F,weight.col="score",
+#                     type="bigwig")
+#
+#   smdown<-ScoreMatrix(target=smcRNAseq,windows=downstream,
+#                       strand.aware=F,weight.col="score",
+#                       type="bigwig")
+#
+#
+#   smup2<-ScoreMatrix(target=smcRNAseq,windows=up2,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigwig")
+#
+#   smdown2<-ScoreMatrix(target=smcRNAseq,windows=down2,
+#                        strand.aware=F,weight.col="score",
+#                        type="bigwig")
+#
+#
+#   sml<-as(list(smup2,smup,sm,smdown,smdown2),'ScoreMatrixList')
+#   sml<-intersectScoreMatrixList(sml,reorder=T)
+#   roworder=rev(order(rowSums(sml[[3]],na.rm=T)))
+#   sml<-orderBy(sml,roworder)
+#
+#   multiHeatMatrix(sml,common.scale=T,winsorize=c(5,95),
+#                   matrix.main=c("-20kb","-10kb","anchor","+10kb",
+#                                 "+20kb"),
+#                   #col=c("blue","lightgrey","red"),
+#                   legend.name=prettyGeneName(grp),grid=F)
+#
+#
+#
+#   # X chr anchors
+#
+#   anchors<-keepAnchors
+#   anchors<-anchors[seqnames(anchors)=="chrX"]
+#   upstream<-trim(flank(anchors,width=flankSize))
+#   downstream<-trim(flank(anchors,width=flankSize,start=F))
+#
+#   upstream<-upstream[order(upstream$region)]
+#   downstream<-downstream[order(downstream$region)]
+#
+#   up2<-trim(flank(upstream,width=flankSize))
+#   down2<-trim(flank(downstream,width=flankSize,start=F))
+#
+#
+#   sm<-ScoreMatrixBin(target=smcRNAseq,windows=anchors,
+#                      bin.num=100,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigWig")
+#   smup<-ScoreMatrix(target=smcRNAseq,windows=upstream,
+#                     strand.aware=F,weight.col="score",
+#                     type="bigwig")
+#
+#   smdown<-ScoreMatrix(target=smcRNAseq,windows=downstream,
+#                       strand.aware=F,weight.col="score",
+#                       type="bigwig")
+#
+#
+#   smup2<-ScoreMatrix(target=smcRNAseq,windows=up2,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigwig")
+#
+#   smdown2<-ScoreMatrix(target=smcRNAseq,windows=down2,
+#                        strand.aware=F,weight.col="score",
+#                        type="bigwig")
+#
+#
+#   sml<-as(list(smup2,smup,sm,smdown,smdown2),'ScoreMatrixList')
+#   sml<-intersectScoreMatrixList(sml,reorder=T)
+#   roworder=rev(order(rowSums(sml[[3]],na.rm=T)))
+#   sml<-orderBy(sml,roworder)
+#
+#   multiHeatMatrix(sml,common.scale=T,winsorize=c(5,95),
+#                   matrix.main=c("-20kb","-10kb","anchor","+10kb",
+#                                 "+20kb"),
+#                   #col=c("blue","lightgrey","red"),
+#                   legend.name=prettyGeneName(grp),grid=F)
+#
+#
+#
+#   # autosomal anchors
+#   anchors<-keepAnchors
+#   anchors<-anchors[seqnames(anchors)!="chrX"]
+#   upstream<-trim(flank(anchors,width=flankSize))
+#   downstream<-trim(flank(anchors,width=flankSize,start=F))
+#
+#   upstream<-upstream[order(upstream$region)]
+#   downstream<-downstream[order(downstream$region)]
+#
+#   up2<-trim(flank(upstream,width=flankSize))
+#   down2<-trim(flank(downstream,width=flankSize,start=F))
+#
+#
+#   sm<-ScoreMatrixBin(target=smcRNAseq,windows=anchors,
+#                      bin.num=100,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigWig")
+#   smup<-ScoreMatrix(target=smcRNAseq,windows=upstream,
+#                     strand.aware=F,weight.col="score",
+#                     type="bigwig")
+#
+#   smdown<-ScoreMatrix(target=smcRNAseq,windows=downstream,
+#                       strand.aware=F,weight.col="score",
+#                       type="bigwig")
+#
+#
+#   smup2<-ScoreMatrix(target=smcRNAseq,windows=up2,
+#                      strand.aware=F,weight.col="score",
+#                      type="bigwig")
+#
+#   smdown2<-ScoreMatrix(target=smcRNAseq,windows=down2,
+#                        strand.aware=F,weight.col="score",
+#                        type="bigwig")
+#
+#
+#   sml<-as(list(smup2,smup,sm,smdown,smdown2),'ScoreMatrixList')
+#   sml<-intersectScoreMatrixList(sml,reorder=T)
+#   roworder=rev(order(rowSums(sml[[3]],na.rm=T)))
+#   sml<-orderBy(sml,roworder)
+#   orderBy(sml,roworder)
+#   multiHeatMatrix(sml,common.scale=T,winsorize=c(5,95),
+#                   matrix.main=c("-20kb","-10kb","anchor","+10kb",
+#                                 "+20kb",
+#                                 ylim=c(-2,2)),
+#                   #col=c("blue","lightgrey","red"),
+#                   legend.name=prettyGeneName(grp),grid=F)
+#   dev.off()
+# }
+#
+
+
+
+
+
+
+
+
 #####################
 ## anchors
 #####################
 
-loops<-import("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/2020_RNA_seq/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe",format="bedpe")
+loops<-import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),format="bedpe")
+
+anchors<-zipup(loops)
+anchors<-unlist(anchors)
+strand(anchors)[seq(1,length(anchors),by=2)]<-"+"
+strand(anchors)[seq(2,length(anchors),by=2)]<-"-"
+
+anchors<-reduce(sort(anchors))
+#anchors$region<-1:length(anchors)
+anchors$chr<-seqnames(anchors)
+
+loopsAll<-paste0(outPath,"/tracks/loops.bed")
+export(anchors,con=loopsAll,format="bed")
+
+loopsX<-paste0(outPath,"/tracks/loopsX.bed")
+export(anchors[seqnames(anchors)=="chrX"], con=loopsX,format="bed")
+
+loopsA<-paste0(outPath,"/tracks/loopsA.bed")
+export(anchors[seqnames(anchors)!="chrX"], con=loopsA,format="bed")
+
+flankSize<-60000
+
+smcRNAseq<-paste0(outPath,"/tracks/salmon_",groupsOI,
+                           "_wt_lfc.bw")
+
+png(filename=paste0(outPath,"/plots/anchors-all_flank",flankSize/10000,"kb.png"),width=19,
+    height=16,units="cm", res=150)
+par(mfrow=c(3,1))
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(loopsAll),
+                refgenome="ce11", bin=100L, xmin=flankSize,
+                xmax=flankSize, type="af",
+                xanchored=10000)
 
 
-anchors<-unlist(zipup(loops))
-anchors<-anchors[seqnames(anchors)=="chrX"]
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+plotHeatmap(p,main="All loop anchors", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F))
+dev.off()
 
-fullSet<-reduce(anchors)
+png(filename=paste0(outPath,"/plots/anchors-chrX_flank",flankSize/10000,"kb.png"),width=19,
+    height=16,units="cm", res=150)
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(loopsX),
+                   refgenome="ce11", bin=100L, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=10000)
+plotHeatmap(p,main="chrX loop anchors", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F))
+dev.off()
 
-tenkb<-fullSet[width(fullSet)==10000]
-fivekb<-fullSet[width(fullSet)==5000]
 
+png(filename=paste0(outPath,"/plots/anchors-autosomal_flank",flankSize/10000,"kb.png"),width=19,
+    height=16,units="cm", res=150)
+
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(loopsA),
+                   refgenome="ce11", bin=100L, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=10000)
+plotHeatmap(p,main="Autosomal loop anchors", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F))
+dev.off()
 
