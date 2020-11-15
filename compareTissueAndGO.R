@@ -3,6 +3,7 @@ library(ggVennDiagram)
 library(ggplot2)
 library(EnhancedVolcano)
 library(wormcat)
+library(xlsx)
 
 source("functions.R")
 
@@ -30,23 +31,16 @@ sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+  sigTables[[paste0(grp,"_all")]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                           namePadjCol="padj",
                           nameLfcCol="log2FoldChange",
                           direction="both",
                           chr="all", nameChrCol="chr"))
 }
-
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 
-for(i in 1:length(sigGenes)){
-  write.table(sigGenes[[i]], file=paste0(outPath,"/txt/wormCat_",
-                                         names(sigGenes)[i],"_padj",
-                                         formatC(padjVal,format="e",digits=0),
-                                         "_lfc", lfcVal,".txt"),
-                                         quote=F,row.names=F, col.names=F)
-}
+
 
 
 ### upregulated genes
@@ -54,24 +48,14 @@ sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+  sigTables[[paste0(grp,"_up")]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="gt",
                         chr="all", nameChrCol="chr"))
 }
-
-
-sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
-
-for(i in 1:length(sigGenes)){
-  write.table(sigGenes[[i]], file=paste0(outPath,"/txt/wormCat_UP_",
-                                         names(sigGenes)[i],"_padj",
-                                         formatC(padjVal,format="e",digits=0),
-                                         "_lfc", lfcVal,".txt"),
-              quote=F,row.names=F, col.names=F)
-}
+sigGenesUp<-lapply(sigTables, "[", ,"wormbaseID")
 
 
 
@@ -80,27 +64,26 @@ sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+  sigTables[[paste0(grp,"_down")]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
                         chr="all", nameChrCol="chr"))
+
 }
 
+sigGenesDown<-lapply(sigTables, "[", ,"wormbaseID")
 
-sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 
-for(i in 1:length(sigGenes)){
-  write.table(sigGenes[[i]], file=paste0(outPath,"/txt/wormCat_DOWN_",
-                                         names(sigGenes)[i],"_padj",
-                                         formatC(padjVal,format="e",digits=0),
-                                         "_lfc", lfcVal,".txt"),
-              quote=F,row.names=F, col.names=F)
-}
+wormcatIn<-c(sigGenes,sigGenesUp,sigGenesDown)
 
+wormcatIn<-lapply(wormcatIn,function (x) c("Wormbase ID",x))
+
+openxlsx::write.xlsx(wormcatIn,
+                     file=paste0(outPath,"/wormcat/wormcat.xlsx"))
 
 
 
-
+#worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/wormcat.xlsx"), output_dir=paste0(outPath,"/wormcat/"), input_type="Wormbase.ID")
 
