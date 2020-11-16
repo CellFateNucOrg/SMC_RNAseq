@@ -29,6 +29,8 @@ groupsOI<-levels(SMC)[-1]
 ## venn diagrams
 #######
 
+
+## significantly changed genes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
@@ -52,11 +54,77 @@ sigGenes<-lapply(achr, "[", ,"wormbaseID")
 p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_",paste(groupsOI,
-                                                  collapse="_"),"_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_allGenes_",
+                                paste(groupsOI, collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+
+## upregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="gt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
+sigGenes<-lapply(achr, "[", ,"wormbaseID")
+p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_upGenes_",
+                                paste(groupsOI,collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+## upregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="lt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes down: lfc< -", lfcVal, ", padj<",padjVal))
+
+xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+
+achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
+sigGenes<-lapply(achr, "[", ,"wormbaseID")
+p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal down: lfc< -", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_downGenes_",
+                                paste(groupsOI,collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=16,units="cm")
+
+
 
 
 ########

@@ -107,13 +107,20 @@ genedf<-as.data.frame(geneGR)
 
 
 # download gene id data from simplemine: https://wormbase.org/tools/mine/simplemine.cgi
+# for entrez ids, load wormbaseID column into https://david.ncifcrf.gov/conversion.jsp
 geneIDs<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/simplemine_WS278_geneID.txt")
+david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
 
 metadata<-inner_join(geneIDs, genedf,by=c("WormBase.Gene.ID"="wormbase")) %>%
   dplyr::select(WormBase.Gene.ID,Public.Name,Sequence.Name,seqnames,start, end, strand) %>%
   collect %>% GenomicRanges::GRanges()
 
 names(mcols(metadata))<-c("wormbaseID","publicID","sequenceID")
+
+i<-which(metadata$wormbaseID %in% david$From)
+j<-match(metadata$wormbaseID[i],david$From)
+metadata$entrezID<-NA
+metadata$entrezID[i]<-david$To[j]
 
 #seqinfo(metadata)<-wbseqinfo
 seqlevelsStyle(metadata)<-"ucsc"
@@ -326,6 +333,9 @@ for(grp in groupsOI){
    resLFC$start<-as.vector(start(metadata))[idx]
    resLFC$end<-as.vector(end(metadata))[idx]
    resLFC$strand<-as.vector(strand(metadata))[idx]
+   resLFC$publicID<-as.vector(metadata$publicID)[idx]
+   resLFC$sequenceID<-as.vector(metadata$sequenceID)[idx]
+   resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
    saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
                               "_DESeq2_fullResults.rds"))
 
