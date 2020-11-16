@@ -18,14 +18,42 @@ The output is then analysed in R with DESeq2 using the following script:
 
 **_DESeqAnalysis_SALMON.R_**
 
+This produces the following plots:
 
+- basic QC plots: bar plots and density plots of the raw counts,sample-sample clustering heatmap, heatmap of top 500 expressed genes with and without sample clustering, PCA plots coloured by main variables (_salmon_sampleQC.pdf_)
 
-## Comparison with other datasets
+- boxplots of lfc of genes by chr or chr type (_salmon_xxxx_boxplots_expnByChr.pdf_, _salmon_xxxx_boxplots_expnByChrType.pdf_)
 
-Finally I compared the output of Salmon with other publically available datasets of genes with:
+- MAplots (_salmon_xxxx_MAplots_results.pdf_)
 
+- Volcano plots (_salmon_xxxxx_volcanoPlot_xxxxx.pdf_)
+
+- heirarchical clustering of samples by most changed genes (_salmon_xxxxxx_hclust_mostChanged.pdf_)
+
+- barplots of expression of a few individual genes, most changed in each sample (_salmon_xxxx_topGenes_normCounts.pdf_)
+
+## Comparison of the different data sets
+
+The significant genes from each data set are compared by:
 _**compareDatasets.R**_
 
+This script produces the following plots:
+
+- barplots to campare counts of genes per chromosome (_./plots/bar_countsPerChr_xxxxxx.pdf_)
+
+- venn diagrams to compare overlap between datasets (_./plots/venn_xxxxxx.pdf_)
+
+- correlation of the log2 fold change of genes shared between data sets (_./plots/cor_xxxxx.png_)
+
+## Comparison of HiC features
+
+The association of gene expression with different HiC features are compared by:
+_**compareHICfreatures.R**_
+
+
+## Comparison of Tissue and GO term enrichment
+
+_**compareTissueAndGO.R**_
 
 
 ## Publically available datasets
