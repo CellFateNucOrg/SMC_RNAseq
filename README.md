@@ -20,17 +20,17 @@ The output is then analysed in R with DESeq2 using the following script:
 
 This produces the following plots:
 
-- basic QC plots: bar plots and density plots of the raw counts,sample-sample clustering heatmap, heatmap of top 500 expressed genes with and without sample clustering, PCA plots coloured by main variables (_salmon_sampleQC.pdf_)
+- basic QC plots: bar plots and density plots of the raw counts,sample-sample clustering heatmap, heatmap of top 500 expressed genes with and without sample clustering, PCA plots coloured by main variables (_./plots/salmon_sampleQC.pdf_)
 
-- boxplots of lfc of genes by chr or chr type (_salmon_xxxx_boxplots_expnByChr.pdf_, _salmon_xxxx_boxplots_expnByChrType.pdf_)
+- boxplots of lfc of genes by chr or chr type (_./plots/salmon_xxxx_boxplots_expnByChr.pdf_, _./plots/salmon_xxxx_boxplots_expnByChrType.pdf_)
 
-- MAplots (_salmon_xxxx_MAplots_results.pdf_)
+- MAplots (_./plots/salmon_xxxx_MAplots_results.pdf_)
 
-- Volcano plots (_salmon_xxxxx_volcanoPlot_xxxxx.pdf_)
+- Volcano plots (_./plots/salmon_xxxxx_volcanoPlot_xxxxx.pdf_)
 
-- heirarchical clustering of samples by most changed genes (_salmon_xxxxxx_hclust_mostChanged.pdf_)
+- heirarchical clustering of samples by most changed genes (_./plots/salmon_xxxxxx_hclust_mostChanged.pdf_)
 
-- barplots of expression of a few individual genes, most changed in each sample (_salmon_xxxx_topGenes_normCounts.pdf_)
+- barplots of expression of a few individual genes, most changed in each sample (_./plots/salmon_xxxx_topGenes_normCounts.pdf_)
 
 ## Comparison of the different data sets
 
