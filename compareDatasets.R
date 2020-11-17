@@ -94,7 +94,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_upGenes_",
 
 
 
-## upregulated genes
+## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
@@ -130,11 +130,23 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_downGenes_",
 ########
 ## significantly changed count - barplot
 ########
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                                                      namePadjCol="padj",
+                                                                      nameLfcCol="log2FoldChange",
+                                                                      direction="both",
+                                                                      chr="all", nameChrCol="chr"))
+}
+
 sigPerChr<-lapply(sigTables, "[", ,"chr")
 sigPerChr<-as.data.frame(do.call(rbind,lapply(sigPerChr,table)))
 sigPerChr$SMC<-rownames(sigPerChr)
 sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
 sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
+
 
 p1<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC)) +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
@@ -161,11 +173,13 @@ for (grp in groupsOI){
                                                       nameChrCol="chr"))
 }
 
+
 sigPerChr<-lapply(sigTables, "[", ,"chr")
 sigPerChr<-as.data.frame(do.call(rbind,lapply(sigPerChr,table)))
 sigPerChr$SMC<-rownames(sigPerChr)
 sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
 sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
+ymax<-max(sigPerChr$genes)
 
 p2<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC)) +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
@@ -197,12 +211,14 @@ sigPerChr$SMC<-rownames(sigPerChr)
 sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
 sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
 
-p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC)) +
+p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) +
+  facet_grid(cols=vars(SMC), switch="x") +
   geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
-  geom_text(aes(label=genes), vjust=-0.2, color="black",
+  geom_text(aes(label=genes), vjust=1.2, color="black",
             position = position_dodge(0.9), size=3) + ylab("Number of genes") +
   ggtitle("Number of significantly downregulated genes per chromosome")  +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2)
+  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+  scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/bar_countsPerChr_",paste(groupsOI,
@@ -232,20 +248,28 @@ combnTable<-combn(1:length(groupsOI),m=2)
 # all genes
 geneTable<-na.omit(geneTable)
 
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-min(geneTable[,lfcCols])*1.1
+maxScale<-max(geneTable[,lfcCols])*1.1
+
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
   png(file=paste0(outPath, "/plots/cor_allGenes_",grp1,"_",grp2,".png"), width=5,
       height=5, units="in", res=150)
-  minScale<-min(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
-  maxScale<-max(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
-  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=1,
-       cex=0.5,col="#111111ee",xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
+  #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
        ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
-  title(paste0("All genes ",grp1," vs ", grp2," (R=",Rval,")"))
+  title(paste0("All genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
   dev.off()
 }
 
@@ -257,15 +281,18 @@ for (i in 1:ncol(combnTable)){
   grp2<-groupsOI[combnTable[2,i]]
   png(file=paste0(outPath, "/plots/cor_chrX_",grp1,"_",grp2,".png"), width=5,
       height=5, units="in", res=150)
-  minScale<-min(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
-  maxScale<-max(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
-  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=1,
-       cex=0.5,col="#111111ee",xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
        ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
-  title(paste0("chrX genes ",grp1," vs ", grp2," (R=",Rval,")"))
+  title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
   dev.off()
 }
 
@@ -276,15 +303,18 @@ for (i in 1:ncol(combnTable)){
   grp2<-groupsOI[combnTable[2,i]]
   png(file=paste0(outPath, "/plots/cor_autosomal_",grp1,"_",grp2,".png"), width=5,
       height=5, units="in", res=150)
-  minScale<-min(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
-  maxScale<-max(geneTable[,c(paste0(grp1,"_lfc"),paste0(grp2,"_lfc"))])
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
-  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=1,
-       cex=0.5,col="#111111ee",xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5, col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
        ylim=c(minScale,maxScale))
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  abline(v=0,h=0,col="grey60",lty=3)
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
-  title(paste0("Autosomal genes ",grp1," vs ", grp2," (R=",Rval,")"))
+  title(paste0("Autosomal genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
   dev.off()
 }
 
