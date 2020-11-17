@@ -45,6 +45,6 @@ for (f in starFiles) {
 }
 
 
-countTable$percentRawMapped<-round(100*countTable$salmonNumMap/countTable$rawData,2)
+#countTable$percentRawMapped<-round(100*countTable$salmonNumMap/countTable$rawData,2)
 
 write.table(countTable,file=paste0(outPath,"/qc/readCountsByStage.txt"), col.names=T, row.names=F, quote=F)
