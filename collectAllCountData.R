@@ -4,11 +4,11 @@ library("rjson")
 outPath="."
 
 if(!file.exists(paste0(outPath,"/qc/rawData/readCount.txt"))){
-  system(paste0("./collectFastQCreadCounts.sh ",outPath,"/qc/rawData/readCount.txt"))
+  system(paste0("./collectFastQCreadCounts.sh ",outPath,"/qc/rawData"))
 }
 
 if(!file.exists(paste0(outPath,"/qc/cutadapt/readCount.txt"))){
-  system(paste0("./collectFastQCreadCounts.sh ",outPath,"/qc/cutadapt/readCount.txt"))
+  system(paste0("./collectFastQCreadCounts.sh ",outPath,"/qc/cutadapt"))
 }
 
 rawDataCount<-read.delim(paste0(outPath,"/qc/rawData/readCount.txt"),header=F)
@@ -32,7 +32,6 @@ for (d in salmonDirs){
   countTable$salmonPercentMap[i]<-round(jsonData$percent_mapped,2)
 }
 
-countTable$percentRawMapped<-round(100*countTable$salmonNumMap/countTable$rawData,2)
 
 starFiles<-list.files(path=paste0(outPath,"/bamSTAR"),pattern="_Log\\.final\\.out$")
 
@@ -41,8 +40,11 @@ for (f in starFiles) {
   i<-grep("Uniquely mapped reads number",df$V1)
   j<-grep("Uniquely mapped reads %",df$V1)
   lib<-gsub("_Log.final.out","",f)
-  countTable[countTable$library==lib,"starUniqMap"]<-dfV2[i]
-  countTable[countTable$library==lib,"starPercentUniqMap"]<-dfV2[i]
+  countTable[countTable$library==lib,"starUniqMap"]<-df$V2[i]
+  countTable[countTable$library==lib,"starPercentUniqMap"]<-df$V2[j]
 }
+
+
+countTable$percentRawMapped<-round(100*countTable$salmonNumMap/countTable$rawData,2)
 
 write.table(countTable,file=paste0(outPath,"/qc/readCountsByStage.txt"), col.names=T, row.names=F, quote=F)
