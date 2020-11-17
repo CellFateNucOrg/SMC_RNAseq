@@ -36,10 +36,10 @@ for (d in salmonDirs){
 starFiles<-list.files(path=paste0(outPath,"/bamSTAR"),pattern="_Log\\.final\\.out$")
 
 for (f in starFiles) {
-  df<-read.delim(paste0(outPath,"/bamSTAR/",f),header=F)
+  df<-read.delim(paste0(outPath,"/bamSTAR/",f),header=F,stringsAsFactors=F)
   i<-grep("Uniquely mapped reads number",df$V1)
   j<-grep("Uniquely mapped reads %",df$V1)
-  lib<-gsub("_Log.final.out","",f)
+  lib<-gsub("_Log\\.final\\.out","",f)
   countTable[countTable$library==lib,"starUniqMap"]<-df$V2[i]
   countTable[countTable$library==lib,"starPercentUniqMap"]<-df$V2[j]
 }
