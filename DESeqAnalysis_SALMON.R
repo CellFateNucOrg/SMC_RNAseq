@@ -38,7 +38,6 @@ ce11seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-wierdGenes<-c("WBGene00013172")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -108,7 +107,9 @@ genedf<-as.data.frame(geneGR)
 
 
 # download gene id data from simplemine: https://wormbase.org/tools/mine/simplemine.cgi
+# for entrez ids, load wormbaseID column into https://david.ncifcrf.gov/conversion.jsp
 geneIDs<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/simplemine_WS278_geneID.txt")
+david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
 
 metadata<-inner_join(geneIDs, genedf,by=c("WormBase.Gene.ID"="wormbase")) %>%
   dplyr::select(WormBase.Gene.ID,Public.Name,Sequence.Name,seqnames,start, end, strand) %>%
@@ -116,11 +117,17 @@ metadata<-inner_join(geneIDs, genedf,by=c("WormBase.Gene.ID"="wormbase")) %>%
 
 names(mcols(metadata))<-c("wormbaseID","publicID","sequenceID")
 
+i<-which(metadata$wormbaseID %in% david$From)
+j<-match(metadata$wormbaseID[i],david$From)
+metadata$entrezID<-NA
+metadata$entrezID[i]<-david$To[j]
+
 #seqinfo(metadata)<-wbseqinfo
 seqlevelsStyle(metadata)<-"ucsc"
 seqinfo(metadata)<-ce11seqinfo
 metadata<-sort(metadata)
 
+saveRDS(metadata,paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 ###############################################################
 ### get samples into DESeq2
@@ -326,6 +333,9 @@ for(grp in groupsOI){
    resLFC$start<-as.vector(start(metadata))[idx]
    resLFC$end<-as.vector(end(metadata))[idx]
    resLFC$strand<-as.vector(strand(metadata))[idx]
+   resLFC$publicID<-as.vector(metadata$publicID)[idx]
+   resLFC$sequenceID<-as.vector(metadata$sequenceID)[idx]
+   resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
    saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
                               "_DESeq2_fullResults.rds"))
 
@@ -424,6 +434,17 @@ for(grp in groupsOI){
    export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,grp,
                         "_wt_lfc.bedGraph"),
           format="bedGraph")
+
+
+   forBW<-disjoin(forBG,ignore.strand=T)
+   oldf<-as.data.frame(findOverlaps(forBW,forBG,ignore.strand=T))
+   oldf$scorePerSubBp<-forBG$score[oldf$subjectHits]/width(forBG)[oldf$subjectHits]
+   oldf$scorePerQuery<-width(forBW)[oldf$queryHits]*oldf$scorePerSubBp
+   score<-oldf %>% group_by(queryHits) %>% summarise(score=mean(scorePerQuery))
+   forBW$score<-score$score
+   export(forBW,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+                       "_wt_lfc.bw"),
+          format="bigwig")
 
    #######
    ### make bed file for significant genes
@@ -614,6 +635,10 @@ for(grp in groupsOI){
            names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
    abline(h=0,lty=2,col="blue")
+
+
+
+
    dev.off()
 
 
@@ -817,7 +842,7 @@ for(grp in groupsOI){
    ##### create filtered tables of gene names
    results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
                            "_DESeq2_fullResults.rds"))
-
+   #results<-na.omit(results)
 
 
    nrow(filterResults(results,padj=0.05,lfc=0,"both","all", writeTable=F))

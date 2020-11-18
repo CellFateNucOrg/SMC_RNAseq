@@ -1,499 +1,322 @@
 library(readxl)
 library(ggVennDiagram)
 library(ggplot2)
+library(EnhancedVolcano)
+
 source("functions.R")
 
 outPath="."
-
-salmon<-readRDS(paste0(outPath,"/rds/salmon_DESeq2_fullResults.rds"))
-star<-readRDS(paste0(outPath,"/rds/star_DESeq2_fullResults.rds"))
-quasr<-readRDS(paste0(outPath,"/rds/quasr_DESeq2_fullResults.rds"))
-
 padjVal=0.05
 lfcVal=0.5
 
+fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
-#####################################################
-## compare to public data
-#####################################################
+# extract the strain variable
+strain<-factor(as.character(unique(fileList$sampleName),levels=c("366","382","775","784")))
+SMC<-strain
+levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
 
-kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
-kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
-#download.file(url=kramerURL,destfile=kramerFileName)
-library("readxl")
-
-kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
-names(kramer)
-kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
-
-lfcVal<-0.5
-padjVal<-0.05
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
+controlGrp<-levels(SMC)[1] # control group
+groupsOI<-levels(SMC)[-1]
 
 
-salmonSig<-salmon$wormbase[!is.na(salmon$padj) &
-                             salmon$padj<padjVal &
-                             abs(salmon$log2FoldChange)>lfcVal]
+###########################
+## compare samples
+##########################
 
 
-x<-list(salmon=salmonSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("salmon vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
-
-
-starSig<-star$wormbase[!is.na(star$padj) &
-                         star$padj<padjVal &
-                         star$log2FoldChange< -lfcVal &
-                         star$chr!="chrX"]
-
-x<-list(star=starSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("star vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
+#######
+## venn diagrams
+#######
 
 
-quasrSig<-quasr$wormbase[!is.na(quasr$padj) &
-                           quasr$padj<padjVal &
-                           quasr$log2FoldChange< -lfcVal &
-                           quasr$chr!="chrX"]
+## significantly changed genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
 
-x<-list(quasr=quasrSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                 namePadjCol="padj",
+                                 nameLfcCol="log2FoldChange",
+                                 direction="both",
+                                 chr="all", nameChrCol="chr"))
+}
 
-p3<-ggVennDiagram(x) + ggtitle(label=paste0("quasr vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal))
+
+xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+
+achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
+sigGenes<-lapply(achr, "[", ,"wormbaseID")
+p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_Kramer2015_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_allGenes_",
+                                paste(groupsOI, collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+
+## upregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="gt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
+sigGenes<-lapply(achr, "[", ,"wormbaseID")
+p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_upGenes_",
+                                paste(groupsOI,collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+## downregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="lt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes down: lfc< -", lfcVal, ", padj<",padjVal))
+
+xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+
+achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
+sigGenes<-lapply(achr, "[", ,"wormbaseID")
+p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal down: lfc< -", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_downGenes_",
+                                paste(groupsOI,collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+
+########
+## significantly changed count - barplot
+########
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                                                      namePadjCol="padj",
+                                                                      nameLfcCol="log2FoldChange",
+                                                                      direction="both",
+                                                                      chr="all", nameChrCol="chr"))
+}
+
+sigPerChr<-lapply(sigTables, "[", ,"chr")
+sigPerChr<-as.data.frame(do.call(rbind,lapply(sigPerChr,table)))
+sigPerChr$SMC<-rownames(sigPerChr)
+sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
+sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
+
+
+p1<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC)) +
+  geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
+  geom_text(aes(label=genes), vjust=-0.2, color="black",
+          position = position_dodge(0.9), size=3) + ylab("Number of genes") +
+  ggtitle("Number of significantly changed genes per chromosome")  +
+  theme_minimal() + scale_fill_grey(start=0.8, end=0.2)
+
+
+########
+## up regulated count - barplot
+########
+
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
+                                                      padj=padjVal, lfc=lfcVal,
+                                                      namePadjCol="padj",
+                                                      nameLfcCol="log2FoldChange",
+                                                      direction="gt",
+                                                      chr="all",
+                                                      nameChrCol="chr"))
+}
+
+
+sigPerChr<-lapply(sigTables, "[", ,"chr")
+sigPerChr<-as.data.frame(do.call(rbind,lapply(sigPerChr,table)))
+sigPerChr$SMC<-rownames(sigPerChr)
+sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
+sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
+ymax<-max(sigPerChr$genes)
+
+p2<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC)) +
+  geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
+  geom_text(aes(label=genes), vjust=-0.2, color="black",
+            position = position_dodge(0.9), size=3) + ylab("Number of genes") +
+  ggtitle("Number of significantly upregulated genes per chromosome")  +
+  theme_minimal() + scale_fill_grey(start=0.8, end=0.2)
+
+########
+## down regulated count -barplot
+########
+
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
+                                                                      padj=padjVal, lfc= -lfcVal,
+                                                                      namePadjCol="padj",
+                                                                      nameLfcCol="log2FoldChange",
+                                                                      direction="lt",
+                                                                      chr="all",
+                                                                      nameChrCol="chr"))
+}
+
+sigPerChr<-lapply(sigTables, "[", ,"chr")
+sigPerChr<-as.data.frame(do.call(rbind,lapply(sigPerChr,table)))
+sigPerChr$SMC<-rownames(sigPerChr)
+sigPerChr<-sigPerChr %>% gather(colnames(sigPerChr)[1:6],key=chr, value=genes)
+sigPerChr$chr<-gsub("chr","",sigPerChr$chr)
+
+p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) +
+  facet_grid(cols=vars(SMC), switch="x") +
+  geom_bar(stat="identity",position=position_dodge(),aes(fill=chr), show.legend = FALSE) +
+  geom_text(aes(label=genes), vjust=1.2, color="black",
+            position = position_dodge(0.9), size=3) + ylab("Number of genes") +
+  ggtitle("Number of significantly downregulated genes per chromosome")  +
+  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+  scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/bar_countsPerChr_",paste(groupsOI,
+                                collapse="_"),"_padj",
                                 formatC(padjVal,format="e",digits=0),
-                                "_lfc", formatC(lfcVal,format="e",digits=0),
-                                ".pdf"),
-                plot=p, device="pdf",width=29,height=10,units="cm")
+                                "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=19,height=29,units="cm")
+
+
+
+#########
+## correlation
+#########
+
+geneTable<-NULL
+for (grp in groupsOI){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-inner_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+combnTable<-combn(1:length(groupsOI),m=2)
+# all genes
+geneTable<-na.omit(geneTable)
+
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-min(geneTable[,lfcCols])*1.1
+maxScale<-max(geneTable[,lfcCols])*1.1
+
+for (i in 1:ncol(combnTable)){
+  grp1<-groupsOI[combnTable[1,i]]
+  grp2<-groupsOI[combnTable[2,i]]
+  png(file=paste0(outPath, "/plots/cor_allGenes_",grp1,"_",grp2,".png"), width=5,
+      height=5, units="in", res=150)
+  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
+  #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
+       ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+  abline(bestFitLine,col="red")
+  title(paste0("All genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
+  dev.off()
+}
+
+geneTable<-na.omit(geneTable)
+tmp<-geneTable
+geneTable<-geneTable[geneTable$chr=="chrX",]
+for (i in 1:ncol(combnTable)){
+  grp1<-groupsOI[combnTable[1,i]]
+  grp2<-groupsOI[combnTable[2,i]]
+  png(file=paste0(outPath, "/plots/cor_chrX_",grp1,"_",grp2,".png"), width=5,
+      height=5, units="in", res=150)
+  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
+       ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+  abline(bestFitLine,col="red")
+  title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
+  dev.off()
+}
+
+geneTable<-tmp
+geneTable<-geneTable[geneTable$chr!="chrX",]
+for (i in 1:ncol(combnTable)){
+  grp1<-groupsOI[combnTable[1,i]]
+  grp2<-groupsOI[combnTable[2,i]]
+  png(file=paste0(outPath, "/plots/cor_autosomal_",grp1,"_",grp2,".png"), width=5,
+      height=5, units="in", res=150)
+  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5, col="#11111155",xlab=prettyGeneName(grp1),
+       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
+       ylim=c(minScale,maxScale))
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+  abline(bestFitLine,col="red")
+  title(paste0("Autosomal genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
+  dev.off()
+}
 
 
-
-
-###############################
-## different cutoffs
-###############################
-
-padjVal<-0.05
-lfcVal<-0
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-salmonSig<-salmon$wormbase[!is.na(salmon$padj) &
-                             salmon$padj<padjVal &
-                             abs(salmon$log2FoldChange)>lfcVal]
-
-
-x<-list(salmon=salmonSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("salmon vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
-
-lfcVal<-0.5
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-salmonSig<-salmon$wormbase[!is.na(salmon$padj) &
-                             salmon$padj<padjVal &
-                             abs(salmon$log2FoldChange)>lfcVal]
-
-
-x<-list(salmon=salmonSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("salmon vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
-
-lfcVal<-0.75
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-salmonSig<-salmon$wormbase[!is.na(salmon$padj) &
-                             salmon$padj<padjVal &
-                             abs(salmon$log2FoldChange)>lfcVal]
-
-
-x<-list(salmon=salmonSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p3<-ggVennDiagram(x) + ggtitle(label=paste0("salmon vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal<-1
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-salmonSig<-salmon$wormbase[!is.na(salmon$padj) &
-                             salmon$padj<padjVal &
-                             abs(salmon$log2FoldChange)>lfcVal]
-
-
-x<-list(salmon=salmonSig, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p4<-ggVennDiagram(x) + ggtitle(label=paste0("salmon vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_bestCutoff_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-
-###############################
-## chrX upregulated
-###############################
-
-dim(kramer)
-dim(salmon)
-idx<-match(kramer$Gene_WB_ID, salmon$wormbase)
-kramer$chr<-salmon$chr[idx]
-kramer<-kramer[!is.na(kramer$chr),]
-
-
-padjVal=0.01
-
-lfcVal=0
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-      kramer$dpy27_RNAi_L3_padj < padjVal &
-      kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-      kramer$chr=="chrX"
-kramerdpy27dcc<-kramer[idx,]
-
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-  kramer$dpy21_mutant_L3_padj < padjVal &
-  kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-kramerdpy21dcc<-kramer[idx,]
-
-x<-list(salmon=salmondcc$wormbase, dpy27=kramerdpy27dcc$Gene_WB_ID,
-        dpy21=kramerdpy21dcc$Gene_WB_ID)
-
-p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-
-lfcVal=0.5
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-  kramer$dpy27_RNAi_L3_padj < padjVal &
-  kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-kramerdpy27dcc<-kramer[idx,]
-
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-  kramer$dpy21_mutant_L3_padj < padjVal &
-  kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-
-kramerdpy21dcc<-kramer[idx,]
-
-x<-list(salmon=salmondcc$wormbase, dpy27=kramerdpy27dcc$Gene_WB_ID,
-        dpy21=kramerdpy21dcc$Gene_WB_ID)
-
-p2<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-
-lfcVal=0.75
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-  kramer$dpy27_RNAi_L3_padj < padjVal &
-  kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-kramerdpy27dcc<-kramer[idx,]
-
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-  kramer$dpy21_mutant_L3_padj < padjVal &
-  kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-
-kramerdpy21dcc<-kramer[idx,]
-
-x<-list(salmon=salmondcc$wormbase, dpy27=kramerdpy27dcc$Gene_WB_ID,
-        dpy21=kramerdpy21dcc$Gene_WB_ID)
-
-p3<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-
-lfcVal=1
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-  kramer$dpy27_RNAi_L3_padj < padjVal &
-  kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-kramerdpy27dcc<-kramer[idx,]
-
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-  kramer$dpy21_mutant_L3_padj < padjVal &
-  kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-  kramer$chr=="chrX"
-
-kramerdpy21dcc<-kramer[idx,]
-
-x<-list(salmon=salmondcc$wormbase, dpy27=kramerdpy27dcc$Gene_WB_ID,
-        dpy21=kramerdpy21dcc$Gene_WB_ID)
-
-p4<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_XchrUp_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-
-###############################
-## classical DCC genes
-###############################
-
-pubDCC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_DCCgr.rds")
-pubNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_NDCgr.rds")
-
-
-padjVal=0.01
-lfcVal=0
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.5
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p2<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.75
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p3<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-lfcVal=1
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p4<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_papers_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-padjVal=0.05
-lfcVal=0
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.5
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p2<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.75
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p3<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-lfcVal=1
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, DC=pubDCC$wormbase,
-        nonDC=pubNDC$wormbase)
-p4<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_papers_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-
-
-###############################
-## Jans 2009
-###############################
-
-JansDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_DCgr.rds")
-JansNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_NDCgr.rds")
-
-
-padjVal=0.01
-lfcVal=0
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.5
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p2<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.75
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p3<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-lfcVal=1
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p4<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_Jans2009_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-padjVal=0.05
-lfcVal=0
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.5
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p2<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal=0.75
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p3<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-lfcVal=1
-salmondcc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-x<-list(salmon=salmondcc$wormbase, JansDC=JansDC$wormbase,
-        JansNDC=JansNDC$wormbase)
-p4<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DCC genes: lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_Jans2009_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-1",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
-
-
-###############################
-## Jans 2009 vs Kramer
-###############################
-
-kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
-names(kramer)
-kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
-
-padjVal<-0.05
-lfcVal<-0
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-x<-list(JansDC=JansDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal))
-
-
-x<-list(JansNDC=JansNDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal))
-
-
-lfcVal<-0.5
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-x<-list(JansDC=JansDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p3<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal))
-
-
-
-x<-list(JansNDC=JansNDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-
-p4<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal))
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_Jans2009vKramer2015_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", "0-0.5",".pdf"),
-                plot=p, device="pdf",width=19,height=20,units="cm")
 
