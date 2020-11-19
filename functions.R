@@ -87,7 +87,49 @@ getSignificantGenes<-function(resultsTable, padj=0.05, lfc=0, namePadjCol="padj"
 }
 
 
+#' Convert short gene name to proper format
+#'
+#' Takes a gene name like scc1cs and adds hyphen. Function is based
+#' on finding one or more digits in the name and putting a hyphen
+#' in front of it.
+#' @param geneName Gene name without hyphen, e.g. scc1cs
+#' @return Gene name with hyphen, e.g. scc-1cs
+#' @export
 prettyGeneName<-function(geneName){
   gsub("([[:digit:]]+)","-\\1",geneName)
 }
 
+
+#' Assign GRanges to A/B compartment
+#'
+#' Function takes in a genomic ranges object which you wish to assign,
+#' and a genomic ranges for an eigen vector giving the compartments,
+#' and then adds pcaScore and compartment (A or B) columns to the
+#' metadata of the GRanges object. If strings for the names of the gr
+#' and pca are given a bedgraph will be produced with the AB
+#' assignments of all the genes.
+#' @param gr Genomic ranges object which you wish to assign to A/B compartments
+#' @param pcagr Genomic ranges for eigen vector giving the A/B compartments
+#' @param grName Name of the data in the gr object. Used to output a bedgraph of AB assignments
+#' @param pcaName Name of the data in the pcagr object. Used to output a bedgraph of AB assignments
+#' @return The gr genomic ranges that was input with additional metadata columns of pcaScore and compartment
+assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
+                       outPath="."){
+  ol<-as.data.frame(findOverlaps(gr,pcagr,ignore.strand=T))
+  ol$subjectScore<-pcagr$score[ol$subjectHits]
+  pcaScore<-ol %>% group_by(queryHits)%>% summarise(pcaScore=mean(subjectScore,na.rm=T))
+
+  gr$pcaScore[pcaScore$queryHits]<-pcaScore$pcaScore
+  gr$compartment<-as.factor(ifelse(gr$pcaScore>0,"B","A"))
+  idx<-is.na(gr$pcaScore)
+  print(paste0(sum(idx)," genes have no overlapping PCA bin"))
+  gr<-gr[! idx ]
+  forBG<-gr
+  forBG$score<-ifelse(forBG$compartment=="A",1,-1)
+  if(!(is.null(grName) | is.null(pcaName))){
+    export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
+                            "__Compartments_",pcaName, ".bedGraph"),
+           format="bedGraph")
+  }
+  return(gr)
+}
