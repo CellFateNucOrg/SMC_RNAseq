@@ -20,9 +20,10 @@ library(ggpubr)
 # get funciton for converting gene names from WBID to publicID
 source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
 source("functions.R")
-###############################################################
+####
 ### some variables
-###############################################################
+####
+plotPDFs=F
 fileNamePrefix="salmon_"
 outPath="."
 genomeVer="WS275"
@@ -61,9 +62,10 @@ controlGrp<-levels(sampleTable$SMC)[1] # control group
 groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to control
 
 
-###############################################################
+# Create metadata object --------------------------------------------------
+###############################################################-
 ### create metadata
-###############################################################
+###############################################################-
 
 if(!file.exists(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.",
                        genomeVer, ".annotations.sqlite"))){
@@ -129,9 +131,11 @@ metadata<-sort(metadata)
 
 saveRDS(metadata,paste0(outPath,"/wbGeneGR_WS275.rds"))
 
-###############################################################
-### get samples into DESeq2
-###############################################################
+###############################################################-
+# Import into DESeq2 ------------------------------------------------------
+###############################################################-
+
+
 
 # import the count matrices
 txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
@@ -143,9 +147,9 @@ dds <- DESeqDataSetFromTximport(txi=txi,
 
 
 
-###############################################################
+###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
-###############################################################
+###############################################################-
 
 #dds<-collapseReplicates(dds,groupby=samples$sampleID,renameCols=T)
 #dds <- DESeq(dds)
@@ -171,10 +175,10 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 dds<-DESeq(dds)
 
 
+######################################################-
+# Basic sample stats ------------------------------------------------------
+######################################################-
 
-######################################################
-#### Basic sample stats
-######################################################
 
 ## basic sample stats
 sink(file=paste0(outPath,"/txt/", fileNamePrefix,
@@ -192,9 +196,9 @@ sink()
 pdf(file=paste0(outPath,"/plots/",fileNamePrefix,
                 "sampleQC.pdf"), width=8,height=8,paper="a4")
 
-#########
-## sample counts summary: boxplots and density plots
-########
+#######-
+# sample counts summary: boxplots and density plots -----------------------
+#######-
 ## box plots
 epsilon <- 1 # pseudo-count to avoid problems with log(0)
 #df<-as.data.frame(log2(counts(dds) + epsilon))
@@ -216,15 +220,15 @@ legend("topright", legend=colData(dds)$sampleName, col=as.factor(colData(dds)$sa
 
 
 
-#########
-## plot dispersion estimates
-#########
+#########-
+# dispersion estimates ----------------------------------------------------
+#########-
 plotDispEsts(dds)
 
 
-#########
-### sample to sample heatmap
-#########
+#########-
+# sample to sample heatmap ------------------------------------------------
+#########-
 vsd <- vst(dds, blind=TRUE)
 colnames(vsd)<-colData(dds)$sampleName
 sampleDists <- dist(t(assay(vsd)))
@@ -237,9 +241,9 @@ pheatmap(sampleDistMatrix,
          clustering_distance_cols=sampleDists,
          col=colors)
 
-#########
-## Heatmap of most highly expressed genes
-#########
+#########-
+# Heatmap - most highly expressed genes -----------------------------------
+#########-
 select <- order(rowMeans(counts(dds,normalized=TRUE)),
                 decreasing=TRUE)[1:500]
 df <- as.data.frame(colData(dds)[,c("strain","replicate","lane")])
@@ -250,9 +254,9 @@ pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_co
 
 
 
-###########
-## pca
-###########
+###########-
+# pca ---------------------------------------------------------------------
+###########-
 p1<-plotPCA(vsd, intgroup=c("strain"))
 print(p1)
 p2<-plotPCA(vsd, intgroup=c("replicate"))
@@ -265,9 +269,9 @@ dev.off()
 
 
 
-##########
-## pairwise correlation between genes in different replicates
-##########
+##########-
+# pairwise correlation between genes in different replicates --------------
+##########-
 #Define a function to draw a scatter plot for a pair of variables (samples) with density colors
 plotFun <- function(x,y){
    dns <- densCols(x,y);
@@ -284,18 +288,22 @@ corFun <- function(x,y){
 df<-as.data.frame(log2(counts(dds) + epsilon))
 colnames(df)<-colData(dds)$sampleName
 for (grp in c(controlGrp,groupsOI)){
-   png(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.png"),
+   if(plotPDFs==T){
+      pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.pdf"),
+          width=8,height=8,units="in",paper="a4")
+   } else {
+      png(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.png"),
        width=8,height=8,units="in",res=150)
+   }
    idx<-colData(dds)$SMC %in% c(grp)
    pairs(df[,idx], panel=plotFun, lower.panel=corFun, labels=colnames(df)[idx], main=grp)
    dev.off()
 }
 
 
-
-##############################################################
-### get significant genes
-###############################################################
+##############################################################-
+# Significant genes -------------------------------------------------------
+##############################################################-
 
 
 pThresh=0.05
@@ -354,9 +362,9 @@ for(grp in groupsOI){
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
                    "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
 
-   #######
-   ## plot results filtering threshold
-   #######
+   #######-
+   # plot results filtering threshold ----------------------------------------
+   #######-
    plot(metadata(resLFC)$filterNumRej,
         type="b", ylab="number of rejections",
         xlab="quantiles of filter",main="Threshold for independant filtering of results")
@@ -366,9 +374,9 @@ for(grp in groupsOI){
                                    round(metadata(resLFC)$filterThreshold,2)))
 
 
-   ##########
-   ## heirarchical clustering of most significantly changed genes
-   ##########
+   ##########-
+   # heirarchical clustering of most significantly changed genes -------------
+   ##########-
    # select gene names based on FDR (5%)
    gene.kept <- rownames(resLFC)[resLFC$padj <= pThresh & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>0.5]
 
@@ -395,9 +403,9 @@ for(grp in groupsOI){
    dev.off()
 
 
-   ##########
-   ## plot individual genes
-   ##########
+   ##########-
+   # plot individual genes ---------------------------------------------------
+   ##########-
 
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
                    "_topGenes_normCounts.pdf"), width=8,height=11,paper="a4")
@@ -412,9 +420,9 @@ for(grp in groupsOI){
    dev.off()
 
 
-   ##########
-   # make GRanges for LogFoldChanges for bigwig and bed
-   ##########
+   ##########-
+   # make GRanges for LFC ----------------------------------------------------
+   ##########-
    #remove nas
    resGR<-GenomicRanges::GRanges(seqnames=resLFC$chr,
                                  IRanges::IRanges(start=resLFC$start,
@@ -446,9 +454,9 @@ for(grp in groupsOI){
                        "_wt_lfc.bw"),
           format="bigwig")
 
-   #######
-   ### make bed file for significant genes
-   #######
+   #######-
+   # bed file for significant genes ------------------------------------------
+   #######-
 
    idx<-which(resGR$padj<0.05)
    forBed<-resGR[idx]
@@ -467,9 +475,9 @@ for(grp in groupsOI){
           format="bed")
 
 
-   #######
-   # average bw tracks (Use STAR tracks for this)
-   ######
+   #######-
+   # Average STAR bigwig tracks ----------------------------------------------
+   ######-
 
    #biolSamples<-unique(sampleTable$SMC)
    biolSamples<-c(grp,controlGrp)
@@ -530,9 +538,10 @@ for(grp in groupsOI){
 
 
 
-   ###########
+   # MAplots -----------------------------------------------------------------
+   ###########-
    # MAplot ALL genes
-   ############
+   ############-
 
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
                    "_MAplots_results.pdf"), width=5,height=5,paper="a4")
@@ -542,9 +551,9 @@ for(grp in groupsOI){
    plotMA(resLFC, main=paste0(grp," apeglm shrunk LFC, threshold=", pThresh), ylim=c(-3,3), alpha=pThresh)
    #plotCounts(dds, gene=which.min(res$padj), intgroup="sampleType")
 
-   #############
+   #############-
    # MAplot X chr genes
-   #############
+   #############-
 
    chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
    chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
@@ -561,9 +570,9 @@ for(grp in groupsOI){
 
 
 
-   #############
+   #############-
    # MAplotautosomal genes
-   #############
+   #############-
 
    autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
    autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
@@ -574,9 +583,11 @@ for(grp in groupsOI){
 
    dev.off()
 
-   #############
+
+   # Fisher tests ------------------------------------------------------------
+   #############-
    # Fisher test of number of up and down genes on X v autosomes
-   #############
+   #############-
 
    sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
                     "_logfile.txt"),append=TRUE, type="output")
@@ -590,9 +601,9 @@ for(grp in groupsOI){
    print(fisher.test(upVdownXvA))
 
 
-   #############
+   #############-
    # Fisher test of number of differentially expressed genes on X v autosomes
-   #############
+   #############-
 
    testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
                         dim(autosomalRes)[1],
@@ -603,9 +614,11 @@ for(grp in groupsOI){
    print(fisher.test(testEnrich))
    sink()
 
-   #############
+
+   # boxplots X vs autosomes -------------------------------------------------
+   #############-
    # Box plot by X v autosomes
-   #############
+   #############-
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
                    "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
 
@@ -621,9 +634,9 @@ for(grp in groupsOI){
    dev.off()
 
 
-   #############
+   #############-
    # Box plot by chromosome
-   #############
+   #############-
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
                    "_boxPlots_expnByChr.pdf"), width=8,height=5,paper="a4")
    chrName<-factor(resLFC$chr)
@@ -642,9 +655,9 @@ for(grp in groupsOI){
    dev.off()
 
 
-   #############
-   # Volcano plot
-   #############
+   #############-
+   # Volcano plots -----------------------------------------------------------
+   #############-
    #https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html
    #all black plot for manual changing of colours.
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
@@ -683,10 +696,15 @@ for(grp in groupsOI){
                    colAlpha=0.5,
                    pointSize = 1.0)
    #dev.off()
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_allGenes.pdf"), plot=p1,
+             device="pdf",path=outPath, width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                           "_volcanoPlot_allGenes.png"), plot=p1,
           device="png",path=outPath, width=12,height=12,units="cm")
-
+   }
 
    resByChr<-resLFC[order(resLFC$chr),]
    # create custom key-value pairs for 'low', 'chrX', 'autosome' expression by fold-change
@@ -735,10 +753,15 @@ for(grp in groupsOI){
                    colAlpha=0.5,
                    pointSize = 1.0)
    #dev.off()
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_autVchrX.pdf"), plot=p2,
+             device="pdf",path=outPath,width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                           "_volcanoPlot_autVchrX.png"), plot=p2,
           device="png",path=outPath,width=12,height=12,units="cm")
-
+   }
    idx<-resByChr$chr=="chrX"
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
    #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
@@ -766,10 +789,15 @@ for(grp in groupsOI){
                    colAlpha=0.5,
                    pointSize=1.0)
    #dev.off()
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-   "_volcanoPlot_chrX.png"), plot=p3,
-   device="png",path=outPath,width=12,height=12,units="cm")
-
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   "_volcanoPlot_chrX.pdf"), plot=p3,
+   device="pdf",path=outPath,width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_chrX.png"), plot=p3,
+             device="png",path=outPath,width=12,height=12,units="cm")
+   }
 
 
    idx<-resByChr$chr!="chrX"
@@ -801,10 +829,15 @@ for(grp in groupsOI){
                    colAlpha=0.5,
                    pointSize=1.0)
    #dev.off()
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   if (plotPDFs==T) {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_autosomes.pdf"), plot=p4,
+             device="pdf",path=outPath,width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                       "_volcanoPlot_autosomes.png"), plot=p4,
           device="png",path=outPath,width=12,height=12,units="cm")
-
+   }
 
 
    summaryByChr<-function(resLFC,pThresh,LFCthresh) {

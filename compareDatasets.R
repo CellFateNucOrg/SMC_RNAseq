@@ -2,12 +2,14 @@ library(readxl)
 library(ggVennDiagram)
 library(ggplot2)
 library(EnhancedVolcano)
+library(dplyr)
 
 source("functions.R")
 
 outPath="."
 padjVal=0.05
 lfcVal=0.5
+plotPDFs=T
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -247,16 +249,26 @@ for (grp in groupsOI){
 combnTable<-combn(1:length(groupsOI),m=2)
 # all genes
 geneTable<-na.omit(geneTable)
+gt<-geneTable[geneTable$kle2cs_lfc<1 & geneTable$scc1cs_lfc>2,]
+dim(gt)
+david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
+showPeter<-david[david$From %in% gt$wormbaseID,]
+write.table(showPeter,file=paste0(outPath,"/txt/klelt1_sccgt2.tsv"),sep="\t")
 
 lfcCols<-grep("_lfc$",names(geneTable))
 minScale<-min(geneTable[,lfcCols])*1.1
 maxScale<-max(geneTable[,lfcCols])*1.1
 
+if(plotPDFs==T){
+  pdf(file=paste0(outPath, "/plots/cor_allGenes.pdf"), width=5, height=5, paper="a4")
+}
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
-  png(file=paste0(outPath, "/plots/cor_allGenes_",grp1,"_",grp2,".png"), width=5,
-      height=5, units="in", res=150)
+
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/cor_allGenes_",grp1,"_",grp2,".png"), width=5, height=5, units="in", res=150)
+  }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
   #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
   #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
@@ -270,7 +282,9 @@ for (i in 1:ncol(combnTable)){
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
   title(paste0("All genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
-  dev.off()
+  if(plotPDFs==F){
+    dev.off()
+  }
 }
 
 geneTable<-na.omit(geneTable)
@@ -279,8 +293,10 @@ geneTable<-geneTable[geneTable$chr=="chrX",]
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
-  png(file=paste0(outPath, "/plots/cor_chrX_",grp1,"_",grp2,".png"), width=5,
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/cor_chrX_",grp1,"_",grp2,".png"), width=5,
       height=5, units="in", res=150)
+  }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
   #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
   #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
@@ -293,7 +309,9 @@ for (i in 1:ncol(combnTable)){
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
   title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
-  dev.off()
+  if(plotPDFs==F){
+    dev.off()
+  }
 }
 
 geneTable<-tmp
@@ -301,8 +319,9 @@ geneTable<-geneTable[geneTable$chr!="chrX",]
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
-  png(file=paste0(outPath, "/plots/cor_autosomal_",grp1,"_",grp2,".png"), width=5,
-      height=5, units="in", res=150)
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/cor_autosomal_",grp1,"_",grp2,".png"), width=5,height=5, units="in", res=150)
+  }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
   plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
        cex=0.5, col="#11111155",xlab=prettyGeneName(grp1),
@@ -315,8 +334,11 @@ for (i in 1:ncol(combnTable)){
   bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
   abline(bestFitLine,col="red")
   title(paste0("Autosomal genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
-  dev.off()
+  if(plotPDFs==F){
+    dev.off()
+  }
 }
 
-
-
+if(plotPDFs==T){
+  dev.off()
+}
