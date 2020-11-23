@@ -200,7 +200,7 @@ lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
 for (grp in groupsOI){
-  print(paste(grp,length(sigGenes),"genes"))
+  print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",grp,"_upGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
 
@@ -222,7 +222,7 @@ lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
 for (grp in groupsOI){
-  print(paste(grp,length(sigGenes),"genes"))
+  print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",grp,"_downGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
 

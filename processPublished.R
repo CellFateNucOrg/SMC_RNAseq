@@ -164,3 +164,29 @@ write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F
             col.names=T,quote=F,sep="\t")
 
 file.remove(meeuseFileName)
+
+
+
+###############-
+# Garrigues 2019 - Heatshock L2 -------------------------------------------
+###############-
+
+garriguesURL<-"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/bin/elife-51139-supp2.xlsx"
+garriguesFileName<-"elife-51139-supp2.xlsx"
+
+download.file(url=garriguesURL,destfile=garriguesFileName)
+
+garrigues<-readxl::read_excel(garriguesFileName,na="NA")
+garrigues<-garrigues[! is.na(garrigues[,"P-adj"]),]
+
+hsUP<-getSignificantGenes(garrigues, padj=0.05, lfc=1,
+                          namePadjCol="P-adj",
+                          nameLfcCol="log2(FC)", direction="gt")
+hsUP
+saveRDS(hsUP,file="hsUp_garrigues2019.rds")
+
+hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=-1,
+                          namePadjCol="P-adj",
+                          nameLfcCol="log2(FC)", direction="lt")
+hsDOWN
+saveRDS(hsDOWN,file="hsDown_garrigues2019.rds")
