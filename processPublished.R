@@ -190,3 +190,5 @@ hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=-1,
                           nameLfcCol="log2(FC)", direction="lt")
 hsDOWN
 saveRDS(hsDOWN,file="hsDown_garrigues2019.rds")
+
+file.remove(garriguesFileName)
