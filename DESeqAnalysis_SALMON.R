@@ -985,7 +985,7 @@ for(grp in groupsOI){
 
 
    #### heat shock genes
-   myCols<-c("#777777EE","red","red") # background, dataset1, dataset2
+   myCols<-c("#11111100","red","red") # background, dataset1, dataset2
    keyvals<-rep(myCols[1], nrow(salmon))
    names(keyvals)<-rep('Other',nrow(salmon))
    idx<-salmon$wormbaseID %in% hsUp$WormBase.ID | salmon$wormbaseID %in% hsDown$WormBase.ID
