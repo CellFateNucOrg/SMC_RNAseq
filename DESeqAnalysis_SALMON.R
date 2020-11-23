@@ -311,11 +311,9 @@ LFCthresh=0
 #res=list()
 #resLFC=list()
 
-####### remove oscillating genes!
-oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
-                        stringsAsFactors=F)
 
-fileNamePrefix="noOsc_"
+
+fileNamePrefix="salmon_"
 for(grp in groupsOI){
    res<-results(dds,contrast=c("SMC",grp,controlGrp))
    sink(file=paste0(outPath,"/txt/",fileNamePrefix, grp,
@@ -905,5 +903,129 @@ for(grp in groupsOI){
                                   formatC(lfcVal,format="e",digits=0),"_p",
                                   formatC(padjVal,format="e",digits=0),
                                   "_gr.rds"))
+}
+
+
+
+# Volcano - colour by other datasets --------------------------------------
+
+
+
+oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+                        stringsAsFactors=F)
+
+hsUp<-readRDS("hsUp_garrigues2019.rds")
+hsDown<-readRDS("hsDown_garrigues2019.rds")
+
+padjVal=0.05
+lfcVal=0.5
+
+#grp=groupsOI[3]
+
+for(grp in groupsOI){
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+
+   #### oscillating genes
+   keyvals<-rep('black', nrow(salmon))
+   names(keyvals)<-rep('Other',nrow(salmon))
+   idx<-salmon$wormbaseID %in% oscillating$WB_ID
+   keyvals[idx]<-'red'
+   names(keyvals)[idx]<-"Oscillating"
+   sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
+                            salmon$log2FoldChange>lfcVal,
+                            keyvals=="red"), na.rm=T)==3, na.rm=T)
+   sigDown<-sum(rowSums(cbind(salmon$padj< padjVal,
+                              salmon$log2FoldChange<lfcVal,
+                              keyvals=="red"), na.rm=T)==3, na.rm=T)
+   p1<-EnhancedVolcano(salmon,
+                       lab=salmon$publicID,
+                       labSize=0.5,
+                       labCol="#11111100",
+                       x="log2FoldChange",
+                       y="padj",
+                       selectLab=salmon$publicID[12366],
+                       xlim=c(-5.5,5.5),
+                       ylim=c(0,65),
+                       title= paste0(grp," vs ", controlGrp),
+                       subtitle=NULL,
+                       caption = paste0(sum(keyvals=="red"), ' oscillating genes (Meeuse 2020). ',sigUp, " up, ",sigDown," down."),
+                       captionLabSize = 12,
+                       pCutoff=padjVal,
+                       FCcutoff=lfcVal,
+                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                       ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                       #.legend=c('NS','P & Log2 FC'),
+                       #legendLabels=c('NS', expression(p-value<pThresh~and~log[2]~FC>1)),
+                       legendPosition = 'top',
+                       legendLabSize = 12,
+                       legendIconSize = 3.0,
+                       axisLabSize=14,
+                       colCustom=keyvals,
+                       #col = c("black", "red"),
+                       colAlpha=0.5,
+                       pointSize = 1.0)
+   #dev.off()
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_oscillatingGenes.pdf"), plot=p1,
+             device="pdf",path=outPath, width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_oscillatingGenes.png"), plot=p1,
+             device="png",path=outPath, width=12,height=12,units="cm")
+   }
+
+
+
+   #### heat shock genes
+   myCols<-c("#777777EE","red","red") # background, dataset1, dataset2
+   keyvals<-rep(myCols[1], nrow(salmon))
+   names(keyvals)<-rep('Other',nrow(salmon))
+   idx<-salmon$wormbaseID %in% hsUp$WormBase.ID | salmon$wormbaseID %in% hsDown$WormBase.ID
+   keyvals[idx]<-myCols[2]
+   names(keyvals)[idx]<-"Heatshock"
+   sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
+                            salmon$log2FoldChange>lfcVal,
+                            keyvals==myCols[2]), na.rm=T)==3, na.rm=T)
+   sigDown<-sum(rowSums(cbind(salmon$padj< padjVal,
+                              salmon$log2FoldChange< -lfcVal,
+                              keyvals==myCols[2]), na.rm=T)==3, na.rm=T)
+   p1<-EnhancedVolcano(salmon,
+                       lab=salmon$publicID,
+                       labSize=0.5,
+                       labCol=myCols[1],
+                       x="log2FoldChange",
+                       y="padj",
+                       selectLab=salmon$publicID[12366],
+                       xlim=c(-5.5,5.5),
+                       ylim=c(0,65),
+                       title= paste0(grp," vs ", controlGrp),
+                       subtitle=NULL,
+                       caption = paste0(sum(keyvals==myCols[2]), ' heatshock genes (Garrigues 2019). ',sigUp, " up, ",sigDown," down."),
+                       captionLabSize = 12,
+                       pCutoff=padjVal,
+                       FCcutoff=lfcVal,
+                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                       ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                       #.legend=c('NS','P & Log2 FC'),
+                       #legendLabels=c('NS', expression(p-value<pThresh~and~log[2]~FC>1)),
+                       legendPosition = 'top',
+                       legendLabSize = 12,
+                       legendIconSize = 3.0,
+                       axisLabSize=14,
+                       colCustom=keyvals,
+                       #col = c("black", "red"),
+                       colAlpha=0.5,
+                       pointSize = 1.0)
+   #dev.off()
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_hsGenes.pdf"), plot=p1,
+             device="pdf",path=outPath, width=12,height=12,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_volcanoPlot_hsGenes.png"), plot=p1,
+             device="png",path=outPath, width=12,height=12,units="cm")
+   }
 }
 

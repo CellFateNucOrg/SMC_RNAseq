@@ -171,6 +171,7 @@ file.remove(meeuseFileName)
 # Garrigues 2019 - Heatshock L2 -------------------------------------------
 ###############-
 
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/pdf/elife-51139.pdf
 garriguesURL<-"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/bin/elife-51139-supp2.xlsx"
 garriguesFileName<-"elife-51139-supp2.xlsx"
 
