@@ -25,6 +25,8 @@ source("functions.R")
 ####
 plotPDFs=F
 fileNamePrefix="salmon_"
+filterPrefix=NULL
+filterData=F
 outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
@@ -311,9 +313,15 @@ LFCthresh=0
 #res=list()
 #resLFC=list()
 
+####### filter genes
+if(filterData){
+   oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+                        stringsAsFactors=F)
+   toFilter<-oscillating$WB_ID
 
+   fileNamePrefix=filterPrefix
+}
 
-fileNamePrefix="salmon_"
 for(grp in groupsOI){
    res<-results(dds,contrast=c("SMC",grp,controlGrp))
    sink(file=paste0(outPath,"/txt/",fileNamePrefix, grp,
@@ -348,12 +356,11 @@ for(grp in groupsOI){
    resLFC$sequenceID<-as.vector(metadata$sequenceID)[idx]
    resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
 
-   # remove oscillating genes
-   idx<-resLFC$wormbaseID %in% oscillating$WB_ID
-   resLFC<-resLFC[!idx,]
-
-   idx<-res$wormbaseID %in% oscillating$WB_ID
-   res<-res[!idx,]
+   # remove filtered genes
+   if(filterData){
+      idx<-resLFC$wormbaseID %in% toFilter
+      resLFC<-resLFC[!idx,]
+   }
 
    saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
                               "_DESeq2_fullResults.rds"))
