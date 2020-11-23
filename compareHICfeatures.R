@@ -14,6 +14,7 @@ outPath="."
 padjVal=0.05
 lfcVal=0.5
 plotPDFs=F
+fileNamePrefix="noOsc_"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -56,7 +57,7 @@ pca2<-import.bw("./otherData/N2_5000_DamID_pca2.bw")
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   salmon<-salmon[!is.na(salmon$chr),]
   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
@@ -69,7 +70,7 @@ for (grp in groupsOI){
 
 
 
-pdf(file=paste0(paste0(outPath,"/plots/ABcomp_N2_geneCount_padj",
+pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,"ABcomp_N2_geneCount_padj",
                        padjVal,"_lfc", lfcVal,".pdf")),
     width=19, height=4, paper="a4r")
 par(mfrow=c(1,3))
@@ -169,7 +170,8 @@ p3<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
   scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcomp_N2_countsPerChr_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcomp_N2_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
@@ -234,7 +236,8 @@ p2<-ggplot(sigTbl,aes(x=compartment,y=log2FoldChange,col=updown,fill=compartment
   scale_color_grey(start=0.2,end=0.2,guide=F)
 
 p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcomp_N2_LFC_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcomp_N2_LFC_padj",
                           padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
 
@@ -256,7 +259,7 @@ pcas<-data.frame(SMC=SMC,
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
 
   salmon<-salmon[!is.na(salmon$chr),]
@@ -270,7 +273,8 @@ for (grp in groupsOI){
 
 
 
-pdf(file=paste0(paste0(outPath,"/plots/ABcomp_geneCount_padj",
+pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+                       "ABcomp_geneCount_padj",
                        padjVal,"_lfc", lfcVal,".pdf")),
     width=19, height=4, paper="a4r")
 par(mfrow=c(1,3))
@@ -371,7 +375,8 @@ p3<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
   scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcomp_countsPerChr_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcomp_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
@@ -436,7 +441,8 @@ p2<-ggplot(sigTbl,aes(x=compartment,y=log2FoldChange,col=updown,fill=compartment
   scale_color_grey(start=0.2,end=0.2,guide=F)
 
 p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcomp_LFC_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcomp_LFC_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
 
@@ -458,7 +464,7 @@ pcas<-data.frame(SMC=SMC,
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
   pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
 
@@ -479,7 +485,8 @@ for (grp in groupsOI){
 
 pairedCols<-c(brewer.pal(4,"Paired"))
 
-pdf(file=paste0(paste0(outPath,"/plots/ABcompSwitch_geneCount_padj",
+pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+                       "ABcompSwitch_geneCount_padj",
                        padjVal,"_lfc", lfcVal,".pdf")),
     width=19, height=4, paper="a4r")
 par(mfrow=c(1,3))
@@ -612,13 +619,15 @@ p3a<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
 
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcompSwitch_countsPerChr_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcompSwitch_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
 
 p<-ggpubr::ggarrange(p1a,p2a,p3a,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcompSwitch_countsPerChr_ABBA_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcompSwitch_countsPerChr_ABBA_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
@@ -706,12 +715,14 @@ p2a<-ggplot(sigTbl,aes(x=switch,y=log2FoldChange,col=updown,fill=switch)) +
 
 
 p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcompSwitch_LFC_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcompSwitch_LFC_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
 
 p<-ggpubr::ggarrange(p1a,p2a,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcompSwitch_LFC_ABBA_padj",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "ABcompSwitch_LFC_ABBA_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
 
@@ -739,7 +750,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/ABcompSwitch_LFC_ABBA_padj",
 # par(mfrow=c(3,1))
 # for (grp in groupsOI){
 #   anchors<-keepAnchors
-#   smcRNAseq<-import(paste0(outPath,"/tracks/salmon_",grp,
+#   smcRNAseq<-import(paste0(outPath,"/tracks/",fileNamePrefix,grp,
 #                            "_wt_lfc.bw"),
 #                            format="bigwig")
 #   pdf(file=paste0(outPath,"/plots/anchors_",grp,".pdf"),
@@ -910,26 +921,26 @@ anchors<-reduce(sort(anchors))
 #anchors$region<-1:length(anchors)
 anchors$chr<-seqnames(anchors)
 
-loopsAll<-paste0(outPath,"/tracks/loops.bed")
+loopsAll<-paste0(outPath,"/tracks/",fileNamePrefix,"loops.bed")
 export(anchors,con=loopsAll,format="bed")
 
-loopsX<-paste0(outPath,"/tracks/loopsX.bed")
+loopsX<-paste0(outPath,"/tracks/",fileNamePrefix,"loopsX.bed")
 export(anchors[seqnames(anchors)=="chrX"], con=loopsX,format="bed")
 
-loopsA<-paste0(outPath,"/tracks/loopsA.bed")
+loopsA<-paste0(outPath,"/tracks/",fileNamePrefix,"loopsA.bed")
 export(anchors[seqnames(anchors)!="chrX"], con=loopsA,format="bed")
 
 flankSize<-60000
 
-smcRNAseq<-paste0(outPath,"/tracks/salmon_",groupsOI,
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,groupsOI,
                            "_wt_lfc.bw")
 if(plotPDFs==T){
-  pdf(filename=paste0(outPath,"/plots/anchors-all_flank",flankSize/10000,"kb.pdf"),width=19,
+  pdf(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",flankSize/10000,"kb.pdf"),width=19,
       height=16,units="cm", paper="a4")
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/anchors-all_flank",flankSize/10000,"kb.png"),width=19,
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",flankSize/10000,"kb.png"),width=19,
     height=16,units="cm", res=150)
 }
 
@@ -953,7 +964,7 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/anchors-chrX_flank",flankSize/10000,"kb.png"),width=19,
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-chrX_flank",flankSize/10000,"kb.png"),width=19,
     height=16,units="cm", res=150)
 }
 p<-getPlotSetArray(tracks=c(smcRNAseq),
@@ -969,7 +980,7 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/anchors-autosomal_flank",flankSize/10000,"kb.png"),width=19,
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-autosomal_flank",flankSize/10000,"kb.png"),width=19,
     height=16,units="cm", res=150)
 }
 

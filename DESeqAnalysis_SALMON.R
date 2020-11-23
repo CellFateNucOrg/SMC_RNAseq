@@ -45,7 +45,7 @@ fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=
 
 sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum, sep="_")
 
-fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
+   fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
@@ -311,6 +311,11 @@ LFCthresh=0
 #res=list()
 #resLFC=list()
 
+####### remove oscillating genes!
+oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+                        stringsAsFactors=F)
+
+fileNamePrefix="noOsc_"
 for(grp in groupsOI){
    res<-results(dds,contrast=c("SMC",grp,controlGrp))
    sink(file=paste0(outPath,"/txt/",fileNamePrefix, grp,
@@ -344,6 +349,14 @@ for(grp in groupsOI){
    resLFC$publicID<-as.vector(metadata$publicID)[idx]
    resLFC$sequenceID<-as.vector(metadata$sequenceID)[idx]
    resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
+
+   # remove oscillating genes
+   idx<-resLFC$wormbaseID %in% oscillating$WB_ID
+   resLFC<-resLFC[!idx,]
+
+   idx<-res$wormbaseID %in% oscillating$WB_ID
+   res<-res[!idx,]
+
    saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
                               "_DESeq2_fullResults.rds"))
 
@@ -475,65 +488,57 @@ for(grp in groupsOI){
           format="bed")
 
 
-   #######-
-   # Average STAR bigwig tracks ----------------------------------------------
-   ######-
+   # #######-
+   # # Average STAR bigwig tracks ----------------------------------------------
+   # ######-
+   #
+   # #biolSamples<-unique(sampleTable$SMC)
+   # biolSamples<-c(grp,controlGrp)
+   # avrFiles<-c()
+   # for (biolSample in biolSamples) {
+   #    idx<-which(sampleTable$SMC==biolSample)
+   #    bwFiles<-paste0(outPath, "/tracks/",
+   #                    sampleTable$sampleName[idx],
+   #                    "_rpm.bw")
+   #    wigFile<-paste0(outPath, "/tracks/", unique(sampleTable$SMC[idx]),
+   #                    "_",unique(sampleTable$strain[idx]) ,"_rpm_Avr.wig")
+   #    logwigFile<-gsub("_Avr","_logAvr", wigFile )
+   #
+   #    finalOutputFile<-paste0(outPath,"/tracks/lfc_", grp, "_", controlGrp, "_ce11.bw")
+   #
+   #    if(!file.exists(finalOutputFile)){
+   #       system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
+   #                     " > ", wigFile ))
+   #
+   #       system(paste0("wiggletools offset 1 ", wigFile, " | wiggletools log 2 - >",
+   #                     logwigFile))
+   #
+   #       #wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
+   #       #             dest=gsub("\\.wig$","\\.bw",wigFile))
+   #       #wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
+   #       #            dest=gsub("\\.wig$","\\.bw",logwigFile))
+   #       file.remove(wigFile)
+   #    }
+   #    avrFiles<-c(avrFiles,logwigFile)
+   # }
+   #
+   # # single log fold change track
+   # if(!file.exists(finalOutputFile)){
+   #    system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
+   #                  paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig")))
+   #    wigToBigWig(x=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"),
+   #                seqinfo=wbseqinfo,
+   #                dest=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+   #    bw<-import(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+   #    seqlevelsStyle(bw)<-"ucsc"
+   #    idx<-match(seqlevels(ce11seqinfo),seqlevels(bw))
+   #    seqinfo(bw,new2old=idx)<-ce11seqinfo
+   #    export.bw(bw,finalOutputFile)
+   #    file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
+   #    file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+   #    file.remove(avrFiles)
+   # }
 
-   #biolSamples<-unique(sampleTable$SMC)
-   biolSamples<-c(grp,controlGrp)
-   avrFiles<-c()
-   for (biolSample in biolSamples) {
-      idx<-which(sampleTable$SMC==biolSample)
-      bwFiles<-paste0(outPath, "/tracks/",
-                      sampleTable$sampleName[idx],
-                      "_rpm.bw")
-      wigFile<-paste0(outPath, "/tracks/", unique(sampleTable$SMC[idx]),
-                      "_",unique(sampleTable$strain[idx]) ,"_rpm_Avr.wig")
-      logwigFile<-gsub("_Avr","_logAvr", wigFile )
-
-      finalOutputFile<-paste0(outPath,"/tracks/lfc_", grp, "_", controlGrp, "_ce11.bw")
-
-      if(!file.exists(finalOutputFile)){
-         system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
-                       " > ", wigFile ))
-
-         system(paste0("wiggletools offset 1 ", wigFile, " | wiggletools log 2 - >",
-                       logwigFile))
-
-         #wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
-         #             dest=gsub("\\.wig$","\\.bw",wigFile))
-         #wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
-         #            dest=gsub("\\.wig$","\\.bw",logwigFile))
-         file.remove(wigFile)
-      }
-      avrFiles<-c(avrFiles,logwigFile)
-   }
-
-   # single log fold change track
-   if(!file.exists(finalOutputFile)){
-      system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
-                    paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig")))
-      wigToBigWig(x=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"),
-                  seqinfo=wbseqinfo,
-                  dest=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-      bw<-import(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-      seqlevelsStyle(bw)<-"ucsc"
-      idx<-match(seqlevels(ce11seqinfo),seqlevels(bw))
-      seqinfo(bw,new2old=idx)<-ce11seqinfo
-      export.bw(bw,finalOutputFile)
-      file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
-      file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-      file.remove(avrFiles)
-   }
-
-   #system(paste0("wiggletools diff ",
-   #              gsub("_logAvr","_Avr", paste0(avrFiles,collapse=" "))," > ",
-   #              paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig")))
-
-   #wigToBigWig(x=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"),
-   #            seqinfo=wbseqinfo,
-   #            dest=paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.bw"))
-   #file.remove(paste0(outPath,"/tracks/diff_dpy26cs_dpy26wt.wig"))
 
 
 
@@ -555,7 +560,8 @@ for(grp in groupsOI){
    # MAplot X chr genes
    #############-
 
-   chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
+   #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
+   chrXgenes<-resLFC$wormbaseID[resLFC$chr=="chrX"]
    chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
 
    chrXres05<-chrXres[chrXres$padj<pThresh,]
@@ -573,8 +579,8 @@ for(grp in groupsOI){
    #############-
    # MAplotautosomal genes
    #############-
-
-   autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
+   autosomalGenes<-resLFC$wormbaseID[resLFC$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
+   #autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
    autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
 
    autosomalRes05<- autosomalRes[autosomalRes$padj<pThresh,]
@@ -650,9 +656,7 @@ for(grp in groupsOI){
    abline(h=0,lty=2,col="blue")
 
 
-
-
-   dev.off()
+  dev.off()
 
 
    #############-

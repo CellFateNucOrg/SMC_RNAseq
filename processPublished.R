@@ -14,7 +14,7 @@
 
 library(magrittr)
 
-
+outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
@@ -146,3 +146,21 @@ saveRDS(kramerdpy21dc,file=paste0("kramer2015_chrXup_dpy21_lfc",
 
 
 
+###############-
+#  Meeuse et al 2020 - Oscillating genes ----------------------------------
+###############-
+# Grosshans lab
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7370751/
+
+meeuseURL<-"https://www.embopress.org/action/downloadSupplement?doi=10.15252%2Fmsb.20209498&file=msb209498-sup-0003-DatasetEV1.xlsx"
+meeuseFileName<-"MSB-16-e9498-s003.xlsx"
+
+download.file(url=meeuseURL,destfile=meeuseFileName)
+
+meeuse<-readxl::read_excel(meeuseFileName,col_types=c(rep("text",3),rep("numeric",2),"text"))
+oscillating<-meeuse[meeuse$Class=="Osc",]
+
+write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(meeuseFileName)
