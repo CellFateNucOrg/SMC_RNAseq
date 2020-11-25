@@ -117,7 +117,7 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
                        outPath="."){
   ol<-as.data.frame(findOverlaps(gr,pcagr,ignore.strand=T))
   ol$subjectScore<-pcagr$score[ol$subjectHits]
-  pcaScore<-ol %>% group_by(queryHits)%>% summarise(pcaScore=mean(subjectScore,na.rm=T))
+  pcaScore<-ol %>% group_by(queryHits)%>% dplyr::summarise(pcaScore=mean(subjectScore,na.rm=T))
 
   gr$pcaScore[pcaScore$queryHits]<-pcaScore$pcaScore
   gr$compartment<-as.factor(ifelse(gr$pcaScore>0,"B","A"))
