@@ -45,13 +45,18 @@ repeats_ce11.gr$ID<-paste0("rpt",1:length(repeats_ce11.gr),"_",
                            seqnames(repeats_ce11.gr),":",
                       start(repeats_ce11.gr),"-",end(repeats_ce11.gr))
 
-# bedgraph for Todor
-repeats_bg<-repeats_ce11.gr
-mcols(repeats_bg)<-NULL
-repeats_bg$score<-1
-repeats_bg$name<-repeats_ce11.gr$Alias
-export.bedGraph(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bedgraph"))
-export.bed(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bed"))
+## bedgraph for Todor
+#repeats_bg<-repeats_ce11.gr
+#mcols(repeats_bg)<-NULL
+#repeats_bg$score<-1
+#repeats_bg$name<-repeats_ce11.gr$Alias
+#export.bedGraph(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bedgraph"))
+#export.bed(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bed"))
+#tileWidth=5000
+#tiles<-unlist(tileGenome(seqinfo(Celegans),tilewidth=tileWidth))
+#tiles$score<-countOverlaps(tiles,repeats_bg,ignore.strand=TRUE)
+#export(tiles,paste0(workDir,"/repeats_ce11_dfam_nr_",tileWidth,".bw"),
+#       format="bigwig")
 
 # make wormbase formatted chr names for gff3
 seqlevelsStyle(repeats_ce11.gr)<-"ensembl"

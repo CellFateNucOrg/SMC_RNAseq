@@ -143,7 +143,7 @@ sed -i.bak -e 's/>//g' ${GENOME_DIR}/sequence/decoys_forRepeats.txt
 
 cat  ${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.fa.gz ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz > ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
 
-kmerSize=31
+kmerSize=25
 ${SALMON_SING} salmon index -t ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz -d ${GENOME_DIR}/sequence/decoys_forRepeats.txt -p $nThreads -i ${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize} --keepDuplicates -k $kmerSize
 rm ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
 
@@ -156,10 +156,11 @@ annotFile=${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.gff3
 
 # convert to gtf
 b=(`basename -s .gff3 ${annotFile}`)
-gffread $annotFile -T -o ${annotFile%/*}/${b}.gtf
+gtfFile=${annotFile%/*}/${b}.gtf
+gffread $annotFile -T -o ${gtfFile}
 
 # index genome
 echo "indexing genome..."
 mkdir -p ${GENOME_DIR}/sequence/repeats
-STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence/repeats --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${annotFile} --runThreadN $nThreads --genomeSAindexNbases 12
+STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence/repeats --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${gtfFile} --runThreadN $nThreads --genomeSAindexNbases 12
 
