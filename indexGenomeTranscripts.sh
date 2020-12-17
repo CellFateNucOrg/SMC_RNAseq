@@ -13,7 +13,8 @@ module add vital-it
 module add UHTS/Aligner/STAR/2.7.3a;
 #module add UHTS/Analysis/salmon/0.11.2;
 export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2.1-1.ubuntu18.sif"
-#module add UHTS/Assembler/cufflinks/2.2.1
+module add UHTS/Assembler/cufflinks/2.2.1
+module add R/3.6.1
 
 nThreads=$SLURM_CPUS_PER_TASK
 
@@ -142,10 +143,11 @@ sed -i.bak -e 's/>//g' ${GENOME_DIR}/sequence/decoys_forRepeats.txt
 
 cat  ${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.fa.gz ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz > ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
 
-${SALMON_SING} salmon index -t ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz -d ${GENOME_DIR}/sequence/decoys_forRepeats.txt -p $nThreads -i ${GENOME_DIR}/sequence/${genomeVer}_repeats_index
+kmerSize=31
+${SALMON_SING} salmon index -t ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz -d ${GENOME_DIR}/sequence/decoys_forRepeats.txt -p $nThreads -i ${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize} --keepDuplicates -k $kmerSize
 rm ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
 
-repeatsIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index
+repeatsIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize}
 
 
 ##### STAR index for repeats
