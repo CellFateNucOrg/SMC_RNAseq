@@ -41,6 +41,7 @@ chain <- import(paste0(workDir,"/ce10ToCe11.over.chain"))
 # liftover splits some granges, so need to fuse them again
 repeats_ce11.gr <- unlist(range(liftOver(repeats.gr,chain)))
 table(width(repeats_ce11.gr)-width(repeats.gr)) #checking the differences are minor
+mcols(repeats_ce11.gr)<-mcols(repeats.gr)
 repeats_ce11.gr$ID<-paste0("rpt",1:length(repeats_ce11.gr),"_",
                            seqnames(repeats_ce11.gr),":",
                       start(repeats_ce11.gr),"-",end(repeats_ce11.gr))
@@ -59,7 +60,10 @@ repeats_ce11.gr$ID<-paste0("rpt",1:length(repeats_ce11.gr),"_",
 #       format="bigwig")
 
 # make wormbase formatted chr names for gff3
+seqlevelsStyle(genome)<-"ensembl"
 seqlevelsStyle(repeats_ce11.gr)<-"ensembl"
+seqinfo(repeats_ce11.gr)<-seqinfo(genome)
+genome(repeats_ce11.gr)<-NA
 export.gff3(repeats_ce11.gr, paste0(workDir,"/repeats_ce11_dfam_nr.gff3"))
 
 #file.remove(paste0(workDir,"/ce10ToCe11.over.chain.gz"))
@@ -72,6 +76,21 @@ file.remove(paste0(workDir,"/ce10_dfam.nrph.hits"))
 # get repeat sequences
 gff<-import(paste0(workDir,"/repeats_ce11_dfam_nr.gff3"),format="gff3")
 
+gtfdf<-data.frame(seqname=seqnames(gff),
+                  source=gff$source,
+                  feature=gff$type,
+                  start=start(gff),
+                  end=end(gff),
+                  score=".",
+                  strand=strand(gff),
+                  frame=".",
+                  attribute=paste0('gene_id "',gff$ID,'"; gene_name "', 
+                                   gff$Name,'";'))
+
+write.table(gtfdf,paste0(workDir,"/repeats_ce11_dfam_nr.gtf"),sep="\t",
+            col.names=F,row.names=F, quote=F)
+
+
 seqlevelsStyle(genome)<-"ensembl"
 rptSeq<-getSeq(genome,gff)
 
@@ -80,3 +99,8 @@ names(rptSeq)<-paste(gff$ID,gff$Name,gff$Alias,sep=";")
 writeXStringSet(rptSeq, paste0(workDir,"/repeats_ce11_dfam_nr.fa.gz"),
                 append=FALSE, compress="gzip", format="fasta")
 
+
+#### make chrom.sizes
+chromSizes<-data.frame(seqnames=seqnames(genome),seqlengths=seqlengths(genome))
+write.table(chromSizes,file=paste0(workDir,"/ws235.chrom.sizes"),col.names=F,
+            row.names=F,sep="\t",quote=F)

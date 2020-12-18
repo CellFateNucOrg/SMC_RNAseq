@@ -15,6 +15,7 @@ module add UHTS/Aligner/STAR/2.7.3a;
 export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2.1-1.ubuntu18.sif"
 module add UHTS/Assembler/cufflinks/2.2.1
 module add R/3.6.1
+module add UHTS/Aligner/bwa/0.7.17;
 
 nThreads=$SLURM_CPUS_PER_TASK
 
@@ -22,6 +23,7 @@ nThreads=$SLURM_CPUS_PER_TASK
 # prepare directories
 ############
 
+mRNAonly=false
 genomeVer=WS275
 GENOME_DIR=${HOME}/genomeVer/${genomeVer}
 mkdir -p ${GENOME_DIR}/sequence
@@ -58,23 +60,23 @@ mkdir -p ${GENOME_DIR}/annotation
 #STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${annotFile} --runThreadN $nThreads --genomeSAindexNbases 12 
 #
 ###### STAR index for repeats
-#genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
-#annotFile=${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.gff3
-#
-## convert to gtf
-#b=(`basename -s .gff3 ${annotFile}`)
-#gffread $annotFile -T -o ${annotFile%/*}/${b}.gtf
-#
-##index genome
-#echo "indexing genome..."
-#mkdir -p ${GENOME_DIR}/sequence/repeats
-#STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence/repeats --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${annotFile} --runThreadN $nThreads --genomeSAindexNbases 12
-#
-#
-#
-#
-#
-#
+## get repeat annotation from dfam
+Rscript getRepeatData.R ${GENOME_DIR}/annotation
+
+annotFile=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations.gtf
+annotFile_rpt=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
+genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
+rptFile=${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.gtf
+
+cat $annotFile $rptFile > $annotFile_rpt 
+
+#index genome
+echo "indexing genome..."
+mkdir -p ${GENOME_DIR}/sequence/repeats
+STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence/repeats --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${annotFile_rpt} --runThreadN $nThreads --genomeSAindexNbases 12
+
+
+
 #############3
 ## index for Salmon
 ##############
@@ -124,43 +126,41 @@ mkdir -p ${GENOME_DIR}/annotation
 #ncRNAindex=${GENOME_DIR}/sequence/${genomeVer}_ncRNA_index
 #pseudoIndex=${GENOME_DIR}/sequence/${genomeVer}_pseudogenic_index
 #tnIndex=${GENOME_DIR}/sequence/${genomeVer}_transposon_index
+#
+#
+#
+#
+################
+### Index repeats
+################
+#
+#
+######## Salmon index for repeats
+#curl ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/sequence/transcripts/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz -o ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz
+#
+#grep "^>" <(gunzip -c  ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz) | cut -d " " -f 1 > ${GENOME_DIR}/sequence/decoys_forRepeats.txt
+#sed -i.bak -e 's/>//g' ${GENOME_DIR}/sequence/decoys_forRepeats.txt
+#
+#cat  ${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.fa.gz ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz > ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
+#
+#kmerSize=15
+#${SALMON_SING} salmon index -t ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz -d ${GENOME_DIR}/sequence/decoys_forRepeats.txt -p $nThreads -i ${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize} --keepDuplicates -k $kmerSize
+#rm ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
+#
+#repeatsIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize}
 
 
 
-
-###############
-## Index repeats
-###############
-
-# get repeat annotation from dfam
-Rscript getRepeatData.R ${GENOME_DIR}/annotation
-
-####### Salmon index for repeats
-curl ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/sequence/transcripts/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz -o ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz
-
-grep "^>" <(gunzip -c  ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz) | cut -d " " -f 1 > ${GENOME_DIR}/sequence/decoys_forRepeats.txt
-sed -i.bak -e 's/>//g' ${GENOME_DIR}/sequence/decoys_forRepeats.txt
-
-cat  ${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.fa.gz ${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz > ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
-
-kmerSize=25
-${SALMON_SING} salmon index -t ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz -d ${GENOME_DIR}/sequence/decoys_forRepeats.txt -p $nThreads -i ${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize} --keepDuplicates -k $kmerSize
-rm ${GENOME_DIR}/sequence/repeats_gentrome.fa.gz
-
-repeatsIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize}
-
-
-##### STAR index for repeats
+##### BWA index for repeats
 genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
-annotFile=${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.gff3
 
-# convert to gtf
-b=(`basename -s .gff3 ${annotFile}`)
-gtfFile=${annotFile%/*}/${b}.gtf
-gffread $annotFile -T -o ${gtfFile}
-
+# NOTE: cannot make gtf file for non-coding transcripts becuase of stringent gtf file format requirements.
+# So will do star alignment to normal transcript index.
+# will also try bwa alignment
 # index genome
-echo "indexing genome..."
-mkdir -p ${GENOME_DIR}/sequence/repeats
-STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence/repeats --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${gtfFile} --runThreadN $nThreads --genomeSAindexNbases 12
+if [[ ! -f "${genomeFile}.bwt" ]]
+then
+  echo "indexing genome for bwa..."
+  bwa index $genomeFile 
+fi
 
