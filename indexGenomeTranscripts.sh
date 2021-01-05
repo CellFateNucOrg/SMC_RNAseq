@@ -68,6 +68,7 @@ annotFile_rpt=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotat
 genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
 rptFile=${GENOME_DIR}/annotation/repeats_ce11_dfam_nr.gtf
 
+# combine coding transcriptome and repeat files
 cat $annotFile $rptFile > $annotFile_rpt 
 
 #index genome
