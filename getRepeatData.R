@@ -84,7 +84,7 @@ gtfdf<-data.frame(seqname=seqnames(gff),
                   score=".",
                   strand=strand(gff),
                   frame=".",
-                  attribute=paste0('gene_id "',gff$ID,'"; gene_name "', 
+                  attribute=paste0('gene_id "',gff$ID,'"; gene_name "',
                                    gff$Name,'";'))
 
 write.table(gtfdf,paste0(workDir,"/repeats_ce11_dfam_nr.gtf"),sep="\t",
@@ -104,3 +104,23 @@ writeXStringSet(rptSeq, paste0(workDir,"/repeats_ce11_dfam_nr.fa.gz"),
 chromSizes<-data.frame(seqnames=seqnames(genome),seqlengths=seqlengths(genome))
 write.table(chromSizes,file=paste0(workDir,"/ws235.chrom.sizes"),col.names=F,
             row.names=F,sep="\t",quote=F)
+
+
+# McMurchy2017 types
+fig2data2URL<-"https://elifesciences.org/download/aHR0cHM6Ly9jZG4uZWxpZmVzY2llbmNlcy5vcmcvYXJ0aWNsZXMvMjE2NjYvZWxpZmUtMjE2NjYtZmlnMi1kYXRhMi12My54bHN4/elife-21666-fig2-data2-v3.xlsx?_hash=Vc0gZhYRUq5G8oMoQTJHwwfkDZsgkSAv1k2lEThtEHY%3D"
+mcmurchyFilename="elife-21666-fig2-data2-v3.xlsx"
+
+download.file(url=fig2data2URL, destfile=paste0(workDir,"/",mcmurchyFileName))
+
+mcmurchy<-readxl::read_excel(mcmurchyFilename,sheet="Compiled")
+
+
+gff$repType<-NA
+inMcmurchy<-gff$Name %in% mcmurchy$Family
+idxMM<-match(gff$Name[inMcmurchy],mcmurchy$Family)
+gff$repType[inMcmurchy]<-mcmurchy$Class[idxMM]
+
+saveRDS(gff,paste0(workDir,"/repeats_ce11_dfam_nr.rds"))
+
+write.csv(gff,paste0(workDir,"/repeats_ce11_dfam_nr.csv"), quote=F,
+          row.names=F)

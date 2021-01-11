@@ -25,15 +25,17 @@ makeDirs<-function(path,dirNameList=c()) {
 #' @param chr Include all genes in genome ("all") only those on the X chromosome ("chrX"), or only autosomes ("autosomes")
 #' @param outPath Path to working directory
 #' @param filenamePrefix Text to add to filename
+#' @param writeTable Should results table be automatically saved to a file (default: True)
+#' @param IDcolumnName Name of column containing feature IDs (default: "ID")
 #' @return filtered table of results which is also automatically written to disk
 #' @export
 filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
                         chr="all", outPath=".", filenamePrefix="",
-                        writeTable=T) {
+                        writeTable=T,IDcolName="ID") {
   sigGenes<-getSignificantGenes(resultsTable,padj,lfc,direction=direction,chr=chr)
-  idx<-resultsTable$wormbaseID %in% sigGenes$wormbaseID
+  idx<-resultsTable[,IDcolName] %in% sigGenes[,IDcolName]
   filtTable<-resultsTable[idx,c("baseMean","log2FoldChange","padj",
-                                "wormbaseID","chr","start","end","strand")]
+                                IDcolName,"chr","start","end","strand")]
   if(writeTable){
     if(!dir.exists(paste0(outPath,"/txt"))){
       dir.create(paste0(outPath,"/txt"))
