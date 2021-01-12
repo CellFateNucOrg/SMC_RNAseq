@@ -27,8 +27,14 @@ source("functions.R")
 plotPDFs=F
 fileNamePrefix="BWA_"
 filterPrefix="BWA_rpt_"
+dataset="_random"
 filterData=T
-aggregateData=F
+aggregateData=T
+if(aggregateData){
+  filterPrefix="BWA_rptFam_"
+  dataset="_random_rptFam"
+}
+
 outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
@@ -48,18 +54,14 @@ fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, heade
 
 sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum,
                    fileList$libType, sep="_")
-
-fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union_random.txt")
+fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
-# extract the technical replicate variable
-#sampleTable$replicate<-as.factor(gsub("^[0-9]{3}_", "",sampleTable$sampleName))
 sampleTable$replicate=fileList$repeatNum
 sampleTable$lane=fileList$laneNum
 
 # extract the strain variable
-#sampleTable$strain<-factor(gsub("_HS[1-3]$", "",sampleTable$sampleName),levels=c("500","493"))
 sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("366","382","775","784"))
 sampleTable$SMC<-sampleTable$strain
 levels(sampleTable$SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
@@ -78,6 +80,7 @@ if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))){
 }
 
 metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
+#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
 
 
 ###############################################################-
@@ -89,10 +92,13 @@ sampleTable1$sampleName<-basename(sampleTable$fileName)
 
 # read samples into DESeq2
 dds <- DESeqDataSetFromHTSeqCount(sampleTable=sampleTable1,
-                                directory=dirname(sampleTable1$fileName[1]),
+                    directory=dirname(sampleTable1$fileName[1]),
                                 design=~lane+SMC)
 
-colData(dds)$sampleName<-paste(gsub("_union_random.txt","",sampleTable1$sampleName),sep="_")
+colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
+                                ".txt"), "",
+                                sampleTable1$sampleName),
+                               sep="_")
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -105,7 +111,7 @@ colData(dds)$sampleName<-paste(gsub("_union_random.txt","",sampleTable1$sampleNa
 #   2. estimation of dispersion: estimateDispersions
 #   3. Negative Binomial GLM fitting and Wald statistics: nbinomWaldTest
 #   returns a DESeqDataSet object
-metadata<-md
+
 rownames(dds)<-gsub("Gene:","",rownames(dds))
 
 idx<-match(rownames(dds),metadata$ID)
@@ -115,18 +121,11 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
-#only take expressed genes
-#dds <- dds[ rowSums(counts(dds)) > 1, ]
-#print("Number of expressed genes:")
-#dim(dds)[1]
-#16606 genes from 20127
-
-
 dds<-DESeq(dds)
 
 # remove non-repeat genes
 if(filterData){
-  dds<-dds[grep("rpt",rowData(dds)$gene),]
+  dds<-dds[-grep("WBGene",rowData(dds)$gene),]
   fileNamePrefix<-filterPrefix
 }
 
@@ -183,7 +182,8 @@ plotDispEsts(dds)
 #########-
 # sample to sample heatmap ------------------------------------------------
 #########-
-vsd <- vst(dds, blind=TRUE)
+#vsd <- vst(dds, blind=TRUE)
+vsd <- varianceStabilizingTransformation(dds,blind=TRUE)
 colnames(vsd)<-colData(dds)$sampleName
 sampleDists <- dist(t(assay(vsd)))
 sampleDistMatrix <- as.matrix(sampleDists)
@@ -194,6 +194,7 @@ pheatmap(sampleDistMatrix,
          clustering_distance_rows=sampleDists,
          clustering_distance_cols=sampleDists,
          col=colors)
+
 
 #########-
 # Heatmap - most highly expressed genes -----------------------------------

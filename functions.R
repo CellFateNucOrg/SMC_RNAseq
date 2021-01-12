@@ -34,8 +34,13 @@ filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
                         writeTable=T,IDcolName="ID") {
   sigGenes<-getSignificantGenes(resultsTable,padj,lfc,direction=direction,chr=chr)
   idx<-resultsTable[,IDcolName] %in% sigGenes[,IDcolName]
-  filtTable<-resultsTable[idx,c("baseMean","log2FoldChange","padj",
+  if("chr" %in% colnames(resultsTable)){
+    filtTable<-resultsTable[idx,c("baseMean","log2FoldChange","padj",
                                 IDcolName,"chr","start","end","strand")]
+  } else {
+    filtTable<-resultsTable[idx,c("baseMean","log2FoldChange","padj",
+                                  IDcolName,"rptfamName","rptType")]
+  }
   if(writeTable){
     if(!dir.exists(paste0(outPath,"/txt"))){
       dir.create(paste0(outPath,"/txt"))

@@ -61,7 +61,7 @@ seqinfo(metadata)<-ce11seqinfo
 metadata<-sort(metadata)
 
 ######## add repeat data
-#dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
+dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
 
 seqlevelsStyle(dfam)<-"ucsc"
 seqinfo(dfam)<-seqinfo(metadata)
@@ -72,6 +72,7 @@ names(mcols(dfam))<-c("rptID","rptfamName","rptfamID","rptType")
 mcols(dfam)[,names(mcols(metadata))]<-as.character(NA)
 mcols(metadata)[,c("rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)
 mcols(dfam)<-mcols(dfam)[,match(names(mcols(metadata)),names(mcols(dfam)))]
+dfam$bioType<-"repeat"
 # make sure column types are the same
 mcols(dfam)<-sapply(mcols(dfam),as.character)
 mcols(metadata)<-sapply(mcols(metadata),as.character)
@@ -83,3 +84,25 @@ md$ID<-md$wormbaseID
 md$ID[is.na(md$wormbaseID)]<-md$rptID[is.na(md$wormbaseID)]
 
 saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
+
+
+## aggregated repeat families
+dfamagg<-as.data.frame(dfam) %>% group_by(rptfamID) %>%
+  summarise(famSize=n(),
+            rptfamName=unique(rptfamName),
+            rptfamID=unique(rptfamID),
+            rptType=unique(rptType))
+
+mddf<-as.data.frame(md)
+mddf$famSize<-1
+
+rptdf<-data.frame(matrix(ncol=ncol(mddf),nrow=nrow(dfamagg)))
+colnames(rptdf)<-colnames(mddf)
+rptdf[,colnames(dfamagg)]<-dfamagg
+rptdf$ID<-rptdf$rptfamID
+rptdf$bioType<-"repeatFamily"
+mddf<-rbind(mddf,rptdf)
+
+table(mddf$bioType)
+
+saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts.rds"))

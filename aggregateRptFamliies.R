@@ -23,7 +23,7 @@ for (f in files){
   colnames(rptFam)<-c("ID","count")
   dffam<-rbind(df[-rptRows,],rptFam)
   outfile=gsub(".txt","_rptFam.txt",f)
-  write.table(dffam,outfile,quote=F,col.names=F,row.names=F)
+  write.table(dffam,outfile,quote=F,col.names=F,row.names=F,sep="\t")
 }
 
 
