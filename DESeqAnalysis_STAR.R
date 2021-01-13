@@ -2,10 +2,11 @@ library(DESeq2)
 library(Organism.dplyr)
 library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
-library("TxDb.Celegans.UCSC.ce11.refGene")
-library("TxDb.Celegans.UCSC.ce11.ensGene")
+#library("TxDb.Celegans.UCSC.ce11.refGene")
+#library("TxDb.Celegans.UCSC.ce11.ensGene")
 library(tximport)
 library(GenomicFeatures)
+library(GenomeInfoDb)
 library(ggplot2)
 library("RColorBrewer")
 library("PoiClaClu")
@@ -14,10 +15,12 @@ library(tidyr)
 library(EnhancedVolcano)
 library(affy)
 library("gplots")
+library(ggpubr)
+
 #library(REBayes)
 # get funciton for converting gene names from WBID to publicID
 source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
-
+source("functions.R")
 ###############################################################
 ### some variables
 ###############################################################

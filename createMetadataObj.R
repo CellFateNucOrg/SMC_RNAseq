@@ -33,7 +33,10 @@ if(!file.exists(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.",
 
   saveDb(wstxdb,paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.", genomeVer,
                        ".annotations.sqlite"))
-  system(paste0('grep "gene" ',genomeDir,'/annotations/c_elegans.PRJNA13758.', genomeVer,'.annotations.gff3 > geneLines_', genomeVer,'.gff3'))
+  # extract all gene lines
+  system(paste0('grep "gene" ',genomeDir,'/annotations/c_elegans.PRJNA13758.', genomeVer,'.annotations.gff3 > ',genomeDir,'/annotations/geneLines_', genomeVer,'.gff3'))
+  # extract all exon lines
+  system(paste0('grep "exon" ',genomeDir,'/annotations/c_elegans.PRJNA13758.', genomeVer,'.annotations.gff3 > ',genomeDir,'/annotations/exonLines_', genomeVer,'.gff3'))
   file.remove(paste0(genomeDir,"/annotations/c_elegans.PRJNA13758.",
                      genomeVer, ".annotations.gff3"))
 }
@@ -43,7 +46,7 @@ gff<-import(paste0(genomeDir,"/annotations/geneLines_",genomeVer,".gff3"))
 gff<-gff[gff$type!="SAGE_tag" & gff$type!="exon",]
 mcols(gff)<-mcols(gff)[,c("Name","sequence_name","locus","biotype")]
 metadata<-gff[!is.na(gff$Name)]
-names(mcols(metadata))<-c("wormbaseID","publicID","sequenceID","bioType")
+names(mcols(metadata))<-c("wormbaseID","sequenceID","publicID","bioType")
 
 # download gene id data from simplemine: https://wormbase.org/tools/mine/simplemine.cgi
 # for entrez ids, load wormbaseID column into https://david.ncifcrf.gov/conversion.jsp
@@ -83,6 +86,36 @@ md<-c(metadata,dfam)
 md$ID<-md$wormbaseID
 md$ID[is.na(md$wormbaseID)]<-md$rptID[is.na(md$wormbaseID)]
 
+# mark repeats that overlap another gene and/or exon
+exons<-import(paste0(genomeDir,'/annotations/exonLines_', genomeVer,'.gff3'),
+              format="gff3")
+exons<-exons[exons$type=="exon"]
+mcols(exons)<-mcols(exons)[,c("source","type","Parent")]
+seqlevelsStyle(exons)<-"ucsc"
+rptRows<-which(md$bioType == "repeat")
+toIgnore<-which(md$bioType %in% c("repeat","transposon","transposon_protein_coding",
+                                 "transposon_pseudogene"))
+
+
+olstart<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="start")
+olend<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="end")
+olin<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="within")
+
+exons<-exons[which(exons$source=="WormBase")]
+olexons<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="any")
+olexonsEqual<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="equal") # should be empty
+length(unique(queryHits(olstart))) #18
+length(unique(queryHits(olend))) #17
+length(unique(queryHits(olin))) # 26278
+length(unique(queryHits(olexons))) #4954
+
+md$overlap<-NA
+md$overlap[rptRows]<-"OL_none"
+md$overlap[rptRows][unique(c(queryHits(olstart), queryHits(olend),
+                             queryHits(olin)))]<-"OL_gene"
+md$overlap[rptRows][unique(queryHits(olexons))]<-"OL_exon"
+
+
 saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
 
 
@@ -106,3 +139,4 @@ mddf<-rbind(mddf,rptdf)
 table(mddf$bioType)
 
 saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts.rds"))
+
