@@ -32,7 +32,7 @@ fastqFileList=./fastqList.txt
 fastqFile=(`cut -f1 $fastqFileList`)
 sampleNames=(`cut -f2 $fastqFileList`)
 repeatNums=(`cut -f3 $fastqFileList`)
-laneNums=(`cut -f4 $fastqFileList`)
+#laneNums=(`cut -f4 $fastqFileList`)
 
 i=${SLURM_ARRAY_TASK_ID}
 
@@ -48,7 +48,7 @@ mRNAonly=false #false or true
 fastqFile=${fastqFile[$i]}
 sampleName=${sampleNames[$i]}
 repeatNum=${repeatNums[$i]}
-laneNum=${laneNums[$i]}
+#laneNum=${laneNums[$i]}
 
 nThreads=${SLURM_CPUS_PER_TASK}
 
@@ -78,7 +78,8 @@ QC_DIR=${WORK_DIR}/qc
 WIGtoBW_DIR=${HOME}/mySoftware
 
 #FASTQ_DIR=`dirname ${fastqFile}`
-baseName=${sampleName}_${repeatNum}_${laneNum}
+baseName=${sampleName}_${repeatNum}
+#_${laneNum}
 
 #######################################################
 ## get initial read stats                            ##
@@ -220,6 +221,7 @@ if [[ "${mRNAonly}"=="false" ]]
     # count reads per feature with htseq
     mkdir -p ${WORK_DIR}/htseq
     htseq-count -f bam -r name -a 0 -m union --nonunique random  ${WORK_DIR}/bamBWA/${baseName}.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_random.txt
+    htseq-count -f bam -r name -a 0 -m union --nonunique none  ${WORK_DIR}/bamBWA/${baseName}.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_none.txt
     #--additional-attr=gene_name
     
     samtools sort -T ${WORK_DIR}/bamBWA/${baseName}  -@ $nThreads -o ${WORK_DIR}/bamBWA/${baseName}_sort.bam  ${WORK_DIR}/bamBWA/${baseName}.bam
