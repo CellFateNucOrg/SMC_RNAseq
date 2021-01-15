@@ -25,9 +25,9 @@ source("functions.R")
 ### some variables #####
 ###############################################################-
 plotPDFs=F
-fileNamePrefix="BWA_"
-filterPrefix="BWA_rptFam_random_"
-dataset="_random_rptFam"
+fileNamePrefix="STAR_"
+filterPrefix="STAR_rptFamNorm_random_" # used for naming output files
+dataset="_rptFamNorm" # used to upload single or aggregated STAR files
 filterData=T
 
 
@@ -52,7 +52,7 @@ fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, heade
 
 sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum,
                    fileList$libType, sep="_")
-fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
+fileNames<-paste0(outPath,"/bamSTARrpts/rpts_",sampleNames,"_ReadsPerGene",dataset,".tab")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
@@ -85,18 +85,31 @@ metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
 # Import into DESeq2 ------------------------------------------------------
 ###############################################################-
 
-sampleTable1<-sampleTable
-sampleTable1$sampleName<-basename(sampleTable$fileName)
+countTable<-NULL
+for (i in 1:nrow(fileList)){
+  if (is.null(dim(countTable))){
+    tmp<-read.delim(sampleTable$fileName[i],stringsAsFactors=F,header=F,skip=4)
+    countTable<-data.frame(counts=tmp$V4)
+    names(countTable)<-c(sampleTable$sampleName[i])
+    rownames(countTable)<-gsub("^Gene:","",tmp$V1)
+  } else {
+    tmp<-read.delim(sampleTable$fileName[i],stringsAsFactors=F,header=F,skip=4)
+    ifelse(rownames(countTable)==gsub("^Gene:","",tmp$V1),
+           print("same gene names"),
+           print("different gene names - ORDER WRONG!!"))
+    countTable[,sampleTable$sampleName[i]]<-tmp$V4
+  }
+}
 
-# read samples into DESeq2
-dds <- DESeqDataSetFromHTSeqCount(sampleTable=sampleTable1,
-                    directory=dirname(sampleTable1$fileName[1]),
-                                design=~lane+SMC)
+coldata<-sampleTable[,c("sampleName","replicate","lane","strain","SMC")]
+rownames(coldata)<-sampleTable$sampleName
+coldata$replicate<-factor(coldata$replicate)
 
-colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
-                                ".txt"), "",
-                                sampleTable1$sampleName),
-                               sep="_")
+colnames(countTable)==rownames(coldata)
+
+dds<-DESeqDataSetFromMatrix(countData=as.matrix(countTable),
+                            colData=coldata,
+                            design=~lane+SMC)
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -110,8 +123,6 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
 #   3. Negative Binomial GLM fitting and Wald statistics: nbinomWaldTest
 #   returns a DESeqDataSet object
 
-rownames(dds)<-gsub("Gene:","",rownames(dds))
-
 idx<-match(rownames(dds),metadata$ID)
 # add gene and chormosome names as metadata
 featureData <- data.frame(gene=rownames(dds),
@@ -120,7 +131,11 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
-dds<-DESeq(dds)
+#dds<-DESeq(dds)
+dds <- estimateSizeFactors(dds)
+dds <- estimateDispersionsGeneEst(dds)
+dispersions(dds) <- mcols(dds)$dispGeneEst
+dds<-nbinomWaldTest(dds)
 
 # remove non-repeat genes
 if(filterData){

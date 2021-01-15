@@ -49,10 +49,13 @@ dev.off()
 dataset="ribo0"
 files<-list.files(path=paste0(outPath,"/bamSTARrpts"),
                   pattern=paste0(dataset,"_ReadsPerGene.out.tab"), full.names=T)
-f=files[1]
+pdf(file=paste0(outPath,"/plots/STAR_",dataset,"_aggregatedVnorm.pdf"),
+    paper="a4",height=19,width=11)
+par(mfrow=c(4,2))
+#f=files[1]
 for (f in files){
   df<-read.delim(f,header=F)
-  colnames(df)<-c("ID","Fwd","Rev","both")
+  colnames(df)<-c("ID","US","FR","RF")
   rptRows<-grep("rpt",df$ID)
   rptdf<-df[rptRows,]
   idx<-match(rptdf$ID,metadata$ID)
@@ -61,9 +64,27 @@ for (f in files){
   rptFam<-rptdf %>% group_by(rptfamID) %>% summarise(Fcount=sum(Fwd),
                                                      Rcount=sum(Rev),
                                                      bothCount=sum(both))
-  colnames(rptFam)<-c("ID","Fwd","Rev","both")
+  colnames(rptFam)<-c("ID","US","FR","RF")
   dffam<-rbind(df[-rptRows,],rptFam)
   outfile=gsub(".out.tab","_rptFam.tab",f)
   write.table(dffam,outfile,quote=F,col.names=F,row.names=F,sep="\t")
+
+
+  #normalise by repeat family size
+  rptFamNorm<-rptdf %>% group_by(rptfamID) %>% summarise(Fcount=sum(Fwd),
+                                                         Rcount=sum(Rev),
+                                                         bothCount=sum(both),
+                                                         famSize=n())
+  countCols<-grep("count",colnames(rptFamNorm),ignore.case=T)
+  rptFamNorm[countCols]<-ceiling(rptFamNorm[countCols]/rptFamNorm$famSize)
+  rptFamNorm$famSize<-NULL
+  colnames(rptFamNorm)<-c("ID","Fwd","Rev","both")
+  dffamNorm<-rbind(df[-rptRows,],rptFamNorm)
+  outfile=gsub(".out.tab","_rptFamNorm.tab",f)
+  write.table(dffamNorm,outfile,quote=F,col.names=F,row.names=F,sep="\t")
+  plot(rptFam$both~rptFamNorm$both,pch=16,col="#55555577",
+       main=gsub(".txt","",basename(f)))
+  abline(lm(rptFam$both~rptFamNorm$both),col="blue",lty=2)
 }
+dev.off()
 
