@@ -41,8 +41,8 @@ metadata<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
 ## manually curated from papers
 #######################
 
-pubDC<-data.table::fread(input="published_DC.txt")
-pubNDC<-data.table::fread(input="published_Xescapers.txt")
+pubDC<-data.table::fread(input="/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_DC.txt")
+pubNDC<-data.table::fread(input="/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_Xescapers.txt")
 
 
 pubDCgr<-metadata[metadata$wormbase %in% pubDC$wbid]
@@ -100,6 +100,7 @@ saveRDS(JansNDCgr,file="Jans2009_NDCgr.rds")
 #######################
 kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
 kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
+
 #download.file(url=kramerURL,destfile=kramerFileName)
 
 kramer<-readxl::read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
@@ -166,6 +167,30 @@ write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F
 file.remove(meeuseFileName)
 
 
+###############-
+#  Latorre et al 2015 - Oscillating genes ----------------------------------
+###############-
+
+latorreURL<-"http://genesdev.cshlp.org/content/suppl/2015/03/03/29.5.495.DC1/Supplemental_TableS7.xlsx"
+latorreFileName<-"Supplemental_TableS7.xlsx"
+
+download.file(url=latorreURL,destfile=latorreFileName)
+
+latorre<-readxl::read_excel(latorreFileName,col_names=F)
+colnames(latorre)<-"Osc_Latorre2015"
+
+write.table(latorre,file=paste0(outPath,"/oscillatingGenes_latorre.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(latorreFileName)
+
+# osc<-read.delim("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_filtCyc/oscillatingGenes.tsv")
+# sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
+# #2473
+# dim(latorre)
+# #3269
+# dim(osc)
+# #3739
 
 ###############-
 # Garrigues 2019 - Heatshock L2 -------------------------------------------
