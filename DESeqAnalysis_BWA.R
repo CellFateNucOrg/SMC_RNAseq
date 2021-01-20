@@ -67,9 +67,8 @@ controlGrp<-levels(sampleTable$SMC)[1] # control group
 groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to control
 
 
-# Create metadata object --------------------------------------------------
 ###############################################################-
-### create metadata
+### Create metadata object --------------------------------------------------
 ###############################################################-
 
 if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))){
@@ -109,7 +108,7 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
 #   3. Negative Binomial GLM fitting and Wald statistics: nbinomWaldTest
 #   returns a DESeqDataSet object
 
-rownames(dds)<-gsub("Gene:","",rownames(dds))
+#rownames(dds)<-gsub("Gene:","",rownames(dds))
 
 idx<-match(rownames(dds),metadata$ID)
 # add gene and chormosome names as metadata
