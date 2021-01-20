@@ -29,8 +29,8 @@ echo "current git version"
 git log -1 --format="%H"
 
 fastqFileList=./fastqList.txt
-fastqFile1=(`cut -f1 $fastqFileList`)
-fastqFile2=(`cut -f2 $fastqFileList`)
+fastqFile1s=(`cut -f1 $fastqFileList`)
+fastqFile2s=(`cut -f2 $fastqFileList`)
 sampleNames=(`cut -f3 $fastqFileList`)
 repeatNums=(`cut -f4 $fastqFileList`)
 laneNums=(`cut -f5 $fastqFileList`)
@@ -47,7 +47,8 @@ i=${SLURM_ARRAY_TASK_ID}
 ###############################
 
 mRNAonly=false #false or true
-fastqFile=${fastqFile[$i]}
+fastqFile1=${fastqFile1s[$i]}
+fastqFile2=${fastqFile2s[$i]}
 sampleName=${sampleNames[$i]}
 repeatNum=${repeatNums[$i]}
 laneNum=${laneNums[$i]}
@@ -204,17 +205,22 @@ if [[ "${mRNAonly}"=="false" ]]
     rm ${WORK_DIR}/bamBWA/${baseName}_R1.sai
     rm ${WORK_DIR}/bamBWA/${baseName}_R2.sai
     
-    
-    #gtfFile=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
-    annotFile_rpt=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
-    
-    # count reads per feature with htseq
-    mkdir -p ${WORK_DIR}/htseq
-    htseq-count -f bam -r name -a 0 -m union --nonunique random  ${WORK_DIR}/bamBWA/${baseName}.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_random.txt
+
     #--additional-attr=gene_name
     echo "converting bwa aln sam file to bam and indexing"
     samtools sort -T ${WORK_DIR}/bamBWA/${baseName}  -@ $nThreads -o ${WORK_DIR}/bamBWA/${baseName}_sort.bam  ${WORK_DIR}/bamBWA/${baseName}.bam
     samtools index -@ $nThreads ${WORK_DIR}/bamBWA/${baseName}_sort.bam
     rm ${WORK_DIR}/bamBWA/${baseName}.bam
     echo "finished repeat alignment"
+
+    #gtfFile=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
+    annotFile_rpt=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
+
+   # count reads per feature with htseq
+    mkdir -p ${WORK_DIR}/htseq
+    htseq-count -f bam -r name -a 0 -r pos -m union --nonunique random  ${WORK_DIR}/bamBWA/${baseName}_sort.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_random.txt
+    htseq-count -f bam -r name -a 0 -r pos -m union --nonunique none  ${WORK_DIR}/bamBWA/${baseName}_sort.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_none.txt
+#    htseq-count -f bam -r name -a 0 -r pos -m union --nonunique fraction  ${WORK_DIR}/bamBWA/${baseName}_sort.bam $annotFile_rpt > ${WORK_DIR}/htseq/${baseName}_union_fraction.txt
+
 fi
+
