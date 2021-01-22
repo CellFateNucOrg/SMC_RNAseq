@@ -1,6 +1,6 @@
 
 workDir="."
-tbl<-read.csv(paste0(workDir,"/McMurchy2017_PRJNA345014.txt"))
+#tbl<-read.csv(paste0(workDir,"/McMurchy2017_PRJNA345014.txt"))
 
 rowIdx<-(grepl("WT",tbl$genotype.variation) |
            grepl("met-2",tbl$genotype.variation)) &
@@ -22,5 +22,24 @@ SRRs<-data.frame(SRRnumber=setmet$Run,
                               "_ribo0"),
                  replicate=paste0(1:2))
 
-write.table(SRRs,paste0(workDir,"/SRR_McMurchy2017.tsv"),quote=F,
+write.table(SRRs,paste0(workDir,"/SRR_McMurchy2017_setmet.tsv"),quote=F,
+            sep="\t",row.names=F)
+
+
+
+mcmurchyAll<-tbl[,c("Run","Age","Assay.Type","AvgSpotLen","BioProject","BioSample",
+                     "Experiment","genotype.variation","GEO_Accession..exp.",
+                     "growth_condition","LibraryLayout","Sample.Name",
+                     "strain.background","Tissue")]
+
+SRRs<-data.frame(SRRnumber=mcmurchyAll$Run,
+                 dataset=mcmurchyAll$BioProject,
+                 bioType=paste0(gsub("\\([[:alnum:]]*\\)","",
+                                     mcmurchyAll$genotype.variation),
+                                "_ribo0"),
+                 replicate=paste0(1:2),
+                 conditon=mcmurchyAll$growth_condition)
+
+
+write.table(SRRs,paste0(workDir,"/SRR_McMurchy2017_all.tsv"),quote=F,
             sep="\t",row.names=F)
