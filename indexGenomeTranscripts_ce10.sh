@@ -44,7 +44,7 @@ gffread $annotFile -T -o ${annotFile%/*}/${b}.gtf
 
 # need to remove wierd exons:
 annotFile=${GENOME_DIR}/annotation/c_elegans.${genomeVer}.annotations.gtf
-grep "exon" ${annotFile} > ${GENOME_DIR}/annotation/c_elegans.${genomeVer}.annotations1.gtf
+grep "exon" ${annotFile} | grep "gene_id" > ${GENOME_DIR}/annotation/c_elegans.${genomeVer}.annotations1.gtf
 mv  ${GENOME_DIR}/annotation/c_elegans.${genomeVer}.annotations1.gtf ${annotFile}
  
 #mv c_elegans.PRJNA13758.${genomeVer}.annotations.gtf $annotFile
