@@ -37,8 +37,8 @@ SRRs<-data.frame(SRRnumber=mcmurchyAll$Run,
                  bioType=paste0(gsub("\\([[:alnum:]]*\\)","",
                                      mcmurchyAll$genotype.variation),
                                 "_ribo0"),
-                 replicate=paste0(1:2),
-                 conditon=mcmurchyAll$growth_condition)
+                 replicate=paste0("r",1:2),
+                 condition=gsub("condition","c",mcmurchyAll$growth_condition))
 
 
 write.table(SRRs,paste0(workDir,"/SRR_McMurchy2017_all.tsv"),quote=F,
