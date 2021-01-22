@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --time=0-03:00:00
-#SBATCH --array=4
+#SBATCH --array=1,4,8
 #SBATCH --mail-user=jennifer.semple@izb.unibe.ch
 #SBATCH --mail-type=end,fail
 #SBATCH --job-name="getSRR"
@@ -22,7 +22,7 @@ QC_DIR=$WORK_DIR/qc
 
 # name of SRR file. Must have no header and four  tab separated columns.
 # First column SRR number. Second column is the dataset name. Third column is biological type. Fourth column is replicate number
-SRRfile=${WORK_DIR}/SRR_McMurchy2017.tsv
+SRRfile=${WORK_DIR}/SRR_McMurchy2017_all.tsv
 
 module load vital-it
 module add UHTS/Quality_control/fastqc/0.11.7;
@@ -36,7 +36,7 @@ SRRfields=(`cut -f1 ${SRRfile}`)
 datasets=(`cut -f2 ${SRRfile}`)
 biotypes=(`cut -f3 ${SRRfile}`)
 replicates=(`cut -f4 ${SRRfile}`)
-
+conditions=(`cut -f5 ${SRRfile}`)
 
 mkdir -p $FASTQ_DIR
 mkdir -p $QC_DIR
@@ -45,7 +45,7 @@ mkdir -p $QC_DIR
 i=$SLURM_ARRAY_TASK_ID
 
 #get sample + repeat number base name
-baseName=${datasets[$i]}_${biotypes[$i]}_${replicates[$i]}
+baseName=${datasets[$i]}_${biotypes[$i]}_${replicates[$i]}_${conditions[$i]}
 mkdir -p ${WORK_DIR}/${baseName}
 
 
@@ -78,12 +78,12 @@ then
   #cat ${WORK_DIR}/${baseName}/*.srr_2.fastq > ${FASTQ_DIR}/${baseName}_R2.fastq
   cat ${WORK_DIR}/${baseName}/*_1.fastq > ${FASTQ_DIR}/${baseName}_R1.fastq
   cat ${WORK_DIR}/${baseName}/*_2.fastq > ${FASTQ_DIR}/${baseName}_R2.fastq
-  gzip ${FASTQ_DIR}/${baseName}_R1.fastq
-  gzip ${FASTQ_DIR}/${baseName}_R2.fastq
+  gzip -f ${FASTQ_DIR}/${baseName}_R1.fastq
+  gzip -f ${FASTQ_DIR}/${baseName}_R2.fastq
 else 
   #cat ${WORK_DIR}/${baseName}/*.srr.fastq > ${FASTQ_DIR}/${baseName}.fastq 
   cat ${WORK_DIR}/${baseName}/*.fastq > ${FASTQ_DIR}/${baseName}.fastq  
-  gzip ${FASTQ_DIR}/${baseName}.fastq 
+  gzip -f ${FASTQ_DIR}/${baseName}.fastq 
 fi
 
 #rm -rf ${WORK_DIR}/${baseName}
