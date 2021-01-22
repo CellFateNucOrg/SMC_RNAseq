@@ -41,8 +41,8 @@ metadata<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
 ## manually curated from papers
 #######################
 
-pubDC<-data.table::fread(input="published_DC.txt")
-pubNDC<-data.table::fread(input="published_Xescapers.txt")
+pubDC<-data.table::fread(input="/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_DC.txt")
+pubNDC<-data.table::fread(input="/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_Xescapers.txt")
 
 
 pubDCgr<-metadata[metadata$wormbase %in% pubDC$wbid]
@@ -100,6 +100,7 @@ saveRDS(JansNDCgr,file="Jans2009_NDCgr.rds")
 #######################
 kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
 kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
+
 #download.file(url=kramerURL,destfile=kramerFileName)
 
 kramer<-readxl::read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
@@ -166,6 +167,30 @@ write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F
 file.remove(meeuseFileName)
 
 
+###############-
+#  Latorre et al 2015 - Oscillating genes ----------------------------------
+###############-
+
+latorreURL<-"http://genesdev.cshlp.org/content/suppl/2015/03/03/29.5.495.DC1/Supplemental_TableS7.xlsx"
+latorreFileName<-"Supplemental_TableS7.xlsx"
+
+download.file(url=latorreURL,destfile=latorreFileName)
+
+latorre<-readxl::read_excel(latorreFileName,col_names=F)
+colnames(latorre)<-"Osc_Latorre2015"
+
+write.table(latorre,file=paste0(outPath,"/oscillatingGenes_latorre.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(latorreFileName)
+
+# osc<-read.delim("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_filtCyc/oscillatingGenes.tsv")
+# sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
+# #2473
+# dim(latorre)
+# #3269
+# dim(osc)
+# #3739
 
 ###############-
 # Garrigues 2019 - Heatshock L2 -------------------------------------------
@@ -193,3 +218,68 @@ hsDOWN
 saveRDS(hsDOWN,file="hsDown_garrigues2019.rds")
 
 file.remove(garriguesFileName)
+
+
+
+###############-
+# McMurchy2017 - met-2 set-25 -------------------------------------------
+###############-
+
+#https://elifesciences.org/articles/21666#content
+mcmurchyURL<-"https://elifesciences.org/download/aHR0cHM6Ly9jZG4uZWxpZmVzY2llbmNlcy5vcmcvYXJ0aWNsZXMvMjE2NjYvZWxpZmUtMjE2NjYtZmlnMy1kYXRhMS12My54bHN4/elife-21666-fig3-data1-v3.xlsx?_hash=i7mFCQwW4gKRQReqEcD2uQMPpsq%2FVYx5K7AX5dmoTWs%3D"
+mcmurchyFileName<-"elife-21666-fig3-data1-v3.xlsx"
+
+download.file(url=mcmurchyURL,destfile=mcmurchyFileName)
+
+mcmurchyRep<-readxl::read_excel(mcmurchyFileName,sheet="Repeat expression data",
+                             na="NA")
+
+mcmurchyRep<-mcmurchyRep[!is.na(mcmurchyRep$`padj_met-2 set-25`),c(1,2,grep("met-2",colnames(mcmurchyRep)))]
+
+sigUpRep<-mcmurchyRep[mcmurchyRep$`padj_met-2 set-25` < 0.01 & mcmurchyRep$`LFC_met-2 set-25`>0,]
+
+sigUpRepGR<-GRanges(sigUpRep$coordinates)
+
+mcols(sigUpRepGR)<-sigUpRep
+
+saveRDS(sigUpRepGR,file=paste0(outPath,"/met2_set25_sigUp_McMurchy2017.rds"))
+
+
+mcmurchyURL<-"https://elifesciences.org/download/aHR0cHM6Ly9jZG4uZWxpZmVzY2llbmNlcy5vcmcvYXJ0aWNsZXMvMjE2NjYvZWxpZmUtMjE2NjYtZmlnMy1kYXRhMi12My54bHN4/elife-21666-fig3-data2-v3.xlsx?_hash=2vu9blXMCN9S8sSWnUpNN3A1Az6H1TWAt58x4pkP%2FZI%3D"
+mcmurchyFileName<-"elife-21666-fig3-data2-v3.xlsx"
+
+download.file(url=mcmurchyURL,destfile=mcmurchyFileName)
+
+mcmurchyChosenRep<-readxl::read_excel(mcmurchyFileName,
+                             sheet="Repeats upregulated, any strain",
+                             na="NA")
+mcmurchyChosenRep<-mcmurchyChosenRep[,c(1:5,grep("met-2",colnames(mcmurchyChosenRep)))]
+mcmurchyChosenRepGR<-GRanges(mcmurchyChosenRep$Coordinates)
+
+ol<-findOverlaps(mcmurchyChosenRepGR,sigUpRepGR)
+chosen<-sigUpRepGR[unique(subjectHits(ol))]
+
+max(chosen$`padj_met-2 set-25`)
+min(chosen$`LFC_met-2 set-25`)
+
+
+mcmurchyURL<-"https://elifesciences.org/download/aHR0cHM6Ly9jZG4uZWxpZmVzY2llbmNlcy5vcmcvYXJ0aWNsZXMvMjE2NjYvZWxpZmUtMjE2NjYtZmlnMy1kYXRhMy12My54bHN4/elife-21666-fig3-data3-v3.xlsx?_hash=ghAI%2Bz10GsGrnPjK5%2FftPNqInJms2JpgWRZ3XGRFFJw%3D"
+mcmurchyFileName<-"elife-21666-fig3-data3-v3.xlsx"
+
+download.file(url=mcmurchyURL,destfile=mcmurchyFileName)
+
+mcmurchyGenes<-readxl::read_excel(mcmurchyFileName,
+                             sheet="Gene expresion data",
+                             na="NA")
+mcmurchyGenesGR<-GRanges(mcmurchyGenes$position[!is.na(mcmurchyGenes$`padj_met-2 set-25`)])
+mcols(mcmurchyGenesGR)<-mcmurchyGenes[!is.na(mcmurchyGenes$`padj_met-2 set-25`),]
+
+
+mcmurchyGenesGR<-mcmurchyGenesGR[ mcmurchyGenesGR$`padj_met-2 set-25`<0.05 & mcmurchyGenesGR$`LFC_met-2 set-25`>0]
+
+
+ol1<-findOverlaps(sigUpRepGR,mcmurchyGenesGR)
+# 131 query hits
+
+sigUpRepGR[-queryHits(ol1)]
+# 44 ranges left -  close enough to 43 in figure 3 A

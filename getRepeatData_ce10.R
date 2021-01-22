@@ -6,10 +6,11 @@ library(BSgenome.Celegans.UCSC.ce10)
 genome<-Celegans
 dfamVer="Dfam_2.0"
 
-args<-commandArgs(trailingOnly=TRUE)
-workDir<-args[1]
+#args<-commandArgs(trailingOnly=TRUE)
+#workDir<-args[1]
 print(paste0("workDir is: ", workDir))
-#workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
+workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
+#workDir="."
 
 dfamURL=paste0("https://www.dfam.org/releases/",dfamVer,"/ce10_dfam.nrph.hits.gz")
 download.file(url=dfamURL, destfile=paste0(workDir,"/ce10_",dfamVer,".nrph.hits.gz"),method="wget")
@@ -43,6 +44,7 @@ repeats.gr$ID<-paste0("rpt",1:length(repeats.gr),"_",
                            seqnames(repeats.gr),":",
                       start(repeats.gr),"-",end(repeats.gr))
 
+saveRDS(repeats.gr,paste0(workDir,"/repeats_ce10_",dfamVer,"_nr.rds"))
 export.gff3(repeats.gr, paste0(workDir,"/repeats_ce10_",dfamVer,"_nr.gff3"))
 
 

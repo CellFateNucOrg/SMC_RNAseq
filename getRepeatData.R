@@ -4,24 +4,25 @@ library(dplyr)
 library(BSgenome.Celegans.UCSC.ce11)
 
 genome<-Celegans
+dfamVer="Dfam_3.3"
 
 args<-commandArgs(trailingOnly=TRUE)
 workDir<-args[1]
 print(paste0("workDir is: ", workDir))
-#workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
+workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
 
 
-dfamURL=paste0("https://www.dfam.org/releases/Dfam_3.3/annotations/ce10/ce10_dfam.nrph.hits.gz")
-download.file(url=dfamURL, destfile=paste0(workDir,"/ce10_dfam.nrph.hits.gz"),method="wget")
-system(paste0("gunzip ",workDir,"/ce10_dfam.nrph.hits.gz"))
-repeats_dfam <- read.delim(paste0(workDir,"/ce10_dfam.nrph.hits"))
+dfamURL=paste0("https://www.dfam.org/releases/",dfamVer,"/annotations/ce10/ce10_dfam.nrph.hits.gz")
+download.file(url=dfamURL, destfile=paste0(workDir,"/ce10_",dfamVer,".nrph.hits.gz"),method="wget")
+system(paste0("gunzip ",workDir,"/ce10_",dfamVer,".nrph.hits.gz"))
+repeats_dfam <- read.delim(paste0(workDir,"/ce10_",dfamVer,".nrph.hits"))
 
 
 repeats.gr <- GRanges(seqnames=repeats_dfam[,"X.seq_name"],
-                      ranges=IRanges(start=apply(repeats_dfam[,c("ali.st",
-                                                          "ali.en")],1,FUN=min),
-                                     end=apply(repeats_dfam[,c("ali.st",
-                                                         "ali.en")],1,FUN=max)),
+                      ranges=IRanges(start=apply(repeats_dfam[,c("env.st",
+                                                          "env.en")],1,FUN=min),
+                                     end=apply(repeats_dfam[,c("env.st",
+                                                         "env.en")],1,FUN=max)),
                       strand=repeats_dfam[,"strand"])
 
 repeats.gr$source<-"Dfam_3.3"
@@ -46,35 +47,37 @@ repeats_ce11.gr$ID<-paste0("rpt",1:length(repeats_ce11.gr),"_",
                            seqnames(repeats_ce11.gr),":",
                       start(repeats_ce11.gr),"-",end(repeats_ce11.gr))
 
-## bedgraph for Todor
-#repeats_bg<-repeats_ce11.gr
-#mcols(repeats_bg)<-NULL
-#repeats_bg$score<-1
-#repeats_bg$name<-repeats_ce11.gr$Alias
-#export.bedGraph(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bedgraph"))
-#export.bed(repeats_bg,paste0(workDir,"/repeats_ce11_dfam_nr.bed"))
-#tileWidth=5000
-#tiles<-unlist(tileGenome(seqinfo(Celegans),tilewidth=tileWidth))
-#tiles$score<-countOverlaps(tiles,repeats_bg,ignore.strand=TRUE)
-#export(tiles,paste0(workDir,"/repeats_ce11_dfam_nr_",tileWidth,".bw"),
-#       format="bigwig")
+saveRDS(repeats_ce11.gr,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.rds"))
+
+# bedgraph for Todor
+repeats_bg<-repeats_ce11.gr
+mcols(repeats_bg)<-NULL
+repeats_bg$score<-1
+repeats_bg$name<-repeats_ce11.gr$Name
+export.bedGraph(repeats_bg,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.bedgraph"))
+export.bed(repeats_bg,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.bed"))
+tileWidth=5000
+tiles<-unlist(tileGenome(seqinfo(Celegans),tilewidth=tileWidth))
+tiles$score<-countOverlaps(tiles,repeats_bg,ignore.strand=TRUE)
+export(tiles,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr_",tileWidth,".bw"),
+      format="bigwig")
 
 # make wormbase formatted chr names for gff3
 seqlevelsStyle(genome)<-"ensembl"
 seqlevelsStyle(repeats_ce11.gr)<-"ensembl"
 seqinfo(repeats_ce11.gr)<-seqinfo(genome)
 genome(repeats_ce11.gr)<-NA
-export.gff3(repeats_ce11.gr, paste0(workDir,"/repeats_ce11_dfam_nr.gff3"))
+export.gff3(repeats_ce11.gr, paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.gff3"))
 
 #file.remove(paste0(workDir,"/ce10ToCe11.over.chain.gz"))
 file.remove(paste0(workDir,"/ce10ToCe11.over.chain"))
 #file.remove(paste0(workDir,"/ce10_dfam.nrph.hits.gz"))
-file.remove(paste0(workDir,"/ce10_dfam.nrph.hits"))
+file.remove(paste0(workDir,"/ce10_",dfamVer,".nrph.hits"))
 #file.remove(paste0(workDir,"/repeats_ce10_dfam_nr.gff3"))
 
 
 # get repeat sequences
-gff<-import(paste0(workDir,"/repeats_ce11_dfam_nr.gff3"),format="gff3")
+gff<-import(paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.gff3"),format="gff3")
 
 gtfdf<-data.frame(seqname=seqnames(gff),
                   source=gff$source,
@@ -84,10 +87,10 @@ gtfdf<-data.frame(seqname=seqnames(gff),
                   score=".",
                   strand=strand(gff),
                   frame=".",
-                  attribute=paste0('gene_id "',gff$ID,'"; gene_name "', 
+                  attribute=paste0('gene_id "',gff$ID,'"; gene_name "',
                                    gff$Name,'";'))
 
-write.table(gtfdf,paste0(workDir,"/repeats_ce11_dfam_nr.gtf"),sep="\t",
+write.table(gtfdf,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.gtf"),sep="\t",
             col.names=F,row.names=F, quote=F)
 
 
@@ -96,7 +99,7 @@ rptSeq<-getSeq(genome,gff)
 
 names(rptSeq)<-paste(gff$ID,gff$Name,gff$Alias,sep=";")
 
-writeXStringSet(rptSeq, paste0(workDir,"/repeats_ce11_dfam_nr.fa.gz"),
+writeXStringSet(rptSeq, paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.fa.gz"),
                 append=FALSE, compress="gzip", format="fasta")
 
 
