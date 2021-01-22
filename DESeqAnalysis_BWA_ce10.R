@@ -1,7 +1,7 @@
 library(DESeq2)
 library(Organism.dplyr)
 library(GenomicRanges)
-library(BSgenome.Celegans.UCSC.ce11)
+library(BSgenome.Celegans.UCSC.ce10)
 library(tximport)
 library(GenomicFeatures)
 library(GenomeInfoDb)
@@ -24,14 +24,15 @@ source("functions.R")
 ###############################################################-
 plotPDFs=F
 fileNamePrefix="BWA_"
-filterPrefix="BWA_rpt_none_"
-dataset="_none"
+filterPrefix="BWA_rpt_random_"
+dataset="_random"
 filterData=T
 
 padjVal=0.01
 lfcVal=0
 outPath="."
-genomeVer="WS275"
+genomeVer="WS220"
+dfamVer="Dfam_2.0"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
@@ -40,7 +41,7 @@ wbseqinfo<-seqinfo(Celegans)
 seqnames(wbseqinfo)<-c(gsub("chr","",seqnames(Celegans)))
 seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
-ce11seqinfo<-seqinfo(Celegans)
+ce10seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
@@ -72,7 +73,7 @@ if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))){
   source(paste0(outPath,"/createMetadataObj.R"))
 }
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))
+metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,"_.rds"))
 #metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
 
 
@@ -92,6 +93,9 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
                                 sampleTable1$sampleName),
                                sep="_")
+
+rownames(dds)<-gsub("Gene:","",rownames(dds))
+rownames(dds)<-gsub("Pseudogene:","",rownames(dds))
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -114,17 +118,21 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
-
-
-#dds<-DESeq(dds)
-
-# remove non-repeat genes
-if(filterData){
-  dds<-dds[-grep("WBGene",rowData(dds)$gene),]
-  fileNamePrefix<-filterPrefix
+if(grepl("rptOnly",filterPrefix)){
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
+  dds<-DESeq(dds)
+} else {
+  dds<-DESeq(dds)
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
 }
-
-dds<-DESeq(dds)
 
 
 ######################################################-
@@ -408,7 +416,7 @@ for(grp in groupsOI){
   forBG<-resGR
   mcols(forBG)<-mcols(forBG)[,c("ID","score")]
   colnames(mcols(forBG))<-c("name","score")
-  seqinfo(forBG)<-ce11seqinfo
+  seqinfo(forBG)<-ce10seqinfo
   export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,grp,
                       "_wt_lfc.bedGraph"),
          format="bedGraph")
@@ -432,7 +440,7 @@ for(grp in groupsOI){
   forBed<-resGR[idx]
   mcols(forBed)<-mcols(forBed)[,c("ID","score")]
   colnames(mcols(forBed))<-c("name","score")
-  seqinfo(forBed)<-ce11seqinfo
+  seqinfo(forBed)<-ce10seqinfo
   #NaIdx<-is.na(forBed$score)
   #forBed$score[NaIdx]<-0
   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
