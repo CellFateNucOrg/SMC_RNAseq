@@ -24,12 +24,13 @@ source("functions.R")
 ###############################################################-
 plotPDFs=F
 fileNamePrefix="BWA_"
-filterPrefix="BWA_rpt_random_"
-dataset="_random"
+filterPrefix="BWA_rptOnly_none_"
+dataset="_none"
 filterData=T
 
-padjVal=0.01
+padjVal=0.1
 lfcVal=0
+minReads=1
 outPath="."
 genomeVer="WS220"
 dfamVer="Dfam_2.0"
@@ -48,21 +49,23 @@ makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, header=T)
 
 
-sampleNames<-paste(fileList$sampleName, fileList$libType, fileList$repeatNum,
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$condition,
                    sep="_")
 fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
 sampleTable$replicate=factor(fileList$repeatNum)
+sampleTable$condition=factor(fileList$condition)
 
 
 # extract the strain variable
-sampleTable$strain<-factor(gsub("-","",as.character(fileList$sampleName)),levels=c("WT","met2_set25"))
+sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25","hpl2","let418","lin13",
+                                                                                                       "lin61","nrde2_let418","nrde2","prg1"))
 
 
 controlGrp<-levels(sampleTable$strain)[1] # control group
-groupsOI<-levels(sampleTable$strain)[-1] # groups of interest to contrast to control
+groupsOI<-levels(sampleTable$strain)[-1][1] # groups of interest to contrast to control
 
 
 ###############################################################-
@@ -73,8 +76,9 @@ if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))){
   source(paste0(outPath,"/createMetadataObj.R"))
 }
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,"_.rds"))
-#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
+
+metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
+#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ###############################################################-
@@ -82,12 +86,12 @@ metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,"_.rd
 ###############################################################-
 
 sampleTable1<-sampleTable
-sampleTable1$sampleName<-basename(sampleTable$fileName)
+sampleTable1$sampleName<-basename(sampleTable1$fileName)
 
 # read samples into DESeq2
 dds <- DESeqDataSetFromHTSeqCount(sampleTable=sampleTable1,
                     directory=dirname(sampleTable1$fileName[1]),
-                                design=~replicate+strain)
+                                design=~condition+replicate+strain)
 
 colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
@@ -96,6 +100,11 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
 
 rownames(dds)<-gsub("Gene:","",rownames(dds))
 rownames(dds)<-gsub("Pseudogene:","",rownames(dds))
+
+# remove rows with no gene expression in any sample:
+dds<-dds[rowMeans(counts(dds))>=minReads,]
+
+
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -133,6 +142,7 @@ if(grepl("rptOnly",filterPrefix)){
     fileNamePrefix<-filterPrefix
   }
 }
+
 
 
 ######################################################-
@@ -276,6 +286,7 @@ if(filterData){
   idx<-match(oscillating$Osc_Latorre2015,metadata$sequenceID)
   sum(is.na(idx))
   toFilter<-metadata$wormbaseID[na.omit(idx)]
+  print(paste0("\n\n****toFilter list has ", length(toFilter), " genes****\n\n"))
 
   fileNamePrefix=filterPrefix
 }
@@ -320,6 +331,7 @@ for(grp in groupsOI){
   # remove filtered genes
   if(filterData){
     idx<-resLFC$ID %in% toFilter
+    print(paste0("\n\n****Filtering ", sum(idx), " genes****\n\n"))
     resLFC<-resLFC[!idx,]
   }
 
@@ -470,88 +482,10 @@ for(grp in groupsOI){
 
   #plotCounts(dds, gene=which.min(res$padj), intgroup="sampleType")
 
-  #############-
-  # MAplot X chr genes
-  #############-
-
-  #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
-  chrXgenes<-resLFC$ID[resLFC$chr=="chrX"]
-  chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
-
-  chrXres05<-chrXres[chrXres$padj<padjVal,]
-
-
-  upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
-  write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
-                                           "_upOnX_p",padjVal,".csv"),
-              row.names=FALSE,col.names=FALSE)
-
-  plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
-
-
-
-  #############-
-  # MAplotautosomal genes
-  #############-
-  autosomalGenes<-resLFC$ID[resLFC$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
-  #autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
-  autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
-
-  autosomalRes05<- autosomalRes[autosomalRes$padj<padjVal,]
-
-  plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",padjVal),ylim=c(-4,4),alpha=padjVal)
-
   dev.off()
-
-
-  # Fisher tests ------------------------------------------------------------
-  #############-
-  # Fisher test of number of up and down genes on X v autosomes
-  #############-
-
-  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
-                   "_logfile.txt"),append=TRUE, type="output")
-  upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                            sum(chrXres05$log2FoldChange<0),
-                            sum(autosomalRes05$log2FoldChange>0),
-                            sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
-
-  cat("\nFisher Test, up v down:\n")
-  print(upVdownXvA)
-  print(fisher.test(upVdownXvA))
-
-
-  #############-
-  # Fisher test of number of differentially expressed genes on X v autosomes
-  #############-
-
-  testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
-                       dim(autosomalRes)[1],
-                       dim(autosomalRes05)[1]),
-                     nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-  cat("\nFisher Test, enrichment of differentially expressed genes:\n")
-  print(testEnrich)
-  print(fisher.test(testEnrich))
-  sink()
 
 
   # boxplots X vs autosomes -------------------------------------------------
-  #############-
-  # Box plot by X v autosomes
-  #############-
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                  "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
-
-  chrType<-factor(rownames(resLFC) %in% chrXgenes)
-  levels(chrType)<-c("Autosomal","X chr")
-  geneCounts<-table(chrType)
-
-  boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-          main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
-          xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-  #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-  abline(h=0,lty=2,col="blue")
-  dev.off()
 
 
   #############-
@@ -751,7 +685,10 @@ for(grp in groupsOI){
 
 mcmurchy<-readRDS(file=paste0(outPath,"/met2_set25_sigUp_McMurchy2017.rds"))
 
-sigUp<-resLFC[resLFC$padj < 0.01 & resLFC$log2FoldChange>0,]
+resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
+                        "_DESeq2_fullResults.rds"))
+resLFC<-resLFC[! is.na(resLFC$padj),]
+sigUp<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange>lfcVal,]
 
 mcmurchyCounts<-table(mcmurchy$Family)
 thisDataCounts<-table(sigUp$rptfamName)
@@ -771,5 +708,5 @@ df[,gsub("_$","",fileNamePrefix)]<-thisDataCounts[idx]
 df[is.na(df)]<-0
 
 write.csv(df, file=paste0(outPath,"/txt/", fileNamePrefix,grp,
-                      "_comparedPublished.csv"),
+                      "_comparedPublished_p",padjVal,".csv"),
           quote=F,row.names=F)

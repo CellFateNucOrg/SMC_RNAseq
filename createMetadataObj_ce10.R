@@ -1,4 +1,5 @@
 library(rtracklayer)
+library(BSgenome.Celegans.UCSC.ce10)
 
 ## variables ###
 outPath="."
@@ -198,7 +199,7 @@ md$overlap[rptRows][unique(c(queryHits(olstart), queryHits(olend),
 md$overlap[rptRows][unique(queryHits(olexons))]<-"OL_exon"
 
 
-saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,"_.rds"))
+saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ## aggregated repeat families
@@ -220,5 +221,5 @@ mddf<-rbind(mddf,rptdf)
 
 table(mddf$bioType)
 
-saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,"_.rds"))
+saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 

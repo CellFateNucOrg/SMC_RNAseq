@@ -24,14 +24,16 @@ source("functions.R")
 ###############################################################-
 plotPDFs=F
 fileNamePrefix="BWA_"
-filterPrefix="BWA_rpt_none_"
+filterPrefix="BWA_rptOnly_none_"
 dataset="_none"
 filterData=T
 
-padjVal=0.01
+padjVal=0.05
 lfcVal=0
 outPath="."
+minReads=1
 genomeVer="WS275"
+dfamVer="Dfam_3.3"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
@@ -44,10 +46,10 @@ ce11seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, header=T)
+fileList<-read.table(paste0(outPath,"/fastqList_metset.txt"), stringsAsFactors=F, header=T)
 
 
-sampleNames<-paste(fileList$sampleName, fileList$libType, fileList$repeatNum,
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum,
                    sep="_")
 fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
 
@@ -57,8 +59,7 @@ sampleTable$replicate=factor(fileList$repeatNum)
 
 
 # extract the strain variable
-sampleTable$strain<-factor(gsub("-","",as.character(fileList$sampleName)),levels=c("WT","met2_set25"))
-
+sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25"))
 
 controlGrp<-levels(sampleTable$strain)[1] # control group
 groupsOI<-levels(sampleTable$strain)[-1] # groups of interest to contrast to control
@@ -72,8 +73,8 @@ if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))){
   source(paste0(outPath,"/createMetadataObj.R"))
 }
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))
-#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
+metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
+#metadata<-readRDS(paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ###############################################################-
@@ -92,6 +93,11 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
                                 sampleTable1$sampleName),
                                sep="_")
+
+
+# remove rows with less than an average of minReads:
+dds<-dds[rowMeans(counts(dds))>=minReads,]
+
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -116,15 +122,21 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 
 
 
-#dds<-DESeq(dds)
-
-# remove non-repeat genes
-if(filterData){
-  dds<-dds[-grep("WBGene",rowData(dds)$gene),]
-  fileNamePrefix<-filterPrefix
+if(grepl("rptOnly",filterPrefix)){
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
+  dds<-DESeq(dds)
+} else {
+  dds<-DESeq(dds)
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
 }
-
-dds<-DESeq(dds)
 
 
 ######################################################-
@@ -765,3 +777,36 @@ df[is.na(df)]<-0
 write.csv(df, file=paste0(outPath,"/txt/", fileNamePrefix,grp,
                       "_comparedPublished.csv"),
           quote=F,row.names=F)
+
+
+
+##### comparison to McMurchy 2017 xlsx tables ------
+
+mcmurchy<-readRDS(file=paste0(outPath,"/met2_set25_sigUp_McMurchy2017.rds"))
+
+resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
+                       "_DESeq2_fullResults.rds"))
+resLFC<-resLFC[! is.na(resLFC$padj),]
+sigUp<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange>lfcVal,]
+
+mcmurchyCounts<-table(mcmurchy$Family)
+thisDataCounts<-table(sigUp$rptfamName)
+
+df<-data.frame(rptfamName=unique(c(names(mcmurchyCounts),
+                                   names(thisDataCounts))),
+               McMurchy=0, thisData=0)
+
+colnames(df)[3]<-gsub("_$","",fileNamePrefix)
+
+idx<-match(df$rptfamName,names(mcmurchyCounts))
+df$McMurchy<-mcmurchyCounts[idx]
+
+idx<-match(df$rptfamName,names(thisDataCounts))
+df[,gsub("_$","",fileNamePrefix)]<-thisDataCounts[idx]
+
+df[is.na(df)]<-0
+
+write.csv(df, file=paste0(outPath,"/txt/", fileNamePrefix,grp,
+                          "_comparedPublished_p",padjVal,".csv"),
+          quote=F,row.names=F)
+
