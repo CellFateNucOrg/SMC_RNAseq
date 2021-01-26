@@ -32,7 +32,7 @@ fastqFileList=./fastqList.txt
 fastqFile=(`cut -f1 $fastqFileList`)
 sampleNames=(`cut -f2 $fastqFileList`)
 repeatNums=(`cut -f3 $fastqFileList`)
-#laneNums=(`cut -f4 $fastqFileList`)
+conditions=(`cut -f4 $fastqFileList`)
 
 i=${SLURM_ARRAY_TASK_ID}
 
@@ -48,7 +48,7 @@ mRNAonly=false #false or true
 fastqFile=${fastqFile[$i]}
 sampleName=${sampleNames[$i]}
 repeatNum=${repeatNums[$i]}
-#laneNum=${laneNums[$i]}
+condition=${conditions[$i]}
 
 nThreads=${SLURM_CPUS_PER_TASK}
 
@@ -78,8 +78,7 @@ QC_DIR=${WORK_DIR}/qc
 WIGtoBW_DIR=${HOME}/mySoftware
 
 #FASTQ_DIR=`dirname ${fastqFile}`
-baseName=${sampleName}_${repeatNum}
-#_${laneNum}
+baseName=${sampleName}_${repeatNum}_${condition}
 
 #######################################################
 ## get initial read stats                            ##

@@ -66,25 +66,25 @@ WIGtoBW_DIR=${HOME}/mySoftware
 baseName=${sampleName}_${repeatNum}
 #_${laneNum}
 
-########################################################
-### get initial read stats                            ##
-########################################################
-#
-##run fastqc on sequences
-#mkdir -p ${WORK_DIR}/qc/rawData
-#fastqc ${fastqFile} -t $nThreads -o ${WORK_DIR}/qc/rawData 
-#	
-########################################################
-### trim adaptors with cutadapt                       ##
-########################################################
-#
-## use cutadapt to trim
-#mkdir -p cutadapt
-#cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o cutadapt/${baseName}.fastq.gz -j $nThreads ${fastqFile}
-#
-##redo fastQC on trimmed reads
-#mkdir -p ${WORK_DIR}/qc/cutadapt
-#fastqc cutadapt/${baseName}.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
+#######################################################
+## get initial read stats                            ##
+#######################################################
+
+#run fastqc on sequences
+mkdir -p ${WORK_DIR}/qc/rawData
+fastqc ${fastqFile} -t $nThreads -o ${WORK_DIR}/qc/rawData 
+	
+#######################################################
+## trim adaptors with cutadapt                       ##
+#######################################################
+
+# use cutadapt to trim
+mkdir -p cutadapt
+cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o cutadapt/${baseName}.fastq.gz -j $nThreads ${fastqFile}
+
+#redo fastQC on trimmed reads
+mkdir -p ${WORK_DIR}/qc/cutadapt
+fastqc cutadapt/${baseName}.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
 
 ########
 # Align to genome with bwa aln
