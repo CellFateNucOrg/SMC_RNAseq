@@ -1,0 +1,5 @@
+fileName	sampleName	repeatNum	condition
+/home/ubelix/izb/md17s996/2020_RNA_seq/McMurchy2017/fastq/PRJNA345014_WT_ribo0_r1_c1.fastq.gz	WT_ribo0	1	c1
+/home/ubelix/izb/md17s996/2020_RNA_seq/McMurchy2017/fastq/PRJNA345014_WT_ribo0_r2_c1.fastq.gz	WT_ribo0	2	c1
+/home/ubelix/izb/md17s996/2020_RNA_seq/McMurchy2017/fastq/PRJNA345014_met-2_set-25_ribo0_r1_c1.fastq.gz	met-2_set-25_ribo0	1	c1
+/home/ubelix/izb/md17s996/2020_RNA_seq/McMurchy2017/fastq/PRJNA345014_met-2_set-25_ribo0_r2_c1.fastq.gz	met-2_set-25_ribo0	2	c1
