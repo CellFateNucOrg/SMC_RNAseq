@@ -69,7 +69,7 @@ groupsOI<-levels(sampleTable$strain)[-1] # groups of interest to contrast to con
 ### Create metadata object --------------------------------------------------
 ###############################################################-
 
-if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))){
+if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))){
   source(paste0(outPath,"/createMetadataObj.R"))
 }
 
@@ -119,7 +119,6 @@ featureData <- data.frame(gene=rownames(dds),
                           chr=as.vector(seqnames(metadata))[idx])
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
-
 
 
 if(grepl("rptOnly",filterPrefix)){
