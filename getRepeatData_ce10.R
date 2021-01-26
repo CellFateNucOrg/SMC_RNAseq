@@ -6,10 +6,10 @@ library(BSgenome.Celegans.UCSC.ce10)
 genome<-Celegans
 dfamVer="Dfam_2.0"
 
-#args<-commandArgs(trailingOnly=TRUE)
-#workDir<-args[1]
+args<-commandArgs(trailingOnly=TRUE)
+workDir<-args[1]
 print(paste0("workDir is: ", workDir))
-workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
+#workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
 #workDir="."
 
 dfamURL=paste0("https://www.dfam.org/releases/",dfamVer,"/ce10_dfam.nrph.hits.gz")

@@ -9,7 +9,7 @@ dfamVer="Dfam_3.3"
 args<-commandArgs(trailingOnly=TRUE)
 workDir<-args[1]
 print(paste0("workDir is: ", workDir))
-workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
+#workDir="~/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats"
 
 
 dfamURL=paste0("https://www.dfam.org/releases/",dfamVer,"/annotations/ce10/ce10_dfam.nrph.hits.gz")
@@ -107,3 +107,24 @@ writeXStringSet(rptSeq, paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.fa.gz"),
 chromSizes<-data.frame(seqnames=seqnames(genome),seqlengths=seqlengths(genome))
 write.table(chromSizes,file=paste0(workDir,"/ws235.chrom.sizes"),col.names=F,
             row.names=F,sep="\t",quote=F)
+
+
+# McMurchy2017 types
+fig2data2URL<-"https://elifesciences.org/download/aHR0cHM6Ly9jZG4uZWxpZmVzY2llbmNlcy5vcmcvYXJ0aWNsZXMvMjE2NjYvZWxpZmUtMjE2NjYtZmlnMi1kYXRhMi12My54bHN4/elife-21666-fig2-data2-v3.xlsx?_hash=Vc0gZhYRUq5G8oMoQTJHwwfkDZsgkSAv1k2lEThtEHY%3D"
+mcmurchyFilename="elife-21666-fig2-data2-v3.xlsx"
+
+download.file(url=fig2data2URL, destfile=paste0("./",mcmurchyFilename))
+
+mcmurchy<-readxl::read_excel(paste0("./",mcmurchyFilename),sheet="Compiled")
+
+gff<-import(paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.gff3"),format="gff3")
+
+gff$repType<-NA
+inMcmurchy<-gff$Name %in% mcmurchy$Family
+idxMM<-match(gff$Name[inMcmurchy],mcmurchy$Family)
+gff$repType[inMcmurchy]<-mcmurchy$Class[idxMM]
+
+saveRDS(gff,paste0("./repeats_ce11_",dfamVer,"_nr.rds"))
+
+write.csv(gff,paste0("./repeats_ce11_",dfamVer,"_nr.csv"), quote=F,
+          row.names=F)
