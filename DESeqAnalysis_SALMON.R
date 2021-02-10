@@ -1158,17 +1158,17 @@ p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
 if(plotPDFs==T){
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                           "lfcValueDistribution_0.5.pdf"), plot=p1,
-          device="pdf",path=outPath, width=27,height=17,units="cm")
+          device="pdf",path=outPath, width=25,height=15,units="cm")
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                           "lfcValueDistribution_0.25.pdf"), plot=p2,
-          device="pdf",path=outPath, width=27,height=17,units="cm")
+          device="pdf",path=outPath, width=25,height=15,units="cm")
 } else {
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                           "lfcValueDistribution_0.5.png"), plot=p1,
-          device="png",path=outPath, width=27,height=17,units="cm")
+          device="png",path=outPath, width=25,height=15,units="cm")
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                           "lfcValueDistribution_0.25.png"), plot=p2,
-          device="png",path=outPath, width=27,height=17,units="cm")
+          device="png",path=outPath, width=25,height=15,units="cm")
 }
 
 
