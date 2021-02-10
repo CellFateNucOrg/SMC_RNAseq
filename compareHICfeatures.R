@@ -278,7 +278,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 # AB compartments - sample specific ---------------------------------------
 
 ####
-## sample specific compartments
+## sample specific compartments -----
 ####
 
 pcas<-data.frame(SMC=SMC,
@@ -359,7 +359,7 @@ dev.off()
 
 
 ####
-## AB compartment by chromosome
+## AB compartment by chromosome -----
 ####
 
 # genes that change significantly
@@ -430,15 +430,14 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 
 
 ####
-## AB comp LFC
+## AB comp LFC -----
 ####
 
 
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
+#sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+#                padj=padjVal,lfc=lfcVal,direction="both")
 #sigList<-lapply(listgr, as.data.frame)
-
-sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
+#sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
 
 
 
@@ -479,8 +478,8 @@ p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown
 
 yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2), outlier.shape=NA,
-               outlier.color="grey50") +
+  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+               outlier.shape=NA) +
   facet_grid(cols=vars(SMC)) + ylim(yminmax) +
   ggtitle("Significantly changed genes by compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
@@ -637,7 +636,7 @@ dev.off()
 
 
 ################-
-## AB compartment by chromosome - changes between TEVonly and cs
+## AB compartment by chromosome - switching between TEVonly and cs -----
 #################-
 
 # genes that change significantly
@@ -738,38 +737,9 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=19,units="cm")
 
-
 ####
-## AB comp LFC - changes between TEVonly and cs
+## AB comp LFC - switching between TEVonly and cs -----
 ####
-
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
-
-sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
-#sigList$SMC<-NA
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$switch),]
-
-yminmax=max(abs(min(sigList$log2FoldChange)),max(sigList$log2FoldChange))
-yminmax<-c(-yminmax,yminmax)
-p1<-ggplot(sigList,aes(x=switch,y=log2FoldChange,fill=switch)) +
-  geom_violin() + facet_grid(cols=vars(SMC)) +
-  ylim(yminmax) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_manual(values=pairedCols)
-
-sigList<-sigList[! (sigList$switch %in% c("AA","BB")),]
-sigList$switch<-droplevels(sigList$switch)
-yminmax1=max(abs(min(sigList$log2FoldChange)),max(sigList$log2FoldChange))
-yminmax1<-c(-yminmax1,yminmax1)
-p1a<-ggplot(sigList,aes(x=switch,y=log2FoldChange,fill=switch)) +
-  geom_violin() + facet_grid(cols=vars(SMC)) +
-  ylim(yminmax) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_manual(values=pairedCols[3:4])
 
 
 # upregulated
@@ -794,30 +764,32 @@ sigList<-do.call(rbind,sigList)
 sigList<-sigList[!is.na(sigList$switch),]
 sigList$updown<-"down"
 sigTbl<-rbind(sigTbl,sigList)
-#sigTbl$compartment<-as.factor(sigTbl$compartment)
-sigTbl$updown<-as.factor(sigTbl$updown)
+sigTbl$switch<-as.factor(sigTbl$switch)
+sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
 
-yminmax=c(-max(abs(sigTbl$log2FoldChange)),max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=switch,y=log2FoldChange,col=updown,fill=switch)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge(0),outlier.size=0.3) +
-  facet_grid(cols=vars(SMC)) + #ylim(yminmax) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_manual(values=pairedCols) +
+
+yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
+p1<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
+  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+               outlier.size=0.4) +
+  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  ggtitle("Log2 fold change by compartment") +
+  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
+  scale_color_grey(start=0.7,end=0.3,guide=F)
+
 
 sigTbl<-sigTbl[! (sigTbl$switch %in% c("AA","BB")),]
 sigTbl$switch<-droplevels(sigTbl$switch)
-yminmax1=max(abs(min(sigTbl$log2FoldChange)),max(sigTbl$log2FoldChange))
-yminmax1<-c(-yminmax1,yminmax1)
-
-p2a<-ggplot(sigTbl,aes(x=switch,y=log2FoldChange,col=updown,fill=switch)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge(0),outlier.size=0.3) +
-  facet_grid(cols=vars(SMC)) + #ylim(yminmax1) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_manual(values=pairedCols[3:4]) +
-  scale_y_continuous(limits = yminmax1) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
+yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
+p2<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
+  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+               outlier.shape=NA) +
+  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  ggtitle("Log2 fold change by compartment") +
+  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+  scale_y_continuous(limits = yminmax) +
+  scale_color_grey(start=0.7,end=0.3,guide=F)
 
 
 
@@ -827,11 +799,6 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
 
-p<-ggpubr::ggarrange(p1a,p2a,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcompSwitch_LFC_ABBA_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
 
 
 
