@@ -334,8 +334,10 @@ for(grp in groupsOI){
    #######-
 
    ## Count significant genes at different thresholds and plot
+   padjVals=c(0.05,0.01)
+   #padjVals=c(0.05,0.99)
    thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
-                             padjVals=c(0.05,0.01), lfcVals=c(0,0.25,0.5,1),
+                             padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
                              direction=c("both","lt","gt"), chr=c("all"),
                              outPath=outPath,
                              fileNamePrefix=paste0(fileNamePrefix, grp))
@@ -370,7 +372,7 @@ for(grp in groupsOI){
 
    if(grp=="dpy26cs"){
       thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
-                                padjVals=c(0.05,0.01), lfcVals=c(0,0.25,0.5,1),
+                                padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
                                 direction=c("both","lt","gt"), chr=c("chrX"),
                                 outPath=outPath,
                                 fileNamePrefix=paste0(fileNamePrefix, grp))
@@ -404,7 +406,7 @@ for(grp in groupsOI){
              device="png",path=outPath,width=9,height=12,units="cm")
 
       thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
-                                padjVals=c(0.05,0.01), lfcVals=c(0,0.25,0.5,1),
+                                padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
                                 direction=c("both","lt","gt"), chr=c("autosomes"),
                                 outPath=outPath,
                                 fileNamePrefix=paste0(fileNamePrefix, grp))
@@ -1112,10 +1114,119 @@ for(grp in groupsOI){
 ##########-
 # LFC density plots------
 ##########-
-
+padjVals=c(0.05,0.01)
+#padjVals=c(0.05,0.99)
 lfcDensity<-NULL
 for(grp in groupsOI) {
-   dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp),
+   #######-
+   # vary filtering threshold ----------------------------------------
+   #######-
+
+   ## Count significant genes at different thresholds and plot
+   thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
+                             padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
+                             direction=c("both","lt","gt"), chr=c("all"),
+                             outPath=outPath,
+                             fileNamePrefix=paste0(fileNamePrefix, grp))
+
+   write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                    "_numSignificant.csv"),quote=F,row.names=F)
+
+   ####### plot percentSignificant
+   p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
+      facet_grid(rows=vars(direction),cols=vars(padj))+
+      ggtitle(paste0(grp," all genes"))+geom_bar(stat="identity")+
+      xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+      geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
+                vjust=0,size=3,lineheight=0.9)+
+      ylim(0,1.2*max(thresholds$percentSignificant))
+
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                          "_thresholds_percentSig.png"), plot=p1,
+          device="png",path=outPath,width=9,height=12,units="cm")
+
+   p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
+      facet_grid(rows=vars(direction),cols=vars(padj))+
+      ggtitle(paste0(grp," all genes"))+geom_bar(stat="identity")+
+      xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+      geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSignificant)),
+                vjust=0,size=3,lineheight=0.9)+
+      ylim(0,1.2*max(thresholds$percentSigGt10))
+
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                          "_thresholds_percentSigGt10.png"), plot=p2,
+          device="png",path=outPath,width=9,height=12,units="cm")
+
+   if(grp=="dpy26cs"){
+      thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
+                                padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
+                                direction=c("both","lt","gt"), chr=c("chrX"),
+                                outPath=outPath,
+                                fileNamePrefix=paste0(fileNamePrefix, grp))
+
+      write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                       "_numSignificant_chrX.csv"),quote=F,row.names=F)
+
+      p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
+         facet_grid(rows=vars(direction),cols=vars(padj))+
+         ggtitle(paste0(grp," chrX genes"))+ geom_bar(stat="identity")+
+         xlab("log2 fold change threshold")+ ylab("Percent significant chrX genes") +
+         geom_text(aes(label=paste0(round(percentSignificant,0),"%\n", numSignificant)),
+                   vjust=0,size=3,lineheight=0.9)+
+         ylim(0,1.2*max(thresholds$percentSignificant))
+
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_thresholds_percentSig_chrX.png"), plot=p1,
+             device="png",path=outPath,width=9,height=12,units="cm")
+
+
+      p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
+         facet_grid(rows=vars(direction),cols=vars(padj))+
+         ggtitle(paste0(grp," chrX genes"))+ geom_bar(stat="identity")+
+         xlab("log2 fold change threshold")+ ylab("Percent significant chrX genes") +
+         geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSignificant)),
+                   vjust=0,size=3,lineheight=0.9)+
+         ylim(0,1.2*max(thresholds$percentSigGt10))
+
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_thresholds_percentSigGt10_chrX.png"), plot=p2,
+             device="png",path=outPath,width=9,height=12,units="cm")
+
+      thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
+                                padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
+                                direction=c("both","lt","gt"), chr=c("autosomes"),
+                                outPath=outPath,
+                                fileNamePrefix=paste0(fileNamePrefix, grp))
+
+      write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                       "_numSignificant_chrA.csv"),quote=F,row.names=F)
+
+      p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
+         facet_grid(rows=vars(direction),cols=vars(padj))+
+         ggtitle(paste0(grp," autosomal genes"))+ geom_bar(stat="identity")+
+         xlab("log2 fold change threshold")+ylab("Percent significant autosomal genes") +
+         geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
+                   vjust=0,size=3,lineheight=0.9)+
+         ylim(0,1.2*max(thresholds$percentSignificant))
+
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_thresholds_percentSig_chrA.png"), plot=p1,
+             device="png",path=outPath,width=9,height=12,units="cm")
+
+      p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
+         facet_grid(rows=vars(direction),cols=vars(padj))+
+         ggtitle(paste0(grp," autosomal genes"))+ geom_bar(stat="identity")+
+         xlab("log2 fold change threshold")+ylab("Percent significant autosomal genes") +
+         geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSignificant)),
+                   vjust=0,size=3,lineheight=0.9)+
+         ylim(0,1.2*max(thresholds$percentSigGt10))
+
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "_thresholds_percentSigGt10_chrA.png"), plot=p2,
+             device="png",path=outPath,width=9,height=12,units="cm")
+   }
+
+   dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
                   breaks=c(seq(0,2,0.05),Inf),chr="all",asCounts=F)[[1]]
    dd$group<-grp
    if(is.null(lfcDensity)){
@@ -1126,7 +1237,7 @@ for(grp in groupsOI) {
 }
 
 grp="dpy26cs"
-dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp),
+dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
                breaks=c(seq(0,2,0.05),Inf), chr="chrX",
                direction="gt", asCounts=F)
 rawX<-dd[[2]]
@@ -1134,7 +1245,7 @@ dd<-dd[[1]]
 dd$group<-paste0(grp,"_chrX")
 lfcDensity<-rbind(lfcDensity,dd)
 
-dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp),
+dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
                breaks=c(seq(0,2,0.05),Inf), chr="autosomes",
                direction="both", asCounts=F)[[1]]
 dd$group<-paste0(grp,"_chrA")

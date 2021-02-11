@@ -257,8 +257,8 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                     chr=chr, writeTable=F, IDcolName="ID", colsToCopy=c("chr"))
     group_tags<-cut(abs(na.omit(sig$log2FoldChange)), breaks=breaks, include.lowest=TRUE, right=TRUE)
     print(pval)
-    print(summary(group_tags))
-    print(length(summary(group_tags)))
+    #print(summary(group_tags))
+    #print(length(summary(group_tags)))
     if(asCounts){
       groupCounts[groupCounts$pvals==pval,"counts"]<-summary(group_tags)
     } else {
