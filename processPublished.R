@@ -166,6 +166,41 @@ write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F
 file.remove(meeuseFileName)
 
 
+###############-
+#  Latorre et al 2015 - Oscillating genes ----------------------------------
+###############-
+
+latorreURL<-"http://genesdev.cshlp.org/content/suppl/2015/03/03/29.5.495.DC1/Supplemental_TableS7.xlsx"
+latorreFileName<-"Supplemental_TableS7.xlsx"
+
+download.file(url=latorreURL,destfile=latorreFileName)
+
+latorre<-readxl::read_excel(latorreFileName,col_names=F)
+colnames(latorre)<-"Osc_Latorre2015"
+
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+sum(latorre$Osc_Latorre2015 %in% metadata$sequenceID)
+#3235
+length(latorre$Osc_Latorre2015)
+#3269
+
+idx<-match(latorre$Osc_Latorre2015,metadata$sequenceID)
+latorre$wormbaseID<-metadata$wormbaseID[idx]
+latorre<-latorre[!is.na(latorre$wormbaseID),]
+
+write.table(latorre,file=paste0(outPath,"/oscillatingGenes_latorre.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(latorreFileName)
+
+osc<-read.delim("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_filtCyc/oscillatingGenes.tsv")
+sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
+#2473
+dim(latorre)
+#3269
+dim(osc)
+#3739
+
 
 ###############-
 # Garrigues 2019 - Heatshock L2 -------------------------------------------
