@@ -26,7 +26,7 @@ source("functions.R")
 plotPDFs=F
 fileNamePrefix="salmon_"
 filterPrefix="noOsc_"
-filterData=T
+filterData=F
 padjVal=0.05
 lfcVal=0.5
 outPath="."
@@ -178,6 +178,29 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 dds<-DESeq(dds)
 
 
+###################-
+####### filter genes-------------------------
+#######-###########-
+if(filterData){
+   oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+                           stringsAsFactors=F) #3739
+   latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
+   hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
+   hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
+
+
+   toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
+                      hsDOWN$WormBase.ID))
+   #4522 genes osc+latorre
+   #6101 genes osc+latorre+hs
+
+   # remove filtered genes
+   idx<-rowData(dds)$gene %in% toFilter
+   dds<-dds[!idx,]
+
+   fileNamePrefix=filterPrefix
+}
+
 ######################################################-
 # Basic sample stats ------------------------------------------------------
 ######################################################-
@@ -313,19 +336,6 @@ for (grp in c(controlGrp,groupsOI)){
 #res=list()
 #resLFC=list()
 
-####### filter genes
-if(filterData){
-   oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
-                        stringsAsFactors=F)
-
-   toFilter<-oscillating$WB_ID
-
-   # remove filtered genes
-   idx<-rowData(dds)$gene %in% toFilter
-   dds<-dds[!idx,]
-
-   fileNamePrefix=filterPrefix
-}
 
 for(grp in groupsOI){
 
@@ -444,7 +454,7 @@ for(grp in groupsOI){
    # filter at the predetermined lfcVal -------
    # #############-
 
-   res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=lfcVal)
+   res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=padjVal)
    # shrink LFC estimates
    #resultsNames(dds) # to get names of coefficients
    resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
@@ -938,7 +948,7 @@ for(grp in groupsOI){
 
 oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
                         stringsAsFactors=F)
-
+latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
 hsUp<-readRDS("hsUp_garrigues2019.rds")
 hsDown<-readRDS("hsDown_garrigues2019.rds")
 
@@ -951,17 +961,24 @@ for(grp in groupsOI){
    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
    #### oscillating genes
-   keyvals<-rep('black', nrow(salmon))
+   bkgrnd='#99999966'
+   keyvals<-rep(bkgrnd, nrow(salmon))
    names(keyvals)<-rep('Other',nrow(salmon))
-   idx<-salmon$wormbaseID %in% oscillating$WB_ID
+   idx<-(salmon$wormbaseID %in% oscillating$WB_ID) & (salmon$wormbaseID %in% latorre$wormbaseID)
+   keyvals[idx]<-'blue'
+   names(keyvals)[idx]<-"Both"
+   idx<-(salmon$wormbaseID %in% oscillating$WB_ID) & !(salmon$wormbaseID %in% latorre$wormbaseID)
    keyvals[idx]<-'red'
-   names(keyvals)[idx]<-"Oscillating"
+   names(keyvals)[idx]<-"Meeuse(2020)"
+   idx<-(salmon$wormbaseID %in% latorre$wormbaseID) & !(salmon$wormbaseID %in% oscillating$WB_ID)
+   keyvals[idx]<-'green'
+   names(keyvals)[idx]<-"Latorre(2015)"
    sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
                             salmon$log2FoldChange>lfcVal,
-                            keyvals=="red"), na.rm=T)==3, na.rm=T)
+                            keyvals!=bkgrnd), na.rm=T)==3, na.rm=T)
    sigDown<-sum(rowSums(cbind(salmon$padj< padjVal,
                               salmon$log2FoldChange< -lfcVal,
-                              keyvals=="red"), na.rm=T)==3, na.rm=T)
+                              keyvals!=bkgrnd), na.rm=T)==3, na.rm=T)
    p1<-EnhancedVolcano(salmon,
                        lab=salmon$publicID,
                        labSize=0.5,
@@ -973,7 +990,7 @@ for(grp in groupsOI){
                        ylim=c(0,65),
                        title= paste0(grp," vs ", controlGrp),
                        subtitle=NULL,
-                       caption = paste0(sum(keyvals=="red"), ' oscillating genes (Meeuse 2020). ',sigUp, " up, ",sigDown," down."),
+                       caption = paste0(sum(keyvals!=bkgrnd), ' oscillating genes. ',sigUp, " up, ",sigDown," down."),
                        captionLabSize = 12,
                        pCutoff=padjVal,
                        FCcutoff=lfcVal,
@@ -999,6 +1016,9 @@ for(grp in groupsOI){
                              "_volcanoPlot_oscillatingGenes.png"), plot=p1,
              device="png",path=outPath, width=12,height=12,units="cm")
    }
+
+
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
 
 

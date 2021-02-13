@@ -167,7 +167,7 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
 varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                         lfcVals=c(0,0.25,0.5,1),
                         direction=c("both","lt","gt"), chr="all",
-                        outPath=".",fileNamePrefix=""){
+                        outPath=".",fileNamePrefix="",shrink=F){
   # make table of all combinations
   thresholds<-expand.grid(group=grp, direction=c("both","lt","gt"),
                           padj=padjVals, lfc=lfcVals, stringsAsFactors=F)
@@ -178,6 +178,10 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   for(pval in padjVals){
     res<-NULL
     res<-results(dds,contrast=contrastOI,alpha=pval)
+    if(shrink){
+      resLFC<-lfcShrink(dds,coef=paste0(contrastOI[1],"_",contrastOI[2],"_vs_",contrastOI[3]), type="apeglm", res=res)
+      res<-resLFC
+    }
 
     pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"_independentFilter_",
                     pval,".pdf"), width=8, height=11, paper="a4")
@@ -243,7 +247,7 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
 #' @export
 getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                      breaks=c(seq(0,2,0.1),Inf), chr="all",
-                     direction="both",asCounts=F){
+                     direction="both",asCounts=F,shrink=F){
   groupCounts<-res<-NULL
   breakLabels<-levels(cut(breaks[-1],breaks))
   groupCounts<-data.frame(breaks=breakLabels,
@@ -251,6 +255,11 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   for(pval in padjVals){
     res<-NULL
     res<-results(dds,contrast=contrastOI,alpha=pval)
+    if(shrink){
+      resLFC<-lfcShrink(dds,coef=paste0(contrastOI[1],"_",contrastOI[2],"_vs_",contrastOI[3]),
+                        type="apeglm", res=res)
+      res<-resLFC
+    }
     res$ID<-rowData(dds)$gene
     res$chr<-rowData(dds)$chr
     sig<-filterResults(res, padj=pval, lfc=0, direction=c(direction),
