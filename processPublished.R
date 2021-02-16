@@ -41,8 +41,9 @@ metadata<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
 ## manually curated from papers
 #######################
 
-pubDC<-data.table::fread(input="published_DC.txt")
-pubNDC<-data.table::fread(input="published_Xescapers.txt")
+
+pubDC<-readxl::read_excel("DCgenes_published.xlsx",sheet="DC")
+pubNDC<-readxl::read_excel("DCgenes_published.xlsx",sheet="Xescapers")
 
 
 pubDCgr<-metadata[metadata$wormbase %in% pubDC$wbid]

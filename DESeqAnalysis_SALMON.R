@@ -25,10 +25,10 @@ source("functions.R")
 ####
 plotPDFs=F
 fileNamePrefix="salmon_"
-filterPrefix="noOsc_"
+filterPrefix=""
 filterData=F
 padjVal=0.05
-lfcVal=0.5
+lfcVal=0
 outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
