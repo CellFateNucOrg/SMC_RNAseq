@@ -247,7 +247,7 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
 #' @export
 getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                      breaks=c(seq(0,2,0.1),Inf), chr="all",
-                     direction="both",asCounts=F,shrink=F){
+                     direction="both",asCounts=F,shrink=T){
   groupCounts<-res<-NULL
   breakLabels<-levels(cut(breaks[-1],breaks))
   groupCounts<-data.frame(breaks=breakLabels,
@@ -258,6 +258,7 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
     if(shrink){
       resLFC<-lfcShrink(dds,coef=paste0(contrastOI[1],"_",contrastOI[2],"_vs_",contrastOI[3]),
                         type="apeglm", res=res)
+      print(paste0(sum(res$log2FoldChange!=resLFC$log2FoldChange,na.rm=T)," lfc values are different after shrinkage"))
       res<-resLFC
     }
     res$ID<-rowData(dds)$gene

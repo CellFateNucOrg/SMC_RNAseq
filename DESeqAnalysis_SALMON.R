@@ -175,9 +175,6 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 #dim(dds)[1]
 #16606 genes from 20127
 
-dds<-DESeq(dds)
-
-
 ###################-
 ####### filter genes-------------------------
 #######-###########-
@@ -185,12 +182,13 @@ if(filterData){
    oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
                            stringsAsFactors=F) #3739
    latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-   hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
-   hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
+   #hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
+   #hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
 
 
-   toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
-                      hsDOWN$WormBase.ID))
+   #toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
+   #                   hsDOWN$WormBase.ID))
+   toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID))
    #4522 genes osc+latorre
    #6101 genes osc+latorre+hs
 
@@ -200,6 +198,8 @@ if(filterData){
 
    fileNamePrefix=filterPrefix
 }
+
+dds<-DESeq(dds)
 
 ######################################################-
 # Basic sample stats ------------------------------------------------------

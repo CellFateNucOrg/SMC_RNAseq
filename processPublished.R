@@ -149,7 +149,7 @@ saveRDS(kramerdpy21dc,file=paste0("kramer2015_chrXup_dpy21_lfc",
 ###############-
 #  Meeuse et al 2020 - Oscillating genes ----------------------------------
 ###############-
-# Grosshans lab
+# Developmental function and state transitions of a gene expression oscillator in Caenorhabditis elegan Meeuse...Grosshans Mol Syst Biol (2020)
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7370751/
 
 meeuseURL<-"https://www.embopress.org/action/downloadSupplement?doi=10.15252%2Fmsb.20209498&file=msb209498-sup-0003-DatasetEV1.xlsx"
@@ -169,7 +169,8 @@ file.remove(meeuseFileName)
 ###############-
 #  Latorre et al 2015 - Oscillating genes ----------------------------------
 ###############-
-
+# The DREAM complex promotes gene body H2A.Z for target repression Latorre..Ahringer (2015)
+# https://pubmed.ncbi.nlm.nih.gov/25737279/
 latorreURL<-"http://genesdev.cshlp.org/content/suppl/2015/03/03/29.5.495.DC1/Supplemental_TableS7.xlsx"
 latorreFileName<-"Supplemental_TableS7.xlsx"
 
