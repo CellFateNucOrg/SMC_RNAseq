@@ -14,7 +14,7 @@ outPath="."
 padjVal=0.05
 lfcVal=0.5
 plotPDFs=F
-fileNamePrefix="noOsc_"
+fileNamePrefix="salmon_"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -201,6 +201,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=lfcVal,direction="both")
 #sigList<-lapply(listgr, as.data.frame)
+
+sigList<-lapply(listgr,as.data.frame)
 
 sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
 # #sigList$SMC<-NA
