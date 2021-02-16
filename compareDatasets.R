@@ -10,6 +10,7 @@ outPath="."
 padjVal=0.05
 lfcVal=0.5
 plotPDFs=T
+fileNamePrefix="noOsc_"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -35,7 +36,7 @@ groupsOI<-levels(SMC)[-1]
 ## significantly changed genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                  namePadjCol="padj",
@@ -56,7 +57,7 @@ sigGenes<-lapply(achr, "[", ,"wormbaseID")
 p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_allGenes_",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
                                 paste(groupsOI, collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -67,7 +68,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_allGenes_",
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -89,7 +90,7 @@ sigGenes<-lapply(achr, "[", ,"wormbaseID")
 p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes up: lfc>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_upGenes_",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
                                 paste(groupsOI,collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -99,7 +100,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_upGenes_",
 ## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -121,7 +122,7 @@ sigGenes<-lapply(achr, "[", ,"wormbaseID")
 p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal down: lfc< -", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_downGenes_",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
                                 paste(groupsOI,collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -134,7 +135,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/venn_downGenes_",
 ########
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                                                       namePadjCol="padj",
@@ -164,7 +165,7 @@ p1<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
 
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
                                                       padj=padjVal, lfc=lfcVal,
@@ -196,7 +197,7 @@ p2<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
 
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
                                                                       padj=padjVal, lfc= -lfcVal,
@@ -223,7 +224,8 @@ p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) +
   scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/bar_countsPerChr_",paste(groupsOI,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "bar_countsPerChr_",paste(groupsOI,
                                 collapse="_"),"_padj",
                                 formatC(padjVal,format="e",digits=0),
                                 "_lfc", lfcVal,".pdf"),
@@ -237,7 +239,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/bar_countsPerChr_",paste(groups
 
 geneTable<-NULL
 for (grp in groupsOI){
-  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/salmon_",grp,"_DESeq2_fullResults.rds")))
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
   colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
   if(is.null(geneTable)){
     geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
@@ -249,25 +251,25 @@ for (grp in groupsOI){
 combnTable<-combn(1:length(groupsOI),m=2)
 # all genes
 geneTable<-na.omit(geneTable)
-gt<-geneTable[geneTable$kle2cs_lfc<1 & geneTable$scc1cs_lfc>2,]
-dim(gt)
-david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
-showPeter<-david[david$From %in% gt$wormbaseID,]
-write.table(showPeter,file=paste0(outPath,"/txt/klelt1_sccgt2.tsv"),sep="\t")
+# gt<-geneTable[geneTable$kle2cs_lfc<1 & geneTable$scc1cs_lfc>2,]
+# dim(gt)
+# david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
+# showPeter<-david[david$From %in% gt$wormbaseID,]
+# write.table(showPeter,file=paste0(outPath,"/txt/klelt1_sccgt2.tsv"),sep="\t")
 
 lfcCols<-grep("_lfc$",names(geneTable))
 minScale<-min(geneTable[,lfcCols])*1.1
 maxScale<-max(geneTable[,lfcCols])*1.1
 
 if(plotPDFs==T){
-  pdf(file=paste0(outPath, "/plots/cor_allGenes.pdf"), width=5, height=5, paper="a4")
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_allGenes.pdf"), width=5, height=5, paper="a4")
 }
 for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
 
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/cor_allGenes_",grp1,"_",grp2,".png"), width=5, height=5, units="in", res=150)
+    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_allGenes_",grp1,"_",grp2,".png"), width=5, height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
   #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
@@ -294,7 +296,7 @@ for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/cor_chrX_",grp1,"_",grp2,".png"), width=5,
+    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_chrX_",grp1,"_",grp2,".png"), width=5,
       height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
@@ -320,7 +322,7 @@ for (i in 1:ncol(combnTable)){
   grp1<-groupsOI[combnTable[1,i]]
   grp2<-groupsOI[combnTable[2,i]]
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/cor_autosomal_",grp1,"_",grp2,".png"), width=5,height=5, units="in", res=150)
+    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_autosomal_",grp1,"_",grp2,".png"), width=5,height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
   plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
@@ -342,3 +344,4 @@ for (i in 1:ncol(combnTable)){
 if(plotPDFs==T){
   dev.off()
 }
+

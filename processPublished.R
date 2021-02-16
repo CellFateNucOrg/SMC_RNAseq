@@ -14,7 +14,7 @@
 
 library(magrittr)
 
-
+outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
@@ -146,3 +146,86 @@ saveRDS(kramerdpy21dc,file=paste0("kramer2015_chrXup_dpy21_lfc",
 
 
 
+###############-
+#  Meeuse et al 2020 - Oscillating genes ----------------------------------
+###############-
+# Developmental function and state transitions of a gene expression oscillator in Caenorhabditis elegan Meeuse...Grosshans Mol Syst Biol (2020)
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7370751/
+
+meeuseURL<-"https://www.embopress.org/action/downloadSupplement?doi=10.15252%2Fmsb.20209498&file=msb209498-sup-0003-DatasetEV1.xlsx"
+meeuseFileName<-"MSB-16-e9498-s003.xlsx"
+
+download.file(url=meeuseURL,destfile=meeuseFileName)
+
+meeuse<-readxl::read_excel(meeuseFileName,col_types=c(rep("text",3),rep("numeric",2),"text"))
+oscillating<-meeuse[meeuse$Class=="Osc",]
+
+write.table(oscillating,file=paste0(outPath,"/oscillatingGenes.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(meeuseFileName)
+
+
+###############-
+#  Latorre et al 2015 - Oscillating genes ----------------------------------
+###############-
+# The DREAM complex promotes gene body H2A.Z for target repression Latorre..Ahringer (2015)
+# https://pubmed.ncbi.nlm.nih.gov/25737279/
+latorreURL<-"http://genesdev.cshlp.org/content/suppl/2015/03/03/29.5.495.DC1/Supplemental_TableS7.xlsx"
+latorreFileName<-"Supplemental_TableS7.xlsx"
+
+download.file(url=latorreURL,destfile=latorreFileName)
+
+latorre<-readxl::read_excel(latorreFileName,col_names=F)
+colnames(latorre)<-"Osc_Latorre2015"
+
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+sum(latorre$Osc_Latorre2015 %in% metadata$sequenceID)
+#3235
+length(latorre$Osc_Latorre2015)
+#3269
+
+idx<-match(latorre$Osc_Latorre2015,metadata$sequenceID)
+latorre$wormbaseID<-metadata$wormbaseID[idx]
+latorre<-latorre[!is.na(latorre$wormbaseID),]
+
+write.table(latorre,file=paste0(outPath,"/oscillatingGenes_latorre.tsv"),row.names=F,
+            col.names=T,quote=F,sep="\t")
+
+file.remove(latorreFileName)
+
+osc<-read.delim("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_filtCyc/oscillatingGenes.tsv")
+sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
+#2473
+dim(latorre)
+#3269
+dim(osc)
+#3739
+
+
+###############-
+# Garrigues 2019 - Heatshock L2 -------------------------------------------
+###############-
+
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/pdf/elife-51139.pdf
+garriguesURL<-"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/bin/elife-51139-supp2.xlsx"
+garriguesFileName<-"elife-51139-supp2.xlsx"
+
+download.file(url=garriguesURL,destfile=garriguesFileName)
+
+garrigues<-readxl::read_excel(garriguesFileName,na="NA")
+garrigues<-garrigues[! is.na(garrigues[,"P-adj"]),]
+
+hsUP<-getSignificantGenes(garrigues, padj=0.05, lfc=1,
+                          namePadjCol="P-adj",
+                          nameLfcCol="log2(FC)", direction="gt")
+hsUP
+saveRDS(hsUP,file="hsUp_garrigues2019.rds")
+
+hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=-1,
+                          namePadjCol="P-adj",
+                          nameLfcCol="log2(FC)", direction="lt")
+hsDOWN
+saveRDS(hsDOWN,file="hsDown_garrigues2019.rds")
+
+file.remove(garriguesFileName)
