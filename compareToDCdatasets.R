@@ -332,3 +332,70 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=11,units="cm")
 
+
+
+###############-
+## intersection oscillating -----
+###############-
+if(!filterData){
+  oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+                          stringsAsFactors=F) #3739
+  latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
+  hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
+  hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
+
+  for (grp in groupsOI){
+    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+    salmonSig<-getSignificantGenes(salmon, padj=padjVal,
+                                   lfc=lfcVal,
+                                   namePadjCol="padj",
+                                   nameLfcCol="log2FoldChange",
+                                   direction="both",
+                                   chr="all", nameChrCol="chr")
+
+    x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$WB_ID,
+            Latorre=latorre$wormbaseID)
+    names(x)<-c(prettyGeneName(grp), "Meeuse", "Latorre")
+    txtLabels<-list()
+    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[2])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[1]]),1)
+    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
+    txtLabels[paste0("% ",names(x)[1]," in union")]<-round(100*length(intersect(x[[1]],union(x[[2]],x[[3]])))/length(x[[1]]),1)
+    p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs oscillating: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2], "\n",txtLabels[[3]],names(txtLabels)[3]))
+
+    #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
+    ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsOscillating_padj",
+                                    padjVal,"_lfc", lfcVal,".pdf"),
+                    plot=p1, device="pdf",width=15,height=11,units="cm")
+
+    # hsUP
+    salmonUp<-getSignificantGenes(salmon, padj=padjVal,
+                                   lfc=lfcVal,
+                                   namePadjCol="padj",
+                                   nameLfcCol="log2FoldChange",
+                                   direction="gt",
+                                   chr="all", nameChrCol="chr")
+    salmonDown<-getSignificantGenes(salmon, padj=padjVal,
+                                  lfc=lfcVal,
+                                  namePadjCol="padj",
+                                  nameLfcCol="log2FoldChange",
+                                  direction="lt",
+                                  chr="all", nameChrCol="chr")
+
+    x<-list(up=salmonUp$wormbaseID, down=salmonDown$wormbaseID,
+            hs_up=hsUP$WormBase.ID, hs_down=hsDOWN$WormBase.ID)
+    names(x)<-c(paste0(prettyGeneName(grp),c("_up","_down")),
+                       "hs_up", "hs_down")
+    txtLabels<-list()
+    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
+    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[4])]<-round(100*length(intersect(x[[1]],x[[4]]))/length(x[[1]]),1)
+    txtLabels[paste0("% ",names(x)[2]," in ",names(x)[3])]<-round(100*length(intersect(x[[2]],x[[3]]))/length(x[[2]]),1)
+    txtLabels[paste0("% ",names(x)[2]," in ",names(x)[4])]<-round(100*length(intersect(x[[2]],x[[4]]))/length(x[[2]]),1)
+    p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs oscillating: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]], names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2], " & \n", txtLabels[[3]], names(txtLabels)[3], " & ", txtLabels[[4]], names(txtLabels)[4]))
+
+    #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
+    ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsHeatshock_padj",
+                                    padjVal,"_lfc", lfcVal,".pdf"),
+                    plot=p1, device="pdf",width=15,height=11,units="cm")
+
+  }
+}
