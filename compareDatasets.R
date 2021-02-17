@@ -8,8 +8,8 @@ source("functions.R")
 
 outPath="."
 padjVal=0.05
-lfcVal=0.5
-plotPDFs=F
+lfcVal=0
+plotPDFs=T
 fileNamePrefix="salmon_"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)

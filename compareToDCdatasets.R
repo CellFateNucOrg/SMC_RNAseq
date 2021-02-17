@@ -9,8 +9,8 @@ outPath="."
 padjVal=0.05
 lfcVal=0
 plotPDFs=T
-fileNamePrefix=""
-filterPrefix="noOsc2x_"
+fileNamePrefix="salmon"
+filterPrefix=""
 filterData=F
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
@@ -125,7 +125,7 @@ for (grp in groupsOI){
   #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
   ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsKarmer_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=13,height=11,units="cm")
+                  plot=p1, device="pdf",width=19,height=13,units="cm")
 
 
 
@@ -165,7 +165,7 @@ for (grp in groupsOI){
   ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                   "venn_chrXup_",grp, "VsKramer_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=13,height=11,units="cm")
+                  plot=p1, device="pdf",width=19,height=13,units="cm")
 
 
   ###############################
@@ -204,7 +204,7 @@ for (grp in groupsOI){
   ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                   "venn_chrAall_",grp, "VsKramer_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=13,height=11,units="cm")
+                  plot=p1, device="pdf",width=19,height=13,units="cm")
 
 }
 
@@ -238,7 +238,7 @@ p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcV
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
                                 grp, "VsPapers_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p1, device="pdf",width=13,height=11,units="cm")
+                plot=p1, device="pdf",width=19,height=13,units="cm")
 
 
 
@@ -271,7 +271,7 @@ p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcV
 #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsJans2009_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p1, device="pdf",width=13,height=11,units="cm")
+                plot=p1, device="pdf",width=19,height=13,units="cm")
 
 
 
@@ -308,5 +308,5 @@ p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "venn_Jans2009vKramer2015_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=26,height=11,units="cm")
+                plot=p, device="pdf",width=29,height=19,units="cm")
 

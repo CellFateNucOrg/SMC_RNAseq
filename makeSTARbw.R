@@ -53,7 +53,7 @@ for (biolSample in biolSamples) {
                    "_",unique(sampleTable$strain[idx]) ,"_rpm_Avr.wig")
    logwigFile<-gsub("_Avr","_logAvr", wigFile )
 
-   finalOutputFile<-paste0(outPath,"/tracks/lfc_", grp, "_", controlGrp, "_ce11.bw")
+   finalOutputFile<-paste0(outPath,"/tracks/star_lfc_", grp, "_", controlGrp, "_ce11.bw")
 
    if(!file.exists(finalOutputFile)){
       system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
@@ -69,21 +69,22 @@ for (biolSample in biolSamples) {
       file.remove(wigFile)
    }
    avrFiles<-c(avrFiles,logwigFile)
-}
 
-# single log fold change track
-if(!file.exists(finalOutputFile)){
-   system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
-                 paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig")))
-   wigToBigWig(x=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"),
-               seqinfo=wbseqinfo,
-               dest=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-   bw<-import(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-   seqlevelsStyle(bw)<-"ucsc"
-   idx<-match(seqlevels(ce11seqinfo),seqlevels(bw))
-   seqinfo(bw,new2old=idx)<-ce11seqinfo
-   export.bw(bw,finalOutputFile)
-   file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
-   file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-   file.remove(avrFiles)
+
+   # single log fold change track
+   if(!file.exists(finalOutputFile)){
+      system(paste0("wiggletools diff ",paste0(avrFiles,collapse=" ")," > ",
+                    paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig")))
+      rtracklayer::wigToBigWig(x=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"),
+                               seqinfo=wbseqinfo,
+                               dest=paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+      bw<-import(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+      seqlevelsStyle(bw)<-"ucsc"
+      idx<-match(seqlevels(ce11seqinfo),seqlevels(bw))
+      seqinfo(bw,new2old=idx)<-ce11seqinfo
+      export.bw(bw,finalOutputFile)
+      file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
+      file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
+      file.remove(avrFiles)
+   }
 }

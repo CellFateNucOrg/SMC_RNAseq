@@ -12,7 +12,7 @@ source("functions.R")
 
 outPath="."
 padjVal=0.05
-lfcVal=0.5
+lfcVal=0
 plotPDFs=F
 fileNamePrefix="salmon_"
 

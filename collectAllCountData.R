@@ -26,7 +26,7 @@ countTable<-data.frame(library=gsub("_fastqc$","",cutadaptCount$library), rawDat
 salmonDirs<-list.files(path=paste0(outPath,"/salmon/mRNA"))
 d=salmonDirs[1]
 for (d in salmonDirs){
-  jsonData<-fromJSON(file=paste0(outPath,"/salmon/rptRNA/",d,"/aux_info/meta_info.json"))
+  jsonData<-fromJSON(file=paste0(outPath,"/salmon/mRNA/",d,"/aux_info/meta_info.json"))
   i<-which(countTable$library==d)
   countTable$salmonNumMap[i]<-jsonData$num_mapped
   countTable$salmonPercentMap[i]<-round(jsonData$percent_mapped,2)
