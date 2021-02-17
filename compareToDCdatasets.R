@@ -7,11 +7,11 @@ source("functions.R")
 
 outPath="."
 padjVal=0.05
-lfcVal=0
+lfcVal=0.5
 plotPDFs=T
-fileNamePrefix="salmon_"
-filterPrefix=""
-filterData=F
+fileNamePrefix="noOsc_"
+filterPrefix="noOsc_"
+filterData=T
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -331,6 +331,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "venn_Jans2009vKramer2015_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=11,units="cm")
+<<<<<<< HEAD
 
 
 
@@ -352,6 +353,8 @@ if(!filterData){
                                    nameLfcCol="log2FoldChange",
                                    direction="both",
                                    chr="all", nameChrCol="chr")
+=======
+>>>>>>> a45e54b (add subtitle with set overlap)
 
     x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$WB_ID,
             Latorre=latorre$wormbaseID)
