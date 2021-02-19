@@ -35,6 +35,8 @@ groupsOI<-levels(SMC)[-1]
 
 sigTables<-list()
 sigGR<-list()
+df<-data.frame(matrix(nrow=10,ncol=3))
+names(df)<-groupsOI
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
@@ -51,9 +53,10 @@ for (grp in groupsOI){
                       strand=sigTables[[n]]$strand)
   mcols(sigGR[[n]])<-sigTables[[n]]
   chrXgr<-sigGR[[n]][sigGR[[n]]$chr=="chrX"]
-  print(chrXgr[order(width(chrXgr),decreasing=T)][1:5])
-  print(chrXgr[order(width(chrXgr),decreasing=T)]$wormbaseID[1:5])
-  print(width(chrXgr[order(width(chrXgr),decreasing=T)][1:5]))
+  print(chrXgr[order(width(chrXgr),decreasing=T)][1:10])
+  print(chrXgr[order(width(chrXgr),decreasing=T)]$wormbaseID[1:10])
+  df[,grp]<-print(chrXgr[order(width(chrXgr),decreasing=T)]$publicID[1:10])
+  print(width(chrXgr[order(width(chrXgr),decreasing=T)][1:10]))
   hist(width(chrXgr),main=n,breaks=100)
 }
 
