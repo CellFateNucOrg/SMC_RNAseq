@@ -25,8 +25,8 @@ source("functions.R")
 ####
 plotPDFs=F
 fileNamePrefix="salmon_"
-filterPrefix=""
-filterData=F
+filterPrefix="noOsc_"
+filterData=T
 padjVal=0.05
 lfcVal=0
 outPath="."
@@ -181,14 +181,14 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 if(filterData){
    oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
                            stringsAsFactors=F) #3739
-   latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
+   #latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
    #hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
    #hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
 
 
    #toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
    #                   hsDOWN$WormBase.ID))
-   toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID))
+   toFilter<-unique(c(oscillating$WB_ID))
    #4522 genes osc+latorre
    #6101 genes osc+latorre+hs
 
@@ -1076,6 +1076,8 @@ for(grp in groupsOI){
 
    #### amplicon genes
    amp<-salmon[salmon$wormbaseID %in% amplicons$WBgeneID,]
+   sigAmp<-amp[amp$chr=="chrX" & amp$padj < 0.05 & amp$log2FoldChange>0.5, ]
+   saveRDS(sigAmp,paste0(outPath,"/rds/",fileNamePrefix,"sigAmplicons_",grp,"_p",0.05,"_lfc",0.5,".rds"))
    keyvals<-rep('black', nrow(amp))
    names(keyvals)<-rep('Other',nrow(amp))
    idxX<-amp$chr=="chrX"

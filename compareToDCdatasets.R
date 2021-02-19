@@ -34,15 +34,29 @@ groupsOI<-levels(SMC)[-1]
 #######
 
 sigTables<-list()
+sigGR<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                                                      namePadjCol="padj",
-                                                                      nameLfcCol="log2FoldChange",
-                                                                      direction="both",
-                                                                      chr="all", nameChrCol="chr"))
+  n<-prettyGeneName(grp)
+  sigTables[[n]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                 namePadjCol="padj",
+                                 nameLfcCol="log2FoldChange",
+                                 direction="both",
+                                 chr="all", nameChrCol="chr"))
+  sigTables[[n]]<-sigTables[[n]][!is.na(sigTables[[n]]$chr),] # removes mtDNA genes
+  sigGR[[n]]<-GRanges(seqnames=sigTables[[n]]$chr,
+                      ranges=IRanges(start=sigTables[[n]]$start,
+                                     end=sigTables[[n]]$end),
+                      strand=sigTables[[n]]$strand)
+  mcols(sigGR[[n]])<-sigTables[[n]]
+  chrXgr<-sigGR[[n]][sigGR[[n]]$chr=="chrX"]
+  print(chrXgr[order(width(chrXgr),decreasing=T)][1:5])
+  print(chrXgr[order(width(chrXgr),decreasing=T)]$wormbaseID[1:5])
+  print(width(chrXgr[order(width(chrXgr),decreasing=T)][1:5]))
+  hist(width(chrXgr),main=n,breaks=100)
 }
+
 
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 

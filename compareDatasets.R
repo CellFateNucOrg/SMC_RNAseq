@@ -10,7 +10,7 @@ outPath="."
 padjVal=0.05
 lfcVal=0
 plotPDFs=T
-fileNamePrefix="salmon_"
+fileNamePrefix="noOsc_"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
