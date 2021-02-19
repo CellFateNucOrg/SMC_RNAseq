@@ -1,5 +1,10 @@
+### make sure to put the correct settings in varaibleSettings.R
 
+# process some public datasets required later (only do once)
 #source("processPublished.R")
+#
+#make bigwigs from STAR data
+#source("makeSTARbw.R")
 
 # get read counts for each sample
 source("collectAllCountData.R")

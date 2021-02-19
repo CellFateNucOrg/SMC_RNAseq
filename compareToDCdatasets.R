@@ -5,6 +5,9 @@ library(EnhancedVolcano)
 
 source("functions.R")
 source("./variableSettings.R")
+if(filterData){
+  fileNamePrefix=filterPrefix
+}
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
