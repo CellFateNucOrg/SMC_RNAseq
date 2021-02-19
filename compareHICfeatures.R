@@ -8,13 +8,9 @@ library(ggpubr)
 library(genomation)
 library(seqplots)
 library(RColorBrewer)
-source("functions.R")
 
-outPath="."
-padjVal=0.05
-lfcVal=0
-plotPDFs=F
-fileNamePrefix="noOsc_"
+source("functions.R")
+source("./variableSettings.R")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 

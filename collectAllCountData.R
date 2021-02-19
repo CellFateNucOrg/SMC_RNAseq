@@ -1,7 +1,7 @@
 library("rjson")
 
 ## get number of reads at each stage of process
-outPath="."
+source("./variableSettings.R")
 
 if(!file.exists(paste0(outPath,"/qc/rawData/readCount.txt"))){
   system(paste0("./collectFastQCreadCounts.sh ",outPath,"/qc/rawData"))

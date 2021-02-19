@@ -6,12 +6,7 @@ library(dplyr)
 library(plyr)
 
 source("functions.R")
-
-outPath="."
-padjVal=0.05
-lfcVal=0
-plotPDFs=F
-fileNamePrefix="noOsc_"
+source("./variableSettings.R")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F,
                      header=T)

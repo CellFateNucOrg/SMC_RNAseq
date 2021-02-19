@@ -18,20 +18,12 @@ library(ggpubr)
 
 #library(REBayes)
 # get funciton for converting gene names from WBID to publicID
-source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
-source("functions.R")
+#source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
+source("./functions.R")
+source("./variableSettings.R")
 ####
 ### some variables
-####
-plotPDFs=F
-fileNamePrefix="salmon_"
-filterPrefix="noOsc_"
-filterData=T
-padjVal=0.05
-lfcVal=0
-outPath="."
-genomeVer="WS275"
-genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
+#####
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
 
@@ -41,7 +33,7 @@ seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
-makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
+makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),paste0("p",padjVal,"_lfc",lfcVal)))
 
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
@@ -179,19 +171,6 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 ####### filter genes-------------------------
 #######-###########-
 if(filterData){
-   oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
-                           stringsAsFactors=F) #3739
-   #latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-   #hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
-   #hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
-
-
-   #toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
-   #                   hsDOWN$WormBase.ID))
-   toFilter<-unique(c(oscillating$WB_ID))
-   #4522 genes osc+latorre
-   #6101 genes osc+latorre+hs
-
    # remove filtered genes
    idx<-rowData(dds)$gene %in% toFilter
    dds<-dds[!idx,]
@@ -1076,8 +1055,6 @@ for(grp in groupsOI){
 
    #### amplicon genes
    amp<-salmon[salmon$wormbaseID %in% amplicons$WBgeneID,]
-   sigAmp<-amp[amp$chr=="chrX" & amp$padj < 0.05 & amp$log2FoldChange>0.5, ]
-   saveRDS(sigAmp,paste0(outPath,"/rds/",fileNamePrefix,"sigAmplicons_",grp,"_p",0.05,"_lfc",0.5,".rds"))
    keyvals<-rep('black', nrow(amp))
    names(keyvals)<-rep('Other',nrow(amp))
    idxX<-amp$chr=="chrX"

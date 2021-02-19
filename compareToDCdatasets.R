@@ -4,14 +4,7 @@ library(ggplot2)
 library(EnhancedVolcano)
 
 source("functions.R")
-
-outPath="."
-padjVal=0.05
-lfcVal=0.5
-plotPDFs=T
-fileNamePrefix="noOsc_"
-filterPrefix="noOsc_"
-filterData=T
+source("./variableSettings.R")
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -34,32 +27,15 @@ groupsOI<-levels(SMC)[-1]
 #######
 
 sigTables<-list()
-sigGR<-list()
-df<-data.frame(matrix(nrow=10,ncol=3))
-names(df)<-groupsOI
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
-  n<-prettyGeneName(grp)
-  sigTables[[n]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                 namePadjCol="padj",
-                                 nameLfcCol="log2FoldChange",
-                                 direction="both",
-                                 chr="all", nameChrCol="chr"))
-  sigTables[[n]]<-sigTables[[n]][!is.na(sigTables[[n]]$chr),] # removes mtDNA genes
-  sigGR[[n]]<-GRanges(seqnames=sigTables[[n]]$chr,
-                      ranges=IRanges(start=sigTables[[n]]$start,
-                                     end=sigTables[[n]]$end),
-                      strand=sigTables[[n]]$strand)
-  mcols(sigGR[[n]])<-sigTables[[n]]
-  chrXgr<-sigGR[[n]][sigGR[[n]]$chr=="chrX"]
-  print(chrXgr[order(width(chrXgr),decreasing=T)][1:10])
-  print(chrXgr[order(width(chrXgr),decreasing=T)]$wormbaseID[1:10])
-  df[,grp]<-print(chrXgr[order(width(chrXgr),decreasing=T)]$publicID[1:10])
-  print(width(chrXgr[order(width(chrXgr),decreasing=T)][1:10]))
-  hist(width(chrXgr),main=n,breaks=100)
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                                                      namePadjCol="padj",
+                                                                      nameLfcCol="log2FoldChange",
+                                                                      direction="both",
+                                                                      chr="all", nameChrCol="chr"))
 }
-
 
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 
@@ -71,18 +47,6 @@ for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   if(filterData){
-    oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
-                            stringsAsFactors=F) #3739
-    #latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-    #hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
-    #hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
-
-    toFilter<-unique(c(oscillating$WB_ID))
-    #toFilter<-unique(c(oscillating$WB_ID,latorre$wormbaseID,hsUP$WormBase.ID,
-    #                   hsDOWN$WormBase.ID))
-    #4522 genes osc+latorre
-    #6101 genes osc+latorre+hs
-
     # remove filtered genes
     idx<-salmon$wormbaseID %in% toFilter
     salmon<-salmon[!idx,]
@@ -348,7 +312,6 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "venn_Jans2009vKramer2015_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=11,units="cm")
-<<<<<<< HEAD
 
 
 
@@ -370,8 +333,6 @@ if(!filterData){
                                    nameLfcCol="log2FoldChange",
                                    direction="both",
                                    chr="all", nameChrCol="chr")
-=======
->>>>>>> a45e54b (add subtitle with set overlap)
 
     x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$WB_ID,
             Latorre=latorre$wormbaseID)

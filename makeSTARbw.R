@@ -2,18 +2,11 @@ library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
 library(GenomicFeatures)
 
-source("functions.R")
-
+source("./functions.R")
+source("./variableSettings.R")
 ###
 ### some variables
 ####
-plotPDFs=F
-fileNamePrefix="salmon_"
-filterPrefix="noOsc_"
-filterData=T
-outPath="."
-genomeVer="WS275"
-genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
 
