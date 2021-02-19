@@ -2,8 +2,6 @@ library(DESeq2)
 library(Organism.dplyr)
 library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
-#library("TxDb.Celegans.UCSC.ce11.refGene")
-#library("TxDb.Celegans.UCSC.ce11.ensGene")
 library(tximport)
 library(GenomicFeatures)
 library(GenomeInfoDb)
@@ -19,21 +17,23 @@ library(ggpubr)
 
 #library(REBayes)
 # get funciton for converting gene names from WBID to publicID
-source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
+#source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
 source("functions.R")
 ###############################################################-
 ### some variables #####
 ###############################################################-
 plotPDFs=F
 fileNamePrefix="BWA_"
-filterPrefix="BWA_rpt_none_"
+filterPrefix="BWA_rptOnly_none_"
 dataset="_none"
 filterData=T
 
 padjVal=0.05
-lfcVal=0.5
+lfcVal=0
 outPath="."
+minReads=1
 genomeVer="WS275"
+dfamVer="Dfam_3.3"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
@@ -71,12 +71,12 @@ groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to contro
 ### Create metadata object --------------------------------------------------
 ###############################################################-
 
-if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))){
-  source(paste0(outPath,"/createMetadaObj.R"))
+if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))){
+  source(paste0(outPath,"/createMetadataObj.R"))
 }
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
-#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
+metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
+#metadata<-readRDS(paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ###############################################################-
@@ -95,6 +95,10 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
                                 sampleTable1$sampleName),
                                sep="_")
+
+# remove rows with less than an average of minReads:
+dds<-dds[rowMeans(counts(dds))>=minReads,]
+
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -117,13 +121,23 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
-dds<-DESeq(dds)
 
-# remove non-repeat genes
-if(filterData){
-  dds<-dds[-grep("WBGene",rowData(dds)$gene),]
-  fileNamePrefix<-filterPrefix
+if(grepl("rptOnly",filterPrefix)){
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
+  dds<-DESeq(dds)
+} else {
+  dds<-DESeq(dds)
+  # remove non-repeat genes
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
 }
+
 
 ######################################################-
 # Basic sample stats ------------------------------------------------------
@@ -344,7 +358,7 @@ for(grp in groupsOI){
   # heirarchical clustering of most significantly changed genes -------------
   ##########-
   # select gene names based on FDR (5%)
-  gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>0.5]
+  gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>lfcVal]
 
   # Retrieve the normalized counts for gene of interest
   countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
@@ -424,7 +438,7 @@ for(grp in groupsOI){
   # bed file for significant genes ------------------------------------------
   #######-
 
-  idx<-which(resGR$padj<0.05)
+  idx<-which(resGR$padj<padjVal)
   forBed<-resGR[idx]
   mcols(forBed)<-mcols(forBed)[,c("ID","score")]
   colnames(mcols(forBed))<-c("name","score")
@@ -717,14 +731,12 @@ for(grp in groupsOI){
   nrow(filterResults(results,padj=0.01,lfc=1,"both","all", writeTable=F))
 
 
-  genesdc<-filterResults(results,padj=0.05,lfc=0.5,"gt","chrX", writeTable=F)
+  genesdc<-filterResults(results,padj=padjVal,lfc=lfcVal,"gt","chrX", writeTable=F)
   genesdcgr<-metadata[metadata$ID %in% genesdc$ID]
   mcols(genesdcgr)<-cbind(mcols(genesdcgr),
                            genesdc[match(genesdcgr$ID,
                                           genesdc$ID),c(1:3)])
   genesdcgr
-  lfcVal=0.5 # >log2(1.4) and <log2(1.5)
-  padjVal=0.05
   saveRDS(genesdcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
                                  "_chrXup_lfc",
                                  formatC(lfcVal,format="e",digits=0),"_p",

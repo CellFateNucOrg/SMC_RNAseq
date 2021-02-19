@@ -1,11 +1,16 @@
 library(rtracklayer)
+library(BSgenome.Celegans.UCSC.ce11)
 
 ## variables ###
 outPath="."
 genomeVer="WS275"
+dfamVer="Dfam_3.3"
+ucscVer="ce11"
+
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
 dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
+ce11seqinfo<-seqinfo(Celegans)
 
 # Create metadata object --------------------------------------------------
 ###############################################################-
@@ -94,7 +99,7 @@ mcols(exons)<-mcols(exons)[,c("source","type","Parent")]
 seqlevelsStyle(exons)<-"ucsc"
 rptRows<-which(md$bioType == "repeat")
 toIgnore<-which(md$bioType %in% c("repeat","transposon","transposon_protein_coding",
-                                 "transposon_pseudogene"))
+                                  "transposon_pseudogene"))
 
 
 olstart<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="start")
@@ -116,7 +121,7 @@ md$overlap[rptRows][unique(c(queryHits(olstart), queryHits(olend),
 md$overlap[rptRows][unique(queryHits(olexons))]<-"OL_exon"
 
 
-saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
+saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ## aggregated repeat families
@@ -138,5 +143,5 @@ mddf<-rbind(mddf,rptdf)
 
 table(mddf$bioType)
 
-saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts.rds"))
+saveRDS(mddf,paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
