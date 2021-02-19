@@ -14,9 +14,8 @@
 
 library(magrittr)
 
-outPath="."
-genomeVer="WS275"
-genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
+
+source("./variableSettings.R")
 
 # txdb<-AnnotationDbi::loadDb(paste0(genomeDir,
 #                                    "/annotations/c_elegans.PRJNA13758.",
