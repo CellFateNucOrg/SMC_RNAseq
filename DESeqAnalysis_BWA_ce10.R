@@ -25,12 +25,12 @@ source("functions.R")
 plotPDFs=F
 fileNamePrefix="BWA_"
 filterPrefix="BWA_rptOnly_none_"
-dataset="_none"
+dataset="_none_rptOnly"
 filterData=T
 
-padjVal=0.1
+padjVal=0.05
 lfcVal=0
-minReads=1
+minReads=10
 outPath="."
 genomeVer="WS220"
 dfamVer="Dfam_2.0"
@@ -46,11 +46,10 @@ ce10seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, header=T)
+fileList<-read.table(paste0(outPath,"/fastqList_all.txt"), stringsAsFactors=F, header=T)
 
 
-sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$condition,
-                   sep="_")
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$condition ,sep="_")
 fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
 
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
@@ -73,7 +72,7 @@ groupsOI<-levels(sampleTable$strain)[-1][1] # groups of interest to contrast to 
 ###############################################################-
 
 if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,".rds"))){
-  source(paste0(outPath,"/createMetadataObj.R"))
+  source(paste0(outPath,"/createMetadataObj_ce10.R"))
 }
 
 
@@ -91,7 +90,7 @@ sampleTable1$sampleName<-basename(sampleTable1$fileName)
 # read samples into DESeq2
 dds <- DESeqDataSetFromHTSeqCount(sampleTable=sampleTable1,
                     directory=dirname(sampleTable1$fileName[1]),
-                                design=~condition+replicate+strain)
+                                design=~replicate+strain)
 
 colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
@@ -688,7 +687,7 @@ mcmurchy<-readRDS(file=paste0(outPath,"/met2_set25_sigUp_McMurchy2017.rds"))
 resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
                         "_DESeq2_fullResults.rds"))
 resLFC<-resLFC[! is.na(resLFC$padj),]
-sigUp<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange>lfcVal,]
+sigUp<-resLFC[resLFC$padj <= padjVal & resLFC$log2FoldChange>lfcVal,]
 
 mcmurchyCounts<-table(mcmurchy$Family)
 thisDataCounts<-table(sigUp$rptfamName)
@@ -710,3 +709,18 @@ df[is.na(df)]<-0
 write.csv(df, file=paste0(outPath,"/txt/", fileNamePrefix,grp,
                       "_comparedPublished_p",padjVal,".csv"),
           quote=F,row.names=F)
+
+
+
+
+## check overlap with indivudal genes
+tbl1<-read.csv(file=paste0(outPath,"/setmetPositives.csv"))
+
+rownames(sigUp)<-gsub("^.*_","",rownames(sigUp))
+dim(tbl1)
+dim(sigUp)
+
+idx<-match(tbl1$coordinates,rownames(sigUp))
+tbl1[which(!is.na(idx)),paste0(filterPrefix,"p",padjVal,"_minR",minReads)]<-TRUE
+
+write.csv(tbl1,file=paste0(outPath,"/setmetPositives.csv"),row.names=F)
