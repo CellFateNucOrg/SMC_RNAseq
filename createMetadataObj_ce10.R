@@ -1,5 +1,6 @@
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce10)
+library(dplyr)
 
 ## variables ###
 outPath="."

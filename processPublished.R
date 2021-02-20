@@ -179,6 +179,16 @@ download.file(url=latorreURL,destfile=latorreFileName)
 latorre<-readxl::read_excel(latorreFileName,col_names=F)
 colnames(latorre)<-"Osc_Latorre2015"
 
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+sum(latorre$Osc_Latorre2015 %in% metadata$sequenceID)
+#3235
+length(latorre$Osc_Latorre2015)
+#3269
+
+idx<-match(latorre$Osc_Latorre2015,metadata$sequenceID)
+latorre$wormbaseID<-metadata$wormbaseID[idx]
+latorre<-latorre[!is.na(latorre$wormbaseID),]
+
 write.table(latorre,file=paste0(outPath,"/oscillatingGenes_latorre.tsv"),row.names=F,
             col.names=T,quote=F,sep="\t")
 
