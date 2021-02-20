@@ -1,4 +1,4 @@
-### make sure to put the correct settings in varaibleSettings.R
+### make sure to put the correct settings in variableSettings.R
 
 # process some public datasets required later (only do once)
 #source("processPublished.R")
