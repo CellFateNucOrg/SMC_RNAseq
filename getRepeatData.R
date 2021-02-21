@@ -125,7 +125,8 @@ inMcmurchy<-gff$Name %in% mcmurchy$Family
 idxMM<-match(gff$Name[inMcmurchy],mcmurchy$Family)
 gff$repType[inMcmurchy]<-mcmurchy$Class[idxMM]
 
-saveRDS(gff,paste0("./repeats_ce11_",dfamVer,"_nr.rds"))
+saveRDS(gff,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.rds"))
 
-write.csv(gff,paste0("./repeats_ce11_",dfamVer,"_nr.csv"), quote=F,
+write.csv(gff,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.csv"), quote=F,
           row.names=F)
+

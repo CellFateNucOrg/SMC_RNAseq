@@ -9,7 +9,7 @@ ucscVer="ce11"
 
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
-dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
+dfam<-readRDS(paste0("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_",ucscVer,"_",dfamVer,"_nr.rds"))
 ce11seqinfo<-seqinfo(Celegans)
 
 # Create metadata object --------------------------------------------------
@@ -69,13 +69,11 @@ seqinfo(metadata)<-ce11seqinfo
 metadata<-sort(metadata)
 
 ######## add repeat data
-dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
-
 seqlevelsStyle(dfam)<-"ucsc"
 seqinfo(dfam)<-seqinfo(metadata)
 
 # give both objects the same column names
-mcols(dfam)[,c("source","type","score","phase")]<-NULL
+mcols(dfam)[,c("rptSource","type","score","phase")]<-NULL
 names(mcols(dfam))<-c("rptID","rptfamName","rptfamID","rptType")
 mcols(dfam)[,names(mcols(metadata))]<-as.character(NA)
 mcols(metadata)[,c("rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)

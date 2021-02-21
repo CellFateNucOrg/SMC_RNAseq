@@ -1,2 +1,14 @@
 slurm*
 .Rproj.user
+salmon/
+tracks/
+rds/
+txt/
+plots/
+htseq/
+bamBWA/
+bamSTAR/
+bamSTARrpts/
+Jans2009*
+Kramer_2015*
+*.xlsx
