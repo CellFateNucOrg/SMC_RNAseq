@@ -1,11 +1,9 @@
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
+library(dplyr)
 
 ## variables ###
-outPath="."
-genomeVer="WS275"
-dfamVer="Dfam_3.3"
-ucscVer="ce11"
+source("./variableSettings.R")
 
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
@@ -73,10 +71,11 @@ seqlevelsStyle(dfam)<-"ucsc"
 seqinfo(dfam)<-seqinfo(metadata)
 
 # give both objects the same column names
-mcols(dfam)[,c("rptSource","type","score","phase")]<-NULL
-names(mcols(dfam))<-c("rptID","rptfamName","rptfamID","rptType")
+mcols(dfam)[,c("type","score","phase")]<-NULL
+names(mcols(dfam))<-c("source","rptID","rptfamName","rptfamID","rptType")
 mcols(dfam)[,names(mcols(metadata))]<-as.character(NA)
-mcols(metadata)[,c("rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)
+mcols(metadata)[,c("source","rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)
+metadata$source<-genomeVer
 mcols(dfam)<-mcols(dfam)[,match(names(mcols(metadata)),names(mcols(dfam)))]
 dfam$bioType<-"repeat"
 # make sure column types are the same
@@ -107,10 +106,10 @@ olin<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="within")
 exons<-exons[which(exons$source=="WormBase")]
 olexons<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="any")
 olexonsEqual<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="equal") # should be empty
-length(unique(queryHits(olstart))) #18
-length(unique(queryHits(olend))) #17
-length(unique(queryHits(olin))) # 26278
-length(unique(queryHits(olexons))) #4954
+length(unique(queryHits(olstart))) #39
+length(unique(queryHits(olend))) #36
+length(unique(queryHits(olin))) # 26113
+length(unique(queryHits(olexons))) #6399
 
 md$overlap<-NA
 md$overlap[rptRows]<-"OL_none"
@@ -118,8 +117,10 @@ md$overlap[rptRows][unique(c(queryHits(olstart), queryHits(olend),
                              queryHits(olin)))]<-"OL_gene"
 md$overlap[rptRows][unique(queryHits(olexons))]<-"OL_exon"
 
-
+#OL_exon OL_gene OL_none
+#6399   21551   55261       7.6% overlap exons and 25.9% overlap noncoding part of gene
 saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
+
 
 
 ## aggregated repeat families

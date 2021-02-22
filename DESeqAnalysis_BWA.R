@@ -334,18 +334,6 @@ for(grp in groupsOI){
   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
                   "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
 
-  #######-
-  # plot results filtering threshold ----------------------------------------
-  #######-
-  plot(metadata(resLFC)$filterNumRej,
-       type="b", ylab="number of rejections",
-       xlab="quantiles of filter",main="Threshold for independant filtering of results")
-  lines(metadata(resLFC)$lo.fit, col="red")
-  abline(v=metadata(resLFC)$filterTheta)
-  legend("topright",legend=paste0("Read count \nthreshold: ",
-                                  round(metadata(resLFC)$filterThreshold,2)))
-
-
   ##########-
   # heirarchical clustering of most significantly changed genes -------------
   ##########-
@@ -364,7 +352,7 @@ for(grp in groupsOI){
               scale="row",
               hclust=function(x) hclust(x,method="average"),
               distfun=function(x) as.dist((1-cor(t(x)))/2),
-              margin=c(6,0),
+              margin=c(8,0),
               trace="none",
               density="none",
               labRow="",

@@ -102,7 +102,7 @@ for (f in starFiles) {
 
 
 bwaFiles<-list.files(path=paste0(outPath,"/bamBWA"),pattern="_union_random\\.txt$")
-for (f in bamFiles) {
+for (f in bwaFiles) {
   df<-read.delim(paste0(outPath,"/bamBWA/",f),header=F,stringsAsFactors=F)
   lib<-gsub("_union_random\\.txt","",f)
   countTable[countTable$library==lib,"bwaUniqMap_random"]<-sum(df$V2)
@@ -111,7 +111,7 @@ countTable$bwaPercentUniqMap_random=100*countTable$bwaUniqMap_random/countTable$
 
 
 bwaFiles<-list.files(path=paste0(outPath,"/bamBWA"),pattern="_union_none\\.txt$")
-for (f in bamFiles) {
+for (f in bwaFiles) {
   df<-read.delim(paste0(outPath,"/bamBWA/",f),header=F,stringsAsFactors=F)
   lib<-gsub("_union_none\\.txt","",f)
   countTable[countTable$library==lib,"bwaUniqMap_none"]<-sum(df$V2)
