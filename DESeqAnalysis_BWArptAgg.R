@@ -386,14 +386,14 @@ for(grp in groupsOI){
                       labSize=3,
                       #labCol="#11111100",
                       labCol="black",
-                      drawConnectors=T,
+                      drawConnectors=F,
                       x="log2FoldChange",
                       y="padj",
                       #selectLab=rownames(resLFC)[12366],
                       #xlim=c(-5.5,5.5),
                       #ylim=c(0,80),
-                      title= paste0(gsub("_$","",fileNamePrefix)," ",grp,
-                                    " vs ", controlGrp),
+                      title=paste0(aligner,"_",geneset,"_",multimappers, " ",
+                                           grp," vs ", controlGrp),
                       titleLabSize=14,
                       subtitle=NULL,
                       caption = paste0(nrow(resLFC), ' expressed families. ',
@@ -423,13 +423,20 @@ for(grp in groupsOI){
                            "_volcanoPlot_allGenes.png"), plot=p1,
            device="png",path=outPath, width=12,height=12,units="cm")
   }
-
-
   ##### create filtered tables of gene names
-  results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
+  resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
                           "_DESeq2_fullResults.rds"))
-  #results<-na.omit(results)
+  sig<-resLFC[!is.na(resLFC$padj) & resLFC$padj<padjVal &
+                 abs(resLFC$log2FoldChange) > lfcVal,
+               c("log2FoldChange","padj","rptfamName","rptType","famSize")]
+  sig$log2FoldChange<-round(sig$log2FoldChange,2)
+  sig$padj<-round(sig$padj,3)
+  write.table(sig, paste0(outPath,"/txt/",fileNamePrefix, grp,
+                          "_p",padjVal,"_lfc",lfcVal,".tsv"),row.names=F,
+              quote=F,sep="\t")
 }
+
+
 
 
 
@@ -532,6 +539,8 @@ if(plotPDFs==T){
                          "lfcValueDistribution_0.25.png"), plot=p2,
          device="png",path=outPath, width=25,height=19,units="cm")
 }
+
+
 
 
 

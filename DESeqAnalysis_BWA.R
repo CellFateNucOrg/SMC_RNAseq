@@ -119,6 +119,8 @@ if(grepl("rptOnly",filterPrefix)){
   # remove non-repeat genes before stats calculation
   if(filterData){
     dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    idx<-grep("_chrX",rownames(dds))
+    dds<-dds[-idx]
     fileNamePrefix<-filterPrefix
   }
   dds<-DESeq(dds)
@@ -331,12 +333,12 @@ for(grp in groupsOI){
   resLFC<-resLFC[! is.na(resLFC$padj),]
 
 
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
-                  "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
 
   ##########-
   # heirarchical clustering of most significantly changed genes -------------
   ##########-
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                  "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
   # select gene names based on FDR (5%)
   gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>lfcVal]
 
@@ -454,21 +456,21 @@ for(grp in groupsOI){
   #############-
   # MAplot X chr genes
   #############-
+  if(! grep("NoX",geneset)){
+    #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
+    chrXgenes<-resLFC$ID[resLFC$chr=="chrX"]
+    chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
 
-  #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
-  chrXgenes<-resLFC$ID[resLFC$chr=="chrX"]
-  chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
-
-  chrXres05<-chrXres[chrXres$padj<padjVal,]
+    chrXres05<-chrXres[chrXres$padj<padjVal,]
 
 
-  upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
-  write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
-                                           "_upOnX_p",padjVal,".csv"),
-              row.names=FALSE,col.names=FALSE)
+    upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
+    write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                             "_upOnX_p",padjVal,".csv"),
+                row.names=FALSE,col.names=FALSE)
 
-  plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
-
+    plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
+  }
 
 
   #############-
@@ -489,51 +491,51 @@ for(grp in groupsOI){
   #############-
   # Fisher test of number of up and down genes on X v autosomes
   #############-
+  if(! grep("NoX",geneset)){
+    sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                     "_logfile.txt"),append=TRUE, type="output")
+    upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
+                              sum(chrXres05$log2FoldChange<0),
+                              sum(autosomalRes05$log2FoldChange>0),
+                              sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
 
-  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
-                   "_logfile.txt"),append=TRUE, type="output")
-  upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                            sum(chrXres05$log2FoldChange<0),
-                            sum(autosomalRes05$log2FoldChange>0),
-                            sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
-
-  cat("\nFisher Test, up v down:\n")
-  print(upVdownXvA)
-  print(fisher.test(upVdownXvA))
-
-
-  #############-
-  # Fisher test of number of differentially expressed genes on X v autosomes
-  #############-
-
-  testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
-                       dim(autosomalRes)[1],
-                       dim(autosomalRes05)[1]),
-                     nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-  cat("\nFisher Test, enrichment of differentially expressed genes:\n")
-  print(testEnrich)
-  print(fisher.test(testEnrich))
-  sink()
+    cat("\nFisher Test, up v down:\n")
+    print(upVdownXvA)
+    print(fisher.test(upVdownXvA))
 
 
-  # boxplots X vs autosomes -------------------------------------------------
-  #############-
-  # Box plot by X v autosomes
-  #############-
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                  "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+    #############-
+    # Fisher test of number of differentially expressed genes on X v autosomes
+    #############-
 
-  chrType<-factor(rownames(resLFC) %in% chrXgenes)
-  levels(chrType)<-c("Autosomal","X chr")
-  geneCounts<-table(chrType)
+    testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
+                         dim(autosomalRes)[1],
+                         dim(autosomalRes05)[1]),
+                       nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
+    cat("\nFisher Test, enrichment of differentially expressed genes:\n")
+    print(testEnrich)
+    print(fisher.test(testEnrich))
+    sink()
 
-  boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-          main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
-          xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-  #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-  abline(h=0,lty=2,col="blue")
-  dev.off()
 
+    # boxplots X vs autosomes -------------------------------------------------
+    #############-
+    # Box plot by X v autosomes
+    #############-
+    pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                    "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+
+    chrType<-factor(rownames(resLFC) %in% chrXgenes)
+    levels(chrType)<-c("Autosomal","X chr")
+    geneCounts<-table(chrType)
+
+    boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
+            main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
+            xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
+    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
+    abline(h=0,lty=2,col="blue")
+    dev.off()
+  }
 
   #############-
   # Box plot by chromosome
