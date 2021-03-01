@@ -162,6 +162,10 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
+#remove unmapped or mitochondrial genes
+idx<-is.na(rowData(dds)$chr) | rowData(dds)$chr %in% c("MtDNA","chrM")
+dds<-dds[!idx,]
+
 #only take expressed genes
 #dds <- dds[ rowSums(counts(dds)) > 1, ]
 #print("Number of expressed genes:")
@@ -349,10 +353,10 @@ for(grp in groupsOI){
                          "_DESeq2_resultsTable.csv"),
              quote=F,row.names=F)
 
-   # remove NAs
-   res<-na.omit(res)
-   resLFC<-na.omit(resLFC)
-
+   # remove NAs from chr (unmapped or mtDNA) and padj (below filter threshold) columns
+   idx<-is.na(resLFC$chr) | is.na(resLFC$padj)
+   res<-res[!idx,]
+   resLFC<-resLFC[!idx,]
 
 
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
@@ -549,6 +553,7 @@ for(grp in groupsOI){
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
                    "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
 
+   idx<-resLFC$log2FoldChange!=0
    chrType<-factor(rownames(resLFC) %in% chrXgenes)
    levels(chrType)<-c("Autosomal","X chr")
    geneCounts<-table(chrType)
@@ -558,6 +563,7 @@ for(grp in groupsOI){
            xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
    abline(h=0,lty=2,col="blue")
+
    dev.off()
 
 
@@ -589,8 +595,8 @@ for(grp in groupsOI){
    #                "_volcanoPlot_allGenes.pdf"), width=8,height=6,paper="a4")
    keyvals<-rep('black', nrow(resLFC))
    names(keyvals)<-rep('NS',nrow(resLFC))
-   keyvals[which(resLFC$padj<padjVal & abs(resLFC$log2FoldChange)>1)]<-'red'
-   names(keyvals)[which(resLFC$padj<padjVal & abs(resLFC$log2FoldChange)>1)]<-paste0('p<',padjVal,' |lfc|>',lfcVal)
+   keyvals[which(resLFC$padj<padjVal & abs(resLFC$log2FoldChange)>lfcVal)]<-'red'
+   names(keyvals)[which(resLFC$padj<padjVal & abs(resLFC$log2FoldChange)>lfcVal)]<-paste0('p<',padjVal,' |lfc|>',lfcVal)
    sigUp<-sum(resLFC$padj<padjVal & resLFC$log2FoldChange>lfcVal)
    sigDown<-sum(resLFC$padj<padjVal & resLFC$log2FoldChange< -lfcVal)
    p1<-EnhancedVolcano(resLFC,
@@ -607,7 +613,7 @@ for(grp in groupsOI){
                    caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
-                   FCcutoff=1.0,
+                   FCcutoff=lfcVal,
                    xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    #.legend=c('NS','P & Log2 FC'),
@@ -652,8 +658,8 @@ for(grp in groupsOI){
 
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
    #                "_volcanoPlot_expnByChr.pdf"), width=8,height=6,paper="a4")
-   sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>1)
-   sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -1)
+   sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>lfcVal)
+   sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -lfcVal)
    p2<-EnhancedVolcano(resByChr,
                    lab=rownames(resByChr),
                    labSize=0.5,
@@ -667,7 +673,7 @@ for(grp in groupsOI){
                    caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
-                   FCcutoff=1.0,
+                   FCcutoff=lfcVal,
                    xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    legendPosition = 'top',
@@ -690,8 +696,8 @@ for(grp in groupsOI){
    idx<-resByChr$chr=="chrX"
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
    #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
-   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>1)
-   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -1)
+   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
+   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
    p3<-EnhancedVolcano(resByChr[idx,],
                    lab=rownames(resByChr[idx,]),
                    x="log2FoldChange",y="padj",
@@ -700,10 +706,10 @@ for(grp in groupsOI){
                    ylim=c(0,65),
                    title= paste0(grp," vs ",controlGrp,": chrX genes"),
                    subtitle=NULL,
-                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   caption = paste0(sum(resByChr$chr=="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
-                   FCcutoff=1.0,
+                   FCcutoff=lfcVal,
                    xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    legendPosition = 'top',
@@ -728,8 +734,8 @@ for(grp in groupsOI){
    idx<-resByChr$chr!="chrX"
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
    #                "_volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
-   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>1)
-   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -1)
+   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
+   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
    p4<-EnhancedVolcano(resByChr[idx,],
                    lab=rownames(resByChr[idx,]),
                    labSize=0.5,
@@ -740,10 +746,10 @@ for(grp in groupsOI){
                    ylim=c(0,65),
                    title= paste0(grp," vs ",controlGrp,": autosomal genes"),
                    subtitle=NULL,
-                   caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                   caption = paste0(sum(resByChr$chr!="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
-                   FCcutoff=1.0,
+                   FCcutoff=lfcVal,
                    xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    legendPosition = 'top',
@@ -1016,7 +1022,8 @@ for(grp in groupsOI) {
                              padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
                              direction=c("both","lt","gt"), chr=c("all"),
                              outPath=outPath,
-                             fileNamePrefix=paste0(fileNamePrefix, grp))
+                             fileNamePrefix=paste0(fileNamePrefix, grp),
+                             shrink=T)
 
    write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
                                     "_numSignificant.csv"),quote=F,row.names=F)
@@ -1061,7 +1068,7 @@ for(grp in groupsOI) {
          ggtitle(paste0(grp," chrX genes"))+ geom_bar(stat="identity")+
          xlab("log2 fold change threshold")+ ylab("Percent significant chrX genes") +
          geom_text(aes(label=paste0(round(percentSignificant,0),"%\n", numSignificant)),
-                   vjust=0,size=3,lineheight=0.9)+
+                   vjust=0, size=3, lineheight=0.9)+
          ylim(0,1.2*max(thresholds$percentSignificant))
 
       ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
