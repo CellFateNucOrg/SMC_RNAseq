@@ -23,18 +23,18 @@ source("functions.R")
 ### some variables #####
 ###############################################################-
 plotPDFs=F
+padjVal=0.05
+lfcVal=0
 fileNamePrefix="BWA_"
 filterPrefix="BWA_rptOnly_none_"
 dataset="_none"
 filterData=T
 
-padjVal=0.05
-lfcVal=0
 outPath="."
-minReads=1
-genomeVer="WS275"
-dfamVer="Dfam_3.3"
+minReads=10
+genomeVer="WS274"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
+dfamVer="Dfam_3.3"
 
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
 
@@ -46,10 +46,10 @@ ce11seqinfo<-seqinfo(Celegans)
 
 makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
 
-fileList<-read.table(paste0(outPath,"/fastqList_metset.txt"), stringsAsFactors=F, header=T)
+fileList<-read.table(paste0(outPath,"/fastqList_all.txt"), stringsAsFactors=F, header=T)
 
 
-sampleNames<-paste(fileList$sampleName, fileList$repeatNum,
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$condition,
                    sep="_")
 fileNames<-paste0(outPath,"/htseq/",sampleNames,"_union",dataset,".txt")
 
@@ -59,7 +59,8 @@ sampleTable$replicate=factor(fileList$repeatNum)
 
 
 # extract the strain variable
-sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25"))
+#sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25"))
+sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25","hpl2", "let418", "lin13", "lin61", "nrde2", "nrde2_let418", "prg1"))
 
 controlGrp<-levels(sampleTable$strain)[1] # control group
 groupsOI<-levels(sampleTable$strain)[-1] # groups of interest to contrast to control
@@ -94,9 +95,11 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 sampleTable1$sampleName),
                                sep="_")
 
+# clean up row names
+rownames(dds)<-gsub("^Gene:","",rownames(dds))
 
-# remove rows with less than an average of minReads:
-dds<-dds[rowMeans(counts(dds))>=minReads,]
+# remove rows with less than a minimum number of total reads (minReads):
+dds<-dds[rowSums(counts(dds))>=minReads,]
 
 
 ###############################################################-

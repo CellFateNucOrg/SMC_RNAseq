@@ -59,8 +59,7 @@ sampleTable$condition=factor(fileList$condition)
 
 
 # extract the strain variable
-sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))),levels=c("WT","met2_set25","hpl2","let418","lin13",
-                                                                                                       "lin61","nrde2_let418","nrde2","prg1"))
+sampleTable$strain<-factor(gsub("-","",(gsub("_ribo0","",as.character(fileList$sampleName)))), levels=c("WT", "met2_set25", "hpl2", "let418", "lin13", "lin61", "nrde2_let418", "nrde2", "prg1"))
 
 
 controlGrp<-levels(sampleTable$strain)[1] # control group
@@ -100,8 +99,8 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
 rownames(dds)<-gsub("Gene:","",rownames(dds))
 rownames(dds)<-gsub("Pseudogene:","",rownames(dds))
 
-# remove rows with no gene expression in any sample:
-dds<-dds[rowMeans(counts(dds))>=minReads,]
+# remove rows with less than a minimum number of total reads (minReads):
+dds<-dds[rowSums(counts(dds))>=minReads,]
 
 
 
