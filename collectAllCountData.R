@@ -1,5 +1,5 @@
 library("rjson")
-
+library(dplyr)
 ## get number of reads at each stage of process
 source("./variableSettings.R")
 
@@ -20,7 +20,8 @@ rawDataCount$fragCount==cutadaptCount$fragCount
 countTable<-data.frame(library=gsub("_fastqc$","",cutadaptCount$library), rawData=rawDataCount$fragCount,
                        cutadapt=cutadaptCount$fragCount,
                        salmonNumMap=NA, salmonPercentMap=NA,
-                       starUniqMap=NA, starPercentUniqMap=NA)
+                       starUniqMap=NA, starPercentUniqMap=NA,
+                       MreadsPerLib=NA)
 
 
 salmonDirs<-list.files(path=paste0(outPath,"/salmon/mRNA"))
@@ -47,4 +48,12 @@ for (f in starFiles) {
 
 #countTable$percentRawMapped<-round(100*countTable$salmonNumMap/countTable$rawData,2)
 
+#seqlib<-gsub("_L[1|2]$","",countTable$library)
+
+
 write.table(countTable,file=paste0(outPath,"/qc/readCountsByStage.txt"), col.names=T, row.names=F, quote=F)
+
+countTable$seqlib<-as.factor(gsub("_L[1|2]$","",countTable$library))
+by_lib<-countTable %>% group_by(seqlib) %>% summarise(total=round(sum(rawData)/1e6,1))
+min(by_lib$total)
+max(by_lib$total)

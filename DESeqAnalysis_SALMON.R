@@ -166,11 +166,9 @@ rowData(dds) <- DataFrame(mcols(dds), featureData)
 idx<-is.na(rowData(dds)$chr) | rowData(dds)$chr %in% c("MtDNA","chrM")
 dds<-dds[!idx,]
 
-#only take expressed genes
-#dds <- dds[ rowSums(counts(dds)) > 1, ]
-#print("Number of expressed genes:")
-#dim(dds)[1]
-#16606 genes from 20127
+#prefilter rows with less than 10 reads in total
+dds<-dds[rowSums(counts(dds)) >= 10,]
+print(paste0(dim(dds)[1], " genes with >=10 reads total"))
 
 ###################-
 ####### filter genes-------------------------

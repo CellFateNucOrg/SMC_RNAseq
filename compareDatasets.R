@@ -102,7 +102,7 @@ for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
@@ -199,7 +199,7 @@ for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
-                                                                      padj=padjVal, lfc= -lfcVal,
+                                                                      padj=padjVal, lfc= lfcVal,
                                                                       namePadjCol="padj",
                                                                       nameLfcCol="log2FoldChange",
                                                                       direction="lt",
@@ -226,8 +226,7 @@ p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "bar_countsPerChr_",paste(groupsOI,
                                 collapse="_"),"_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", lfcVal,".pdf"),
+                                padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
 
