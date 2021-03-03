@@ -435,9 +435,9 @@ for (i in 1:ncol(combnTable)){
   }
 }
 
+tmp<-geneTable # create backup copy
 if(includeChrX){
   geneTable<-na.omit(geneTable)
-  tmp<-geneTable
   geneTable<-geneTable[geneTable$chr=="chrX",]
   for (i in 1:ncol(combnTable)){
     grp1<-groupsOI[combnTable[1,i]]

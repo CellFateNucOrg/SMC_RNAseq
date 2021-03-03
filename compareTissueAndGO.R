@@ -268,7 +268,7 @@ if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
 condaActivate<-gsub("conda$","activate",conda_binary(conda = "auto"))
 sink(file=paste0(outPath,"/runTea.sh"),append=FALSE, type="output")
 cat("#! /bin/bash\n")
-cat(paste0("source ",condaActivate, " tea"))
+cat(paste0("source ",condaActivate, " tea\n"))
 cat(paste0("cd ./tissue/tea/p",padjVal,"_lfc",lfcVal,"\n"))
 #cat("cd ./tissue/tea\n")
 sink()
