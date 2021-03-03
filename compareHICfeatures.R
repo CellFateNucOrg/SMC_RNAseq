@@ -188,7 +188,7 @@ p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "ABcomp_N2_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=19,height=29,units="cm")
+                plot=p, device="pdf",width=19,height=29, units="cm")
 
 
 
@@ -1011,13 +1011,15 @@ flankSize<-60000
 smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,groupsOI,
                            "_wt_lfc.bw")
 if(plotPDFs==T){
-  pdf(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",flankSize/10000,"kb.pdf"),width=19,
-      height=16,units="cm", paper="a4")
+  pdf(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
+                      flankSize/10000,"kb.pdf"), width=19,
+      height=16, paper="a4")
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",flankSize/10000,"kb.png"),width=19,
-    height=16,units="cm", res=150)
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
+                      flankSize/10000,"kb.png"),width=19,
+    height=16, units="cm", res=150)
 }
 
 p<-getPlotSetArray(tracks=c(smcRNAseq),
@@ -1040,8 +1042,9 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-chrX_flank",flankSize/10000,"kb.png"),width=19,
-    height=16,units="cm", res=150)
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-chrX_flank",
+                      flankSize/10000,"kb.png"), width=19,
+    height=16, units="cm", res=150)
 }
 p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(loopsX),
@@ -1056,8 +1059,9 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-autosomal_flank",flankSize/10000,"kb.png"),width=19,
-    height=16,units="cm", res=150)
+  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-autosomal_flank",
+                      flankSize/10000,"kb.png"), width=19,
+    height=16, units="cm", res=150)
 }
 
 p<-getPlotSetArray(tracks=c(smcRNAseq),

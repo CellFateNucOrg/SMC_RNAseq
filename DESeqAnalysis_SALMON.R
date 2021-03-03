@@ -47,8 +47,8 @@ fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
 sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
 
 # extract the technical replicate variable
-sampleTable$replicate=fileList$repeatNum
-sampleTable$lane=fileList$laneNum
+sampleTable$replicate=factor(fileList$repeatNum)
+sampleTable$lane=factor(fileList$laneNum)
 
 # extract the strain variable
 sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("366","382","775","784"))
@@ -239,7 +239,7 @@ plotDispEsts(dds)
 #########-
 vsd <- vst(dds, blind=TRUE)
 colnames(vsd)<-colData(dds)$sampleName
-sampleDists <- dist(t(assay(vsd)))
+sampleDists <- stats::dist(t(assay(vsd)))
 sampleDistMatrix <- as.matrix(sampleDists)
 rownames(sampleDistMatrix) <- colData(dds)$sampleName
 colnames(sampleDistMatrix) <- colData(dds)$sampleName
@@ -298,7 +298,7 @@ colnames(df)<-colData(dds)$sampleName
 for (grp in c(controlGrp,groupsOI)){
    if(plotPDFs==T){
       pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.pdf"),
-          width=8,height=8,units="in",paper="a4")
+          width=8,height=8,paper="a4")
    } else {
       png(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.png"),
        width=8,height=8,units="in",res=150)
@@ -486,17 +486,18 @@ for(grp in groupsOI){
    #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
    chrXgenes<-resLFC$wormbaseID[resLFC$chr=="chrX"]
    chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
-
    chrXres05<-chrXres[chrXres$padj<padjVal,]
 
-
-   upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
-   write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+   if(length(chrXgenes)>0) {
+      upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
+      write.table(rownames(upOnX), file=paste0(outPath,"/txt/",
+                                               fileNamePrefix, grp,
                                             "_upOnX_p",padjVal,".csv"),
                row.names=FALSE,col.names=FALSE)
 
-   plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
-
+      plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),
+             ylim=c(-4,4),alpha=padjVal)
+   }
 
 
    #############-
@@ -508,7 +509,8 @@ for(grp in groupsOI){
 
    autosomalRes05<- autosomalRes[autosomalRes$padj<padjVal,]
 
-   plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",padjVal),ylim=c(-4,4),alpha=padjVal)
+   plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",
+                                    padjVal),ylim=c(-4,4),alpha=padjVal)
 
    dev.off()
 
@@ -523,7 +525,9 @@ for(grp in groupsOI){
    upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
                              sum(chrXres05$log2FoldChange<0),
                              sum(autosomalRes05$log2FoldChange>0),
-                             sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
+                             sum(autosomalRes05$log2FoldChange<0)),nrow=2,
+                      dimnames=list(group=c("Up","Down"),
+                                    chr=c("chrX","chrA")))
 
    cat("\nFisher Test, up v down:\n")
    print(upVdownXvA)
@@ -692,43 +696,45 @@ for(grp in groupsOI){
                           "_volcanoPlot_autVchrX.png"), plot=p2,
           device="png",path=outPath,width=12,height=12,units="cm")
    }
-   idx<-resByChr$chr=="chrX"
-   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-   #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
-   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
-   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
-   p3<-EnhancedVolcano(resByChr[idx,],
-                   lab=rownames(resByChr[idx,]),
-                   x="log2FoldChange",y="padj",
-                   selectLab=rownames(resByChr)[12366],
-                   xlim=c(-5.5,5.5),
-                   ylim=c(0,65),
-                   title= paste0(grp," vs ",controlGrp,": chrX genes"),
-                   subtitle=NULL,
-                   caption = paste0(sum(resByChr$chr=="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
-                   captionLabSize = 12,
-                   pCutoff=padjVal,
-                   FCcutoff=lfcVal,
-                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
-                   ylab=bquote(~-Log[10]~adjusted~italic(P)),
-                   legendPosition = 'top',
-                   legendLabSize = 12,
-                   legendIconSize = 3.0,
-                   axisLabSize=14,
-                   colCustom=keyvals[idx],
-                   colAlpha=0.5,
-                   pointSize=1.0)
-   #dev.off()
-   if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-   "_volcanoPlot_chrX.pdf"), plot=p3,
-   device="pdf",path=outPath,width=12,height=12,units="cm")
-   } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                             "_volcanoPlot_chrX.png"), plot=p3,
-             device="png",path=outPath,width=12,height=12,units="cm")
-   }
 
+   if(length(chrXgenes)>0) {
+      idx<-resByChr$chr=="chrX"
+      #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
+      sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
+      sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
+      p3<-EnhancedVolcano(resByChr[idx,],
+                          lab=rownames(resByChr[idx,]),
+                          x="log2FoldChange",y="padj",
+                          selectLab=rownames(resByChr)[12366],
+                          xlim=c(-5.5,5.5),
+                          ylim=c(0,65),
+                          title= paste0(grp," vs ",controlGrp,": chrX genes"),
+                          subtitle=NULL,
+                          caption = paste0(sum(resByChr$chr=="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                          captionLabSize = 12,
+                          pCutoff=padjVal,
+                          FCcutoff=lfcVal,
+                          xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                          ylab=bquote(~-Log[10]~adjusted~italic(P)),
+                          legendPosition = 'top',
+                          legendLabSize = 12,
+                          legendIconSize = 3.0,
+                          axisLabSize=14,
+                          colCustom=keyvals[idx],
+                          colAlpha=0.5,
+                          pointSize=1.0)
+      #dev.off()
+      if(plotPDFs==T){
+         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                                "_volcanoPlot_chrX.pdf"), plot=p3,
+                device="pdf",path=outPath,width=12,height=12,units="cm")
+      } else {
+         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                                "_volcanoPlot_chrX.png"), plot=p3,
+                device="png",path=outPath,width=12,height=12,units="cm")
+      }
+   }
 
    idx<-resByChr$chr!="chrX"
    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
@@ -800,25 +806,23 @@ for(grp in groupsOI){
 
    sink()
 
-   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
-   salmondc<-filterResults(salmon,padj=padjVal,lfc=lfcVal,"gt","chrX", writeTable=F)
-   salmondcgr<-metadata[metadata$wormbaseID %in% salmondc$wormbaseID]
-   mcols(salmondcgr)<-cbind(mcols(salmondcgr),
-                            salmondc[match(salmondcgr$wormbaseID,
-                                           salmondc$wormbaseID),c(1:3)])
-   salmondcgr
-   saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
-                                  "_chrXup_lfc",
-                                  lfcVal,"_p",
-                                  padjVal,
-                                  "_gr.rds"))
+   if(length(chrXgenes)>0) {
+      salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+      salmondc<-filterResults(salmon,padj=padjVal,lfc=lfcVal,"gt","chrX", writeTable=F)
+      salmondcgr<-metadata[metadata$wormbaseID %in% salmondc$wormbaseID]
+      mcols(salmondcgr)<-cbind(mcols(salmondcgr),
+                               salmondc[match(salmondcgr$wormbaseID,
+                                              salmondc$wormbaseID),c(1:3)])
+      salmondcgr
+      saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
+                                     "_chrXup_lfc", lfcVal,"_p",
+                                     padjVal, "_gr.rds"))
+   }
 }
 
 
 
 # Volcano - colour by other datasets --------------------------------------
-
-
 
 oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
                         stringsAsFactors=F)
@@ -1052,7 +1056,7 @@ for(grp in groupsOI) {
                           "_thresholds_percentSigGt10.png"), plot=p2,
           device="png",path=outPath,width=9,height=12,units="cm")
 
-   if(grp=="dpy26cs"){
+   if(grp=="dpy26cs" & length(chrXgenes)>0 ){
       thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
                                 padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
                                 direction=c("both","lt","gt"), chr=c("chrX"),
@@ -1121,6 +1125,9 @@ for(grp in groupsOI) {
              device="png",path=outPath,width=9,height=12,units="cm")
    }
 
+
+
+   ### plot distribution in full-----
    dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
                   breaks=c(seq(0,2,0.05),Inf),chr="all",asCounts=F)[[1]]
    dd$group<-grp
@@ -1129,54 +1136,55 @@ for(grp in groupsOI) {
    } else {
       lfcDensity<-rbind(lfcDensity,dd)
    }
+
+
+   if(length(chrXgenes)>0){
+      dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
+                     breaks=c(seq(0,2,0.05),Inf), chr="chrX",
+                     direction="gt", asCounts=F)
+      rawX<-dd[[2]]
+      dd<-dd[[1]]
+      dd$group<-paste0(grp,"_chrX")
+      lfcDensity<-rbind(lfcDensity,dd)
+   }
+
+   dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
+                  breaks=c(seq(0,2,0.05),Inf), chr="autosomes",
+                  direction="both", asCounts=F)[[1]]
+   dd$group<-paste0(grp,"_chrA")
+   lfcDensity<-rbind(lfcDensity,dd)
+
+   lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
+   lfcDensity$breaks<-factor(lfcDensity$breaks)
+
+   p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
+      geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +xlab("Absolute log2 fold change bins")+ylab("Density")
+
+
+   p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
+      annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
+               hjust=0.1,color="red")
+
+   p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
+      annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
+               hjust=-0.1,color="red")
+
+   if(plotPDFs==T){
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                             "lfcValueDistribution_0.5.pdf"), plot=p1,
+             device="pdf",path=outPath, width=25,height=15,units="cm")
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                             "lfcValueDistribution_0.25.pdf"), plot=p2,
+             device="pdf",path=outPath, width=25,height=15,units="cm")
+   } else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "lfcValueDistribution_0.5.png"), plot=p1,
+             device="png",path=outPath, width=25,height=15,units="cm")
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                             "lfcValueDistribution_0.25.png"), plot=p2,
+             device="png",path=outPath, width=25,height=15,units="cm")
+   }
 }
-
-grp="dpy26cs"
-dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
-               breaks=c(seq(0,2,0.05),Inf), chr="chrX",
-               direction="gt", asCounts=F)
-rawX<-dd[[2]]
-dd<-dd[[1]]
-dd$group<-paste0(grp,"_chrX")
-lfcDensity<-rbind(lfcDensity,dd)
-
-dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
-               breaks=c(seq(0,2,0.05),Inf), chr="autosomes",
-               direction="both", asCounts=F)[[1]]
-dd$group<-paste0(grp,"_chrA")
-lfcDensity<-rbind(lfcDensity,dd)
-
-lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
-lfcDensity$breaks<-factor(lfcDensity$breaks)
-
-p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
-   geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +xlab("Absolute log2 fold change bins")+ylab("Density")
-
-
-p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
-   annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
-            hjust=0.1,color="red")
-
-p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
-   annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
-            hjust=-0.1,color="red")
-
-if(plotPDFs==T){
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                          "lfcValueDistribution_0.5.pdf"), plot=p1,
-          device="pdf",path=outPath, width=25,height=15,units="cm")
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                          "lfcValueDistribution_0.25.pdf"), plot=p2,
-          device="pdf",path=outPath, width=25,height=15,units="cm")
-} else {
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                          "lfcValueDistribution_0.5.png"), plot=p1,
-          device="png",path=outPath, width=25,height=15,units="cm")
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                          "lfcValueDistribution_0.25.png"), plot=p2,
-          device="png",path=outPath, width=25,height=15,units="cm")
-}
-
 
 
 

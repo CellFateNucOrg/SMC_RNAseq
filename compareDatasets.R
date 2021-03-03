@@ -45,12 +45,19 @@ for (grp in groupsOI){
                                  chr="all", nameChrCol="chr"))
 }
 
+# check if datasets have chrX genes included
+includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -81,9 +88,13 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -113,9 +124,13 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes down: lfc< -", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -306,7 +321,7 @@ p3<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
   scale_y_continuous(limits = yminmax) + xlab(NULL) +
   scale_fill_brewer(palette="Dark2")
 
-countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>% summarise(count=n())
+countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>% dplyr::summarise(count=n())
 yminmax=c(0,max(countbychr$count))
 p4<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge()) +
@@ -323,7 +338,8 @@ p5<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
   scale_fill_brewer(palette="Dark2")
 
 
-countbytype<-sigTbl %>% filter(chr!="chrX") %>% group_by(updown,SMC) %>% summarise(count=n())
+countbytype<-sigTbl %>% filter(chr!="chrX") %>% group_by(updown,SMC) %>%
+  dplyr::summarise(count=n())
 
 yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
 p6<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
@@ -419,30 +435,32 @@ for (i in 1:ncol(combnTable)){
   }
 }
 
-geneTable<-na.omit(geneTable)
-tmp<-geneTable
-geneTable<-geneTable[geneTable$chr=="chrX",]
-for (i in 1:ncol(combnTable)){
-  grp1<-groupsOI[combnTable[1,i]]
-  grp2<-groupsOI[combnTable[2,i]]
-  if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_chrX_",grp1,"_",grp2,".png"), width=5,
-      height=5, units="in", res=150)
-  }
-  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
-  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
-  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
-  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
-  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
-       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
-       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
-       ylim=c(minScale,maxScale))
-  abline(v=0,h=0,col="grey60",lty=3)
-  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
-  abline(bestFitLine,col="red")
-  title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
-  if(plotPDFs==F){
-    dev.off()
+if(includeChrX){
+  geneTable<-na.omit(geneTable)
+  tmp<-geneTable
+  geneTable<-geneTable[geneTable$chr=="chrX",]
+  for (i in 1:ncol(combnTable)){
+    grp1<-groupsOI[combnTable[1,i]]
+    grp2<-groupsOI[combnTable[2,i]]
+    if(plotPDFs==F){
+      png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_chrX_",grp1,"_",grp2,".png"), width=5,
+          height=5, units="in", res=150)
+    }
+    Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
+    #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+    #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+    #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+    plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+         cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+         ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
+         ylim=c(minScale,maxScale))
+    abline(v=0,h=0,col="grey60",lty=3)
+    bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+    abline(bestFitLine,col="red")
+    title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
+    if(plotPDFs==F){
+      dev.off()
+    }
   }
 }
 
