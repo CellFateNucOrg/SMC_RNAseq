@@ -1,4 +1,5 @@
 library(rtracklayer)
+#library(GenomicInteractions)
 #library(ggVennDiagram)
 library(ggplot2)
 #library(EnhancedVolcano)
@@ -986,7 +987,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## anchors
 ####
 
-loops<-import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),format="bedpe")
+loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),format="bedpe")
 
 anchors<-zipup(loops)
 anchors<-unlist(anchors)
