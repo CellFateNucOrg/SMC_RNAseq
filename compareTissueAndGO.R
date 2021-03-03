@@ -4,6 +4,8 @@ library(ggplot2)
 library(EnhancedVolcano)
 library(wormcat)
 library(xlsx)
+library(reticulate)
+conda_install(envname="tea",packages="tissue_enrichment_analysis",pip=T)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -30,7 +32,8 @@ groupsOI<-levels(SMC)[-1]
 ## since r function does not seem to work.
 
 if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))
+  dir.create(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"),
+             recursive=T)
 }
 # ## all genes
 # sigTables<-list()
@@ -113,7 +116,8 @@ problemIDs<-c(177376, 190779, 188651, 13217889, 3565958, 13183957, 189501, 18587
 
 
 if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))
+  dir.create(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"),
+             recursive=T)
 }
 
 # ## significantly changed genes
@@ -239,7 +243,8 @@ for (grp in groupsOI){
 # https://www.micropublication.org/media/2018/03/microPublication.biology-10.17912-W25Q2N.pdf
 
 if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))
+  dir.create(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"),
+             recursive=T)
 }
 
 
@@ -260,8 +265,10 @@ if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
 # sigGenes<-lapply(sigGenes,na.omit)
 
 
+condaActivate<-gsub("conda$","activate",conda_binary(conda = "auto"))
 sink(file=paste0(outPath,"/runTea.sh"),append=FALSE, type="output")
 cat("#! /bin/bash\n")
+cat(paste0("source ",condaActivate, " tea"))
 cat(paste0("cd ./tissue/tea/p",padjVal,"_lfc",lfcVal,"\n"))
 #cat("cd ./tissue/tea\n")
 sink()
@@ -331,5 +338,7 @@ sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
 cat("cd ../../../\n")
 sink()
 
-system(paste0("chmod +x ",outPath,"/runTea.sh"))
-system(paste0(outPath,"/runTea.sh")) # doesn't work? but can be run from command line
+system(paste0("grep -v '^>' ",outPath,"/runTea.sh > ",outPath,"/runTea1.sh"))
+file.remove(paste0(outPath,"/runTea.sh"))
+system(paste0("chmod +x ",outPath,"/runTea1.sh"))
+system(paste0(outPath,"/runTea1.sh"),wait=F)
