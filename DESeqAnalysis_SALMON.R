@@ -379,7 +379,7 @@ for(grp in groupsOI){
    heatmap.2(as.matrix(countTable.kept),
              scale="row",
              hclust=function(x) hclust(x,method="average"),
-             distfun=function(x) as.dist((1-cor(t(x)))/2),
+             distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
              margin=c(6,0),
              trace="none",
              density="none",

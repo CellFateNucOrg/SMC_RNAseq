@@ -249,7 +249,7 @@ yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
 p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),outlier.size=0.4,
                outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Significantly changed genes by N2 compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -259,7 +259,7 @@ yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChang
 p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2), outlier.shape=NA,
                outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Significantly changed genes by N2 compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -472,7 +472,7 @@ yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
 p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),outlier.size=0.4,
                outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Significantly changed genes by compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -482,7 +482,7 @@ yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChang
 p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
                outlier.shape=NA) +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Significantly changed genes by compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -774,7 +774,7 @@ yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
 p1<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
                outlier.size=0.4) +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Log2 fold change by compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -787,7 +787,7 @@ yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
 p2<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
                outlier.shape=NA) +
-  facet_grid(cols=vars(SMC)) + ylim(yminmax) +
+  facet_grid(cols=vars(SMC)) +
   ggtitle("Log2 fold change by compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
@@ -1011,7 +1011,7 @@ flankSize<-60000
 smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,groupsOI,
                            "_wt_lfc.bw")
 if(plotPDFs==T){
-  pdf(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
                       flankSize/10000,"kb.pdf"), width=19,
       height=16, paper="a4")
 }
