@@ -176,7 +176,7 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   thresholds$numSignificant<-NA
 
   for(pval in padjVals){
-    res<-NULL
+    res<-resLFC<-NULL
     res<-results(dds,contrast=contrastOI,alpha=pval)
     if(shrink){
       resLFC<-lfcShrink(dds,coef=paste0(contrastOI[1],"_",contrastOI[2],"_vs_",contrastOI[3]), type="apeglm", res=res)

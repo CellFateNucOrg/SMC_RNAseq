@@ -2,15 +2,16 @@ library(readxl)
 library(ggVennDiagram)
 library(ggplot2)
 library(EnhancedVolcano)
+library(plyr)
 library(dplyr)
 
-source("functions.R")
 
-outPath="."
-padjVal=0.05
-lfcVal=0.5
-plotPDFs=F
-fileNamePrefix="salmon_"
+source("functions.R")
+source("./variableSettings.R")
+if(filterData){
+  fileNamePrefix<-filterPrefix
+}
+
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F,
                      header=T)

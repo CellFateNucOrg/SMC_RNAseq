@@ -3,14 +3,14 @@ library(ggVennDiagram)
 library(ggplot2)
 library(EnhancedVolcano)
 library(dplyr)
+library(tidyr)
 
 source("functions.R")
+source("./variableSettings.R")
 
-outPath="."
-padjVal=0.05
-lfcVal=0.5
-plotPDFs=T
-fileNamePrefix="noOsc_"
+if(filterData){
+  fileNamePrefix<-filterPrefix
+}
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -28,9 +28,9 @@ groupsOI<-levels(SMC)[-1]
 ##########################
 
 
-#######
-## venn diagrams
-#######
+#######-
+## venn diagrams------
+#######-
 
 
 ## significantly changed genes
@@ -45,12 +45,19 @@ for (grp in groupsOI){
                                  chr="all", nameChrCol="chr"))
 }
 
+# check if datasets have chrX genes included
+includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -81,9 +88,13 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -103,7 +114,7 @@ for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
@@ -113,9 +124,13 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes down: lfc< -", lfcVal, ", padj<",padjVal))
 
-xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+if(includeChrX){
+  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
+  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
+  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+} else {
+  p2<-NULL
+}
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[", ,"wormbaseID")
@@ -130,18 +145,19 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGene
 
 
 
-########
-## significantly changed count - barplot
-########
+########-
+## significantly changed count - barplot ------
+########-
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                                                      namePadjCol="padj",
-                                                                      nameLfcCol="log2FoldChange",
-                                                                      direction="both",
-                                                                      chr="all", nameChrCol="chr"))
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
+                                                  padj=padjVal, lfc=lfcVal,
+                                                  namePadjCol="padj",
+                                                  nameLfcCol="log2FoldChange",
+                                                  direction="both",
+                                                  chr="all", nameChrCol="chr"))
 }
 
 sigPerChr<-lapply(sigTables, "[", ,"chr")
@@ -159,9 +175,9 @@ p1<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
   theme_minimal() + scale_fill_grey(start=0.8, end=0.2)
 
 
-########
-## up regulated count - barplot
-########
+########-
+## up regulated count - barplot-----
+########-
 
 sigTables<-list()
 for (grp in groupsOI){
@@ -191,21 +207,22 @@ p2<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
   ggtitle("Number of significantly upregulated genes per chromosome")  +
   theme_minimal() + scale_fill_grey(start=0.8, end=0.2)
 
-########
-## down regulated count -barplot
-########
+########-
+## down regulated count -barplot-----
+########-
 
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
-                                                                      padj=padjVal, lfc= -lfcVal,
-                                                                      namePadjCol="padj",
-                                                                      nameLfcCol="log2FoldChange",
-                                                                      direction="lt",
-                                                                      chr="all",
-                                                                      nameChrCol="chr"))
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(
+                                        salmon, padj=padjVal,
+                                        lfc= lfcVal,
+                                        namePadjCol="padj",
+                                        nameLfcCol="log2FoldChange",
+                                        direction="lt",
+                                        chr="all",
+                                        nameChrCol="chr"))
 }
 
 sigPerChr<-lapply(sigTables, "[", ,"chr")
@@ -227,15 +244,144 @@ p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "bar_countsPerChr_",paste(groupsOI,
                                 collapse="_"),"_padj",
-                                formatC(padjVal,format="e",digits=0),
-                                "_lfc", lfcVal,".pdf"),
+                                padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
 
 
-#########
-## correlation
-#########
+########-
+## significantly changed LFC &count- boxplot&barplot-----
+########-
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-salmon[!is.na(salmon$chr),]
+  rownames(salmon)<-NULL
+  sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
+                                        padj=padjVal, lfc=lfcVal,
+                                        namePadjCol="padj",
+                                        nameLfcCol="log2FoldChange",
+                                        direction="both",
+                                        chr="all", nameChrCol="chr"))
+}
+
+
+
+# sigPerChr<-lapply(sigTables, "[", ,c("wormbaseID","chr","log2FoldChange"))
+# for(g in names(sigPerChr)){ sigPerChr[[g]]$SMC<-g }
+# sigPerChr<-as.data.frame(do.call(rbind,sigPerChr))
+# #sigPerChr$SMC<-gsub("\\.\\d*$","",rownames(sigPerChr))
+# #rownames(sigPerChr)<-NULL
+# sigPerChr$updown<-"both"
+#
+# yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
+# p1<-ggplot(sigPerChr,aes(x=chr,y=log2FoldChange,fill=SMC))+
+#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA)+ ylim(yminmax) +
+#   ggtitle("LFC of significantly changed genes by chromosome") +
+#   theme_minimal() + scale_fill_brewer(palette="Dark2")
+
+
+# upregulated
+sigList<-lapply(sigTables, getSignificantGenes,
+                padj=padjVal,lfc=lfcVal,direction="gt")
+
+sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
+for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+sigList<-do.call(rbind,sigList)
+sigList$updown<-"up"
+sigTbl<-sigList
+
+
+# downregulated
+sigList<-lapply(sigTables, getSignificantGenes,
+                padj=padjVal,lfc=lfcVal,direction="lt")
+
+sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
+for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+sigList<-do.call(rbind,sigList)
+sigList$updown<-"down"
+sigTbl<-rbind(sigTbl,sigList)
+sigTbl$chr<-as.factor(sigTbl$chr)
+sigTbl$SMC<-as.factor(sigTbl$SMC)
+sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+rownames(sigTbl)<-NULL
+
+yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
+p2<-ggplot(sigTbl,aes(x=chr,y=abs(log2FoldChange),fill=SMC)) +
+  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
+  facet_grid(cols=vars(updown)) + ylim(yminmax) +
+  ggtitle("Absolute LFC of significantly changed genes by chromosome") +
+  theme_minimal() + scale_fill_brewer(palette="Dark2")
+
+yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
+p3<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
+  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA) +
+  ggtitle("LFC of significantly changed autosomal genes") +
+  theme_minimal()  +
+  scale_y_continuous(limits = yminmax) + xlab(NULL) +
+  scale_fill_brewer(palette="Dark2")
+
+countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>% dplyr::summarise(count=n())
+yminmax=c(0,max(countbychr$count))
+p4<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
+  geom_bar(stat="identity",position=position_dodge()) +
+  facet_grid(cols=vars(updown))+ ylim(yminmax) +
+  ggtitle("Count of significantly changed genes by chromosome") +
+  theme_minimal()  + scale_fill_brewer(palette="Dark2")
+
+yminmax=c(0,countbychr$count[order(countbychr$count,decreasing=T)[2]])
+p5<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
+  geom_bar(stat="identity",position=position_dodge()) +
+  facet_grid(cols=vars(updown))+
+  ggtitle("Count of significantly changed genes by chromosome") +
+  theme_minimal()  + scale_y_continuous(limits = yminmax) +
+  scale_fill_brewer(palette="Dark2")
+
+
+countbytype<-sigTbl %>% filter(chr!="chrX") %>% group_by(updown,SMC) %>%
+  dplyr::summarise(count=n())
+
+yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
+p6<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
+  geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
+  ylim(yminmax) +
+  ggtitle("Count of significantly changed autosomal genes") +
+  theme_minimal() +xlab(NULL) +
+  scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
+
+# up vs down
+bb<-countbytype %>% pivot_wider(names_from=updown,values_from=count) %>% group_by(SMC) %>% mutate(ratioupdown=as.character(round(up/down,1)), updown="up")
+bb1<-bb
+bb1$updown<-"down"
+bb1$ratioupdown<-"1"
+
+# diff datasets
+aa<-countbytype %>% group_by(updown) %>% mutate(ratio=round(count/min(count),1))
+
+p6<-p6+geom_text(data=aa,aes(x=updown,y=10,label=ratio), color="black",
+             position = position_dodge(1)) +
+  geom_text(data=rbind(bb,bb1),aes(x=updown,y=max(bb$up),label=ratioupdown), color="black",
+                    position = position_dodge(1),vjust=-0.5)
+p<-ggpubr::ggarrange(p2,p4,p5,ncol=1,nrow=3)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "count&LFCbyChr_",
+                                paste(groupsOI,collapse="_"), "_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=19,height=29,units="cm")
+
+
+p<-ggpubr::ggarrange(p3,p6,ncol=1,nrow=2)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "count&LFCautosomes_",
+                                paste(groupsOI,collapse="_"), "_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=13,height=22,units="cm")
+
+
+
+#########-
+## correlation-----
+#########-
 
 geneTable<-NULL
 for (grp in groupsOI){
@@ -289,30 +435,32 @@ for (i in 1:ncol(combnTable)){
   }
 }
 
-geneTable<-na.omit(geneTable)
-tmp<-geneTable
-geneTable<-geneTable[geneTable$chr=="chrX",]
-for (i in 1:ncol(combnTable)){
-  grp1<-groupsOI[combnTable[1,i]]
-  grp2<-groupsOI[combnTable[2,i]]
-  if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_chrX_",grp1,"_",grp2,".png"), width=5,
-      height=5, units="in", res=150)
-  }
-  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
-  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
-  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
-  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
-  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
-       cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
-       ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
-       ylim=c(minScale,maxScale))
-  abline(v=0,h=0,col="grey60",lty=3)
-  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
-  abline(bestFitLine,col="red")
-  title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
-  if(plotPDFs==F){
-    dev.off()
+tmp<-geneTable # create backup copy
+if(includeChrX){
+  geneTable<-na.omit(geneTable)
+  geneTable<-geneTable[geneTable$chr=="chrX",]
+  for (i in 1:ncol(combnTable)){
+    grp1<-groupsOI[combnTable[1,i]]
+    grp2<-groupsOI[combnTable[2,i]]
+    if(plotPDFs==F){
+      png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_chrX_",grp1,"_",grp2,".png"), width=5,
+          height=5, units="in", res=150)
+    }
+    Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")]),2)
+    #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+    #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale),
+    #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+    plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+         cex=0.5,col="#11111155",xlab=prettyGeneName(grp1),
+         ylab=prettyGeneName(grp2), xlim=c(minScale,maxScale),
+         ylim=c(minScale,maxScale))
+    abline(v=0,h=0,col="grey60",lty=3)
+    bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+    abline(bestFitLine,col="red")
+    title(paste0("chrX genes ",prettyGeneName(grp1)," vs ", prettyGeneName(grp2)," (R=",Rval,")"))
+    if(plotPDFs==F){
+      dev.off()
+    }
   }
 }
 
