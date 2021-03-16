@@ -89,6 +89,8 @@ for (grp in groupsOI){
 
 
 
+
+
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
@@ -115,8 +117,21 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                 plot=p, device="pdf",width=29,height=11,units="cm")
 
 
+kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
+scc1only<-base::setdiff(sigGenes[["scc-1cs"]],sigGenes[["kle-2cs"]])
 
-## upregulated genes
+x<-list(kle2only=kle2only, scc1only=scc1only,germline=sigGenes[["germline"]])
+p11<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 or scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+
+kle2scc1<-base::intersect(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
+
+x<-list(kle2andscc1=kle2scc1,germline=sigGenes[["germline"]])
+p12<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+
+
+## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
@@ -141,3 +156,23 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "venn_DownVsGermline_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=11,units="cm")
+
+
+kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
+scc1only<-base::setdiff(sigGenes[["scc-1cs"]],sigGenes[["kle-2cs"]])
+
+x<-list(kle2only=kle2only, scc1only=scc1only,germline=sigGenes[["germline"]])
+p13<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 or scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+
+kle2scc1<-base::intersect(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
+
+x<-list(kle2andscc1=kle2scc1,germline=sigGenes[["germline"]])
+p14<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p11,p12,p13,p14,ncol=2,nrow=2)
+
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "venn_kle2scc1setsVsGermline_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=21,height=19,units="cm")

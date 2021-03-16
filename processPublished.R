@@ -33,11 +33,11 @@ source("./functions.R")
 
 
 # srcref <- Organism.dplyr::src_organism("TxDb.Celegans.UCSC.ce11.refGene")
-metadata1<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
-                                   dplyr::tbl(srcref, "ranges_gene")) %>%
-  dplyr::select(wormbase, alias, genename, gene_chrom,
-                gene_start, gene_end, gene_strand) %>%
-  dplyr::collect() %>% GenomicRanges::GRanges()
+# metadata1<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
+#                                    dplyr::tbl(srcref, "ranges_gene")) %>%
+#   dplyr::select(wormbase, alias, genename, gene_chrom,
+#                 gene_start, gene_end, gene_strand) %>%
+#   dplyr::collect() %>% GenomicRanges::GRanges()
 
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
