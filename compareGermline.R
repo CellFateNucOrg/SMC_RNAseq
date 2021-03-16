@@ -78,6 +78,15 @@ for (grp in groupsOI){
   reinke<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
                    stringsAsFactors=F)
 
+  if(filterData){
+    # remove filtered genes
+    idx<-boeck$wormbaseID %in% toFilter
+    boeck<-boeck[!idx,]
+
+    idx<-reinke$wormbaseID %in% toFilter
+    reinke<-reinke[!idx,]
+  }
+
   salmonSig<-getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                  namePadjCol="padj",
                                  nameLfcCol="log2FoldChange",
@@ -93,13 +102,19 @@ for (grp in groupsOI){
           germlineL4=boeck$wormbaseID[boeck$germline=="germlineL4"],
           somaL4=boeck$wormbaseID[boeck$germline=="somaL4"])
   names(x)<-c(prettyGeneName(grp),"germlineL4","somaL4")
-  p2<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal, ", padj<",padjVal))
+  txtLabels<-list()
+  txtLabels[paste0("% ",names(x)[1]," in ",names(x)[2])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[1]]),1)
+  txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
+  p2<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]], names(txtLabels)[1], " & \n", txtLabels[[2]], names(txtLabels)[2]))
 
   x<-list(salmon=salmonSig$wormbaseID,
           gonadYA=boeck$wormbaseID[boeck$germline=="gonadYA"],
           somaYA=boeck$wormbaseID[boeck$germline=="somaYA"])
   names(x)<-c(prettyGeneName(grp),"gonadYA","somaYA")
-  p3<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal, ", padj<",padjVal))
+  txtLabels<-list()
+  txtLabels[paste0("% ",names(x)[1]," in ",names(x)[2])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[1]]),1)
+  txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
+  p3<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]], names(txtLabels)[1], " & \n", txtLabels[[2]], names(txtLabels)[2]))
 
   p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
   ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
