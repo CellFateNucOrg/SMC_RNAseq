@@ -126,7 +126,8 @@ for (grp in groupsOI){
   p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
 
   #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsKarmer_padj",
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+                                  grp,"VsKarmer_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p1, device="pdf",width=15,height=11,units="cm")
 
@@ -401,3 +402,5 @@ if(!filterData){
 
   }
 }
+
+

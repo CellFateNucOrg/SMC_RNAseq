@@ -13,9 +13,13 @@
 ## Jans 2009 has a few genes it confirmed by qPCR in supl table 6
 
 library(magrittr)
-
+library(GenomicRanges)
+library(ggVennDiagram)
+library(ggplot2)
+library(DESeq2)
 
 source("./variableSettings.R")
+source("./functions.R")
 
 
 # txdb<-AnnotationDbi::loadDb(paste0(genomeDir,
@@ -28,13 +32,14 @@ source("./variableSettings.R")
 #                                  keytype="GENEID")
 
 
-srcref <- Organism.dplyr::src_organism("TxDb.Celegans.UCSC.ce11.refGene")
-metadata<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
+# srcref <- Organism.dplyr::src_organism("TxDb.Celegans.UCSC.ce11.refGene")
+metadata1<-dplyr::inner_join(dplyr::tbl(srcref, "id"),
                                    dplyr::tbl(srcref, "ranges_gene")) %>%
   dplyr::select(wormbase, alias, genename, gene_chrom,
                 gene_start, gene_end, gene_strand) %>%
   dplyr::collect() %>% GenomicRanges::GRanges()
 
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 
 #######################
@@ -46,9 +51,9 @@ pubDC<-readxl::read_excel("DCgenes_published.xlsx",sheet="DC")
 pubNDC<-readxl::read_excel("DCgenes_published.xlsx",sheet="Xescapers")
 
 
-pubDCgr<-metadata[metadata$wormbase %in% pubDC$wbid]
+pubDCgr<-metadata[metadata$wormbaseID %in% pubDC$wbid]
 
-mcols(pubDCgr)<-cbind(mcols(pubDCgr),pubDC[match(pubDCgr$wormbase,pubDC$wbid),])
+mcols(pubDCgr)<-cbind(mcols(pubDCgr),pubDC[match(pubDCgr$wormbaseID,pubDC$wbid),])
 pubDCgr$wbid<-NULL
 pubDCgr$alias<-NULL
 pubDCgr
@@ -56,9 +61,9 @@ pubDCgr
 saveRDS(pubDCgr,file="published_DCgr.rds")
 
 
-pubNDCgr<-metadata[metadata$wormbase %in% pubNDC$wbid]
+pubNDCgr<-metadata[metadata$wormbaseID %in% pubNDC$wbid]
 
-mcols(pubNDCgr)<-cbind(mcols(pubNDCgr),pubNDC[match(pubNDCgr$wormbase,pubNDC$wbid),])
+mcols(pubNDCgr)<-cbind(mcols(pubNDCgr),pubNDC[match(pubNDCgr$wormbaseID,pubNDC$wbid),])
 pubNDCgr$wbid<-NULL
 pubNDCgr$alias<-NULL
 pubNDCgr
@@ -74,9 +79,9 @@ JansDC<-data.table::fread(input="Jans2009_DC_suplTable4.txt")
 JansNDC<-data.table::fread(input="Jans2009_notDC_suplTable5.txt")
 
 
-JansDCgr<-metadata[metadata$wormbase %in% JansDC$WormBaseId]
+JansDCgr<-metadata[metadata$wormbaseID %in% JansDC$WormBaseId]
 
-mcols(JansDCgr)<-cbind(mcols(JansDCgr),JansDC[match(JansDCgr$wormbase,JansDC$WormBaseId),])
+mcols(JansDCgr)<-cbind(mcols(JansDCgr),JansDC[match(JansDCgr$wormbaseID,JansDC$WormBaseId),])
 JansDCgr$WormBaseId<-NULL
 JansDCgr$alias<-NULL
 JansDCgr
@@ -84,9 +89,9 @@ JansDCgr
 saveRDS(JansDCgr,file="Jans2009_DCgr.rds")
 
 
-JansNDCgr<-metadata[metadata$wormbase %in% JansNDC$WormBaseId]
+JansNDCgr<-metadata[metadata$wormbaseID %in% JansNDC$WormBaseId]
 
-mcols(JansNDCgr)<-cbind(mcols(JansNDCgr),JansNDC[match(JansNDCgr$wormbase, JansNDC$WormBaseId),])
+mcols(JansNDCgr)<-cbind(mcols(JansNDCgr),JansNDC[match(JansNDCgr$wormbaseID, JansNDC$WormBaseId),])
 JansNDCgr$WormBaseId<-NULL
 JansNDCgr$alias<-NULL
 JansNDCgr
@@ -107,9 +112,9 @@ kramer<-readxl::read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric
 names(kramer)
 kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
 
-kramergr<-metadata[metadata$wormbase %in% kramer$Gene_WB_ID]
+kramergr<-metadata[metadata$wormbaseID %in% kramer$Gene_WB_ID]
 
-mcols(kramergr)<-cbind(mcols(kramergr),kramer[match(kramergr$wormbase, kramer$Gene_WB_ID),])
+mcols(kramergr)<-cbind(mcols(kramergr),kramer[match(kramergr$wormbaseID, kramer$Gene_WB_ID),])
 kramergr$Gene_WB_ID<-NULL
 kramergr$alias<-NULL
 
@@ -180,7 +185,7 @@ download.file(url=latorreURL,destfile=latorreFileName)
 latorre<-readxl::read_excel(latorreFileName,col_names=F)
 colnames(latorre)<-"Osc_Latorre2015"
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+#metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 sum(latorre$Osc_Latorre2015 %in% metadata$sequenceID)
 #3235
 length(latorre$Osc_Latorre2015)
@@ -230,3 +235,152 @@ hsDOWN
 saveRDS(hsDOWN,file="hsDown_garrigues2019.rds")
 
 file.remove(garriguesFileName)
+
+
+
+
+###############################
+## get germline-soma genes from Boeck-Waterston_GR2016
+###############################
+
+#soma: JK1107(glp-1(q224)) mid-L4 30 h post-L1 stage larvae.
+#Dissected gonads were from N2 (wild type) animals grown for 48 h at 20°C
+#post-L1 stage larvae; approximately 200 gonads dissected and isolated from
+#carcasses
+
+if(!dir.exists("publicData")) {
+  dir.create("publicData")
+}
+tcFile="expressionTC_Boeck-Waterston_GR2016"
+if(!file.exists(paste0("publicData/",tcFile))) {
+  link="https://genome.cshlp.org/content/suppl/2016/09/20/gr.202663.115.DC1/Supplemental_Table_S2.gz"
+  download.file(link,paste0("publicData/",tcFile,".gz"))
+  system(paste0("gunzip -S txt publicData/",tcFile,".gz"))
+}
+
+tcData<-read.table(paste0("publicData/",tcFile),stringsAsFactors=F,header=T)
+glCols<-c("L4_counts","L4b_counts","L4JK1107soma_counts","L4JK1107soma.2_counts",
+          "YA_counts","N2_Yad.1_counts","N2_Ad_gonad.1.RZLI_counts")
+
+match(tcData$WormbaseName,metadata$sequenceID)
+tcData<-dplyr::left_join(tcData,as.data.frame(metadata),by=c("WormbaseName"="sequenceID"))
+tcData<-tcData[!is.na(tcData$wormbaseID),]
+# <-convertGeneNames(tcData$WormbaseName,inputType="seqID",
+#                       outputType=c("seqID","WBgeneID","publicID"))
+
+glCounts<-tcData[,glCols]
+row.names(glCounts)<-tcData$wormbaseID
+coldata<-data.frame(sampleNames=glCols,
+                    stage=factor(c("L4","L4","L4","L4","YA","YA","YA")),
+                    germline=factor(c("mix","mix","soma","soma","mix","mix",
+                                      "gonad"),levels=c("mix","soma","gonad")))
+
+glCounts<-glCounts[!is.na(row.names(glCounts)),]
+
+
+dds <- DESeqDataSetFromMatrix(countData = glCounts,
+                              colData = coldata,
+                              design = ~ stage+germline)
+
+featureData <- data.frame(gene=rownames(glCounts))
+mcols(dds) <- DataFrame(mcols(dds), featureData)
+mcols(dds)
+
+#remove genes with few reads
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+
+# estimate parameters
+dds <- DESeq(dds)
+
+
+resLFCgermline<- lfcShrink(dds,contrast=c("germline","gonad","mix"),type="ashr")
+plotMA(resLFCgermline,main="gonad")
+summary(resLFCgermline)
+
+resLFCgermline<-resLFCgermline[!is.na(resLFCgermline$padj),]
+
+germline<-resLFCgermline[resLFCgermline$padj<0.05 & resLFCgermline$log2FoldChange>0.5,]
+nongl<-resLFCgermline[resLFCgermline$padj<0.05 & resLFCgermline$log2FoldChange< -0.5,]
+germline$wormbaseID<-rownames(germline)
+nongl$wormbaseID<-rownames(nongl)
+dim(germline) #2749
+dim(nongl) #4993
+
+
+resLFCsoma<- lfcShrink(dds,contrast=c("germline","soma","mix"),type="ashr")
+plotMA(resLFCsoma,main="soma")
+
+resLFCsoma<-resLFCsoma[!is.na(resLFCsoma$padj),]
+soma<-resLFCsoma[resLFCsoma$padj<0.05 & resLFCsoma$log2FoldChange>0.5,]
+nonsoma<-resLFCsoma[resLFCsoma$padj<0.05 & resLFCsoma$log2FoldChange< -0.5,]
+soma$wormbaseID<-rownames(soma)
+nonsoma$wormbaseID<-rownames(nonsoma)
+dim(soma) #2127
+dim(nonsoma) #3144
+sum(soma$wormbaseID %in% germline$wormbaseID) #49
+sum(nonsoma$wormbaseID %in% germline$wormbaseID) #939
+sum(germline$wormbaseID %in% soma$wormbaseID) #49
+sum(nongl$wormbaseID %in% soma$wormbaseID) #1293
+sum(nongl$wormbaseID %in% nonsoma$wormbaseID) #449
+
+#germline<-germline[!(germline$wormbaseID %in% soma$wormbaseID),]
+#soma<-soma[!(soma$wormbaseID %in% germline$wormbaseID),]
+
+glvSoma<-data.frame(wormbaseID=c(germline$wormbaseID,nongl$wormbaseID,soma$wormbaseID,
+                                 nonsoma$wormbaseID),
+                    germline=c(rep("gonadYA",nrow(germline)),
+                               rep("somaYA",nrow(nongl)),
+                               rep("somaL4", nrow(soma)),
+                               rep("germlineL4",nrow(nonsoma))))
+write.csv(glvSoma,paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
+          row.names=F)
+
+
+
+###############################
+## get germline-soma genes from Reinke_DEV2004
+###############################
+
+glFile="germlineVsoma_Reinke_Dev2004"
+if (!file.exists(paste0("publicData/",glFile,"/Fig1\ I\ wt\ vs\ glp4\ enriched\ genes.txt"))) {
+  link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
+  download.file(link2,paste0("publicData/",glFile,".zip"))
+  system(paste0("unzip publicData/",glFile,".zip -d publicData/",glFile))
+}
+glData<-read.delim(paste0("publicData/",glFile,"/Fig1\ I\ wt\ vs\ glp4\ enriched\ genes.txt"),stringsAsFactors=F,header=T,sep="\t")
+glData<-glData[,c("WormbaseID","exclusive.category")]
+
+table(glData$exclusive.category)
+
+
+glData<-glData[glData$exclusive.category %in% c("herm intrinsic", "herm oocyte",
+                                              "herm sperm","shared intrinsic",
+                                              "shared oocyte","shared sperm"),]
+
+glData<-dplyr::left_join(glData, as.data.frame(metadata),by=c("WormbaseID"="sequenceID"))
+
+glData<-glData[!is.na(glData$wormbaseID),]
+
+write.csv(glData,paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
+          row.names=F)
+
+######################
+## compare germline datasets
+######################
+
+x<-list(germline=glData$wormbaseID,
+        germlineL4=glvSoma$wormbaseID[glvSoma$germline=="germlineL4"],
+        somaL4=glvSoma$wormbaseID[glvSoma$germline=="somaL4"])
+
+p1<-ggVennDiagram(x) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) L4 soma"))
+
+x<-list(germline=glData$wormbaseID,
+        gonadYA=glvSoma$wormbaseID[glvSoma$germline=="gonadYA"],
+        somaYA=glvSoma$wormbaseID[glvSoma$germline=="somaYA"])
+
+p2<-ggVennDiagram(x) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) YA gonad"))
+
+p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),
+                plot=p, device="pdf",width=29,height=11,units="cm")
