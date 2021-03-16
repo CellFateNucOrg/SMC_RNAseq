@@ -381,6 +381,13 @@ x<-list(germline=glData$wormbaseID,
 
 p2<-ggVennDiagram(x) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) YA gonad"))
 
-p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
+x<-list(germlineL4=glvSoma$wormbaseID[glvSoma$germline=="germlineL4"],
+        gonadYA=glvSoma$wormbaseID[glvSoma$germline=="gonadYA"],
+        somaL4=glvSoma$wormbaseID[glvSoma$germline=="somaL4"],
+        somaYA=glvSoma$wormbaseID[glvSoma$germline=="somaYA"])
+
+p3<-ggVennDiagram(x) + ggtitle(label=paste0("Boeck(2016) L4 vs YA soma/germline"))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),
                 plot=p, device="pdf",width=29,height=11,units="cm")

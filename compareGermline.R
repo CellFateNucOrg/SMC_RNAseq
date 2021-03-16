@@ -18,43 +18,27 @@ levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
 controlGrp<-levels(SMC)[1] # control group
 groupsOI<-levels(SMC)[-1]
 
-
-#######
-## venn diagrams
-#######
-
-sigTables<-list()
-sigGR<-list()
-df<-data.frame(matrix(nrow=10,ncol=3))
-names(df)<-groupsOI
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
-
-  n<-prettyGeneName(grp)
-  sigTables[[n]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                                    namePadjCol="padj",
-                                                    nameLfcCol="log2FoldChange",
-                                                    direction="both",
-                                                    chr="all", nameChrCol="chr"))
-  sigTables[[n]]<-sigTables[[n]][!is.na(sigTables[[n]]$chr),] # removes mtDNA genes
-  sigGR[[n]]<-GRanges(seqnames=sigTables[[n]]$chr,
-                      ranges=IRanges(start=sigTables[[n]]$start,
-                                     end=sigTables[[n]]$end),
-                      strand=sigTables[[n]]$strand)
-  mcols(sigGR[[n]])<-sigTables[[n]]
-
-  # check if datasets have chrX genes included
-  includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
-  if(includeChrX){
-    chrXgr<-sigGR[[n]][sigGR[[n]]$chr=="chrX"]
-    print(chrXgr[order(width(chrXgr),decreasing=T)][1:10])
-    print(chrXgr[order(width(chrXgr),decreasing=T)]$wormbaseID[1:10])
-    df[,grp]<-print(chrXgr[order(width(chrXgr),decreasing=T)]$publicID[1:10])
-    print(width(chrXgr[order(width(chrXgr),decreasing=T)][1:10]))
-    hist(width(chrXgr),main=n,breaks=100)
-  }
+if(filterData){
+  fileNamePrefix=filterPrefix
 }
-df
+
+#####################################################
+## compare to germline -soma data
+#####################################################
+
+boeck<-read.csv(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
+                stringsAsFactors=F)
+reinke<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
+                 stringsAsFactors=F)
+
+if(filterData){
+  # remove filtered genes
+  idx<-boeck$wormbaseID %in% toFilter
+  boeck<-boeck[!idx,]
+
+  idx<-reinke$wormbaseID %in% toFilter
+  reinke<-reinke[!idx,]
+}
 
 
 for (grp in groupsOI){
@@ -65,26 +49,6 @@ for (grp in groupsOI){
     # remove filtered genes
     idx<-salmon$wormbaseID %in% toFilter
     salmon<-salmon[!idx,]
-
-    fileNamePrefix=filterPrefix
-  }
-
-  #####################################################
-  ## compare to germline -soma data
-  #####################################################
-
-  boeck<-read.csv(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
-                   stringsAsFactors=F)
-  reinke<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
-                   stringsAsFactors=F)
-
-  if(filterData){
-    # remove filtered genes
-    idx<-boeck$wormbaseID %in% toFilter
-    boeck<-boeck[!idx,]
-
-    idx<-reinke$wormbaseID %in% toFilter
-    reinke<-reinke[!idx,]
   }
 
   salmonSig<-getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -122,3 +86,58 @@ for (grp in groupsOI){
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=29,height=11,units="cm")
 }
+
+
+
+## upregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="gt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+sigGenes[["germline"]]<-reinke$wormbaseID
+p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(grp, " genes up: lfc>", lfcVal, ", padj<",padjVal))
+p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(grp," genes up: lfc>", lfcVal, ", padj<",padjVal))
+p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(grp," genes up: lfc>", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "venn_UpVsGermline_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=11,units="cm")
+
+
+
+## upregulated genes
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="lt",
+                        chr="all", nameChrCol="chr"))
+}
+
+sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
+sigGenes[["germline"]]<-reinke$wormbaseID
+p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(grp, " genes down: lfc < -", lfcVal, ", padj<",padjVal))
+p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(grp," genes down: lfc < -", lfcVal, ", padj<",padjVal))
+p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(grp," genes down: lfc < -", lfcVal, ", padj<",padjVal))
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                "venn_DownVsGermline_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=29,height=11,units="cm")
