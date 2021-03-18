@@ -493,3 +493,67 @@ if(plotPDFs==T){
   dev.off()
 }
 
+
+#########################
+## compare LFC to wt mean
+#########################
+dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
+wtMean<-rowMeans(counts(dds)[,colData(dds)$SMC==controlGrp])
+logwtcounts<-log2(wtMean[idx])
+logwtcounts[is.infinite(logwtcounts)]<-NA
+
+geneTable<-NULL
+for (grp in groupsOI){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr", paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-inner_join(geneTable,salmon[,c("wormbaseID", "chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+dim(geneTable)
+# all genes
+geneTable<-na.omit(geneTable)
+# gt<-geneTable[geneTable$kle2cs_lfc<1 & geneTable$scc1cs_lfc>2,]
+# dim(gt)
+# david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
+# showPeter<-david[david$From %in% gt$wormbaseID,]
+# write.table(showPeter,file=paste0(outPath,"/txt/klelt1_sccgt2.tsv"),sep="\t")
+
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-min(geneTable[,lfcCols])*1.1
+maxScale<-max(geneTable[,lfcCols])*1.1
+
+if(plotPDFs==T){
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_wtExpr.pdf"), width=5, height=5, paper="a4")
+}
+for (grp in groupsOI){
+
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_wtExpr_",grp1,"_",grp2,".png"), width=5, height=5, units="in", res=150)
+  }
+  idx<-match(geneTable$wormbaseID,names(wtMean))
+  noNAtbl<-na.omit(cbind(as.vector(geneTable[,paste0(grp,"_lfc")]),
+                 logwtcounts))
+  Rval<-round(cor(noNAtbl[,1],noNAtbl[,2]),2)
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
+  #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(logwtcounts,geneTable[,paste0(grp,"_lfc")],pch=16,
+       cex=0.5,col="#11111155", xlim=c(minScale,maxScale),
+       ylab=paste0("log2(",prettyGeneName(grp),"/", controlGrp,")"),
+       xlab=paste0("log2(",controlGrp,")"))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp,"_lfc")]~logwtcounts,
+                  na.action=na.exclude)
+  abline(bestFitLine,col="red")
+  title(paste0(prettyGeneName(grp)," LFC vs ",controlGrp," log counts (R=",
+               Rval,")"))
+  if(plotPDFs==F){
+    dev.off()
+  }
+}
+dev.off()
