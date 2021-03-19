@@ -27,3 +27,6 @@ source("compareTissueAndGO.R")
 # compare to dosage compensation data sets
 source("compareToDCdatasets.R")
 
+# check percentage germline vs soma genes among positives
+source("compareGermline.R")
+
