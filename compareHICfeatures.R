@@ -38,7 +38,7 @@ groupsOI<-levels(SMC)[-1]
 ####
 ## N2 compartments
 ####
-pca2<-import.bw("./otherData/N2_5000b_laminDamID_pca2.bw")
+pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
 
 # why is pca1 just splitting the chromosome in two?
 # mm<-matrix(data=rep(0,100),nrow=10)
@@ -58,7 +58,7 @@ pca2<-import.bw("./otherData/N2_5000b_laminDamID_pca2.bw")
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
 
   salmon<-salmon[!is.na(salmon$chr),]
   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
@@ -285,13 +285,13 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ####
 
 pcas<-data.frame(SMC=SMC,
-                 file=list.files("./otherData",
-                                pattern="_5000_laminDamID_pca2.bw"))
+                 file=list.files(paste0(outPath,"/otherData",
+                                pattern="_5000_laminDamID_pca2.bw")))
 
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
 
   salmon<-salmon[!is.na(salmon$chr),]
@@ -507,12 +507,13 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ####
 
 pcas<-data.frame(SMC=SMC,
-                 file=list.files("./otherData",
-                                 pattern="_5000_laminDamID_pca2.bw"))
+                 file=list.files(paste0(outPath,"/otherData",
+                                 pattern="_5000_laminDamID_pca2.bw")))
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0("./rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,
+                              "_DESeq2_fullResults.rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
   pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
 
@@ -627,8 +628,6 @@ xx<-barplot(t(BAcomp/rowSums(BAcomp)),beside=F,col=c("grey80","grey20"),
             cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
 legend("bottomright", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"),xpd=T)
 text(x=xx, y=0.97, label=t(rowSums(BAcomp)), pos=3,cex=1.3,col="black")
-
-
 
 
 dev.off()
@@ -987,7 +986,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## anchors
 ####
 
-loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),format="bedpe")
+loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
+                           format="bedpe")
 
 anchors<-zipup(loops)
 anchors<-unlist(anchors)

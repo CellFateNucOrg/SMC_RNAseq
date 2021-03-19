@@ -1,7 +1,7 @@
 ### make sure to put the correct settings in variableSettings.R
 
 # process some public datasets required later (only do once)
-#source("processPublished.R")
+source("processPublished.R")
 #
 #make bigwigs from STAR data
 #source("makeSTARbw.R")

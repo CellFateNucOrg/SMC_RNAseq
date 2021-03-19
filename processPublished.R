@@ -151,9 +151,7 @@ kramerdpy27dc<-kramergr[idx,]
 colIdx<-grep("(set)|(dpy21)|(mixed_sex)",colnames(mcols(kramerdpy27dc)))
 mcols(kramerdpy27dc)[,colIdx]<-NULL
 saveRDS(kramerdpy27dc,file=paste0(outPath,"/publicData/kramer2015_chrXup_dpy27_lfc",
-                                  formatC(lfcVal,format="e",digits=0),"_p",
-                                  formatC(padjVal,format="e",digits=0),
-                                  "_gr.rds"))
+                                  lfcVal,"_p", padjVal, "_gr.rds"))
 
 
 idx<-!is.na(kramergr$dpy21_mutant_L3_padj) &
@@ -239,6 +237,16 @@ dim(latorre)
 dim(osc)
 #3739
 
+x<-list(Meeuse=osc$wormbaseID,Latorre=latorre$wormbaseID)
+length(unique(unlist(x))) #4522
+p<-ggVennDiagram(x) +
+  ggtitle(label=paste0("Meeuse(2020) vs Latorre(2015) oscillating genes"))
+
+ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_MeeuseVsLatorre.pdf"),
+                plot=p, device="pdf",width=12,height=11,units="cm")
+
+
+
 
 ###############-
 # Garrigues 2019 - Heatshock L2 -------------------------------------------
@@ -266,7 +274,7 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
   hsUP
   saveRDS(hsUP,file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 
-  hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=-1,
+  hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=1,
                               namePadjCol="P-adj",
                               nameLfcCol="log2(FC)", direction="lt")
   hsDOWN
@@ -274,6 +282,7 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 
   file.remove(paste0(outPath,"/publicData/",garriguesFileName))
 }
+
 
 
 

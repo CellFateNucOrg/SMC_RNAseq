@@ -81,21 +81,23 @@ for (grp in groupsOI){
 
   kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
   kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
-  if(!file.exists(kramerFileName)){
-    download.file(url=kramerURL,destfile=kramerFileName)
+  if(!file.exists(paste0(outPath,"/publicData/",kramerFileName))){
+    download.file(url=kramerURL,
+                  destfile=paste0(outPath,"/publicData/",kramerFileName))
   }
-  kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
+  kramer<-read_excel(paste0(outPath,"/publicData/",kramerFileName),
+                     col_types=c(rep("text",3),rep("numeric",30)))
   names(kramer)
   kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
 
 
-  kramerDpy27<-getSignificantGenes(kramer, padj=padjVal, lfc=lfcVal,
+  kramerDpy27<-getSignificantGenes(kramer, padj=0.05, lfc=0.5,
                                    namePadjCol="dpy27_RNAi_L3_padj",
                                    nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
                                    direction="both",
                                    chr="all", nameChrCol="chr", outPath=".")
 
-  kramerDpy21<-getSignificantGenes(kramer, padj=padjVal, lfc=lfcVal,
+  kramerDpy21<-getSignificantGenes(kramer, padj=0.05, lfc=0.5,
                                    namePadjCol="dpy21_mutant_L3_padj",
                                    nameLfcCol="dpy21_mutant_L3_log2_fold_change",
                                    direction="both",
@@ -226,27 +228,31 @@ grp="dpy26cs"
 ## classical dc genes
 ###############################
 
-pubDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_DCgr.rds")
-pubNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_NDCgr.rds")
+pubDC<-readRDS(paste0(outPath,"/publicData/published_DCgr.rds"))
+pubNDC<-readRDS(paste0(outPath,"/publicData/published_NDCgr.rds"))
 
 if(filterData){
   # remove filtered genes
-  idx<-pubDC$wormbase %in% toFilter
+  idx<-pubDC$wormbaseID %in% toFilter
   pubDC<-pubDC[!idx,]
 
-  idx<-pubNDC$wormbase %in% toFilter
+  idx<-pubNDC$wormbaseID %in% toFilter
   pubNDC<-pubNDC[!idx,]
 }
 
 if(includeChrX){
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-  x<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbase,
-          nonDC=pubNDC$wormbase)
+  x<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbaseID,
+          nonDC=pubNDC$wormbaseID)
   names(x)<-c(prettyGeneName(grp), "DC", "nonDC")
   txtLabels<-list()
   txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
   txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  p1<-ggVennDiagram(x) +
+    ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",
+                                  padjVal),
+                     subtitle=paste0(txtLabels[[1]], names(txtLabels)[1],
+                                  " & ", txtLabels[[2]], names(txtLabels)[2]))
 
 
   #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
@@ -264,23 +270,23 @@ if(includeChrX){
 ## Jans 2009
 ###############################
 
-JansDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_DCgr.rds")
-JansNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_NDCgr.rds")
+JansDC<-readRDS(paste0(outPath,"/publicData/Jans2009_DCgr.rds"))
+JansNDC<-readRDS(paste0(outPath,"/publicData/Jans2009_NDCgr.rds"))
 
 if(filterData){
   # remove filtered genes
-  idx<-JansDC$wormbase %in% toFilter
+  idx<-JansDC$wormbaseID %in% toFilter
   JansDC<-JansDC[!idx,]
 
-  idx<-JansNDC$wormbase %in% toFilter
+  idx<-JansNDC$wormbaseID %in% toFilter
   JansNDC<-JansNDC[!idx,]
 }
 
 
 if(includeChrX){
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-  x<-list(salmon=salmondc$wormbaseID, JansDC=JansDC$wormbase,
-          JansNDC=JansNDC$wormbase)
+  x<-list(salmon=salmondc$wormbaseID, JansDC=JansDC$wormbaseID,
+          JansNDC=JansNDC$wormbaseID)
   names(x)<-c(prettyGeneName(grp), "JansDC", "JansNDC")
   txtLabels<-list()
   txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
@@ -288,8 +294,9 @@ if(includeChrX){
   p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
 
   #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsJans2009_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,
+                                  "VsJans2009_padj", padjVal,"_lfc", lfcVal,
+                                  ".pdf"),
                   plot=p1, device="pdf",width=15,height=11,units="cm")
 }
 
@@ -299,14 +306,19 @@ if(includeChrX){
 ## Jans 2009 vs Kramer
 ###############################
 
-kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
+kramer<-readxl::read_excel(paste0(outPath,"/publicData/",kramerFileName),
+                           col_types=c(rep("text",3),rep("numeric",30)))
 names(kramer)
 kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
 
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
+idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
+  abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal &
+  kramer$dpy27_RNAi_L3_padj<padjVal
 kramerDpy27<-kramer[idx,]
 
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
+idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
+  abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal &
+  kramer$dpy21_mutant_L3_padj<padjVal
 kramerDpy21<-kramer[idx,]
 
 
@@ -341,11 +353,11 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## intersection oscillating -----
 ###############-
 if(!filterData){
-  oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+  oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"),header=T,
                           stringsAsFactors=F) #3739
-  latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-  hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
-  hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
+  latorre<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv")) #3235
+  hsUP<-readRDS(file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds")) #1680
+  hsDOWN<-readRDS(file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds")) #455
 
   for (grp in groupsOI){
     salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
@@ -356,7 +368,7 @@ if(!filterData){
                                    direction="both",
                                    chr="all", nameChrCol="chr")
 
-    x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$WB_ID,
+    x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$wormbaseID,
             Latorre=latorre$wormbaseID)
     names(x)<-c(prettyGeneName(grp), "Meeuse", "Latorre")
     txtLabels<-list()
@@ -385,7 +397,7 @@ if(!filterData){
                                   chr="all", nameChrCol="chr")
 
     x<-list(up=salmonUp$wormbaseID, down=salmonDown$wormbaseID,
-            hs_up=hsUP$WormBase.ID, hs_down=hsDOWN$WormBase.ID)
+            hs_up=hsUP$wormbaseID, hs_down=hsDOWN$wormbaseID)
     names(x)<-c(paste0(prettyGeneName(grp),c("_up","_down")),
                        "hs_up", "hs_down")
     txtLabels<-list()

@@ -826,11 +826,11 @@ for(grp in groupsOI){
 
 # Volcano - colour by other datasets --------------------------------------
 
-oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"),header=T,
                         stringsAsFactors=F)
-latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-hsUp<-readRDS("hsUp_garrigues2019.rds")
-hsDown<-readRDS("hsDown_garrigues2019.rds")
+latorre<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv")) #3235
+hsUp<-readRDS(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
+hsDown<-readRDS(paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
 
 amplicons<-readRDS(paste0(outPath,"/otherData/ampliconMaxTSSgr.RDS"))
 
