@@ -11,3 +11,6 @@ tissue/
 tracks/
 wormcat/
 txt/
+runTea1.sh
+.Rhistory
+.DS_Store
