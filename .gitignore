@@ -1,2 +1,13 @@
 slurm*
 .Rproj.user
+publicData/*.rds
+publicData/*.pdf
+variableSettings.R
+plots/
+qc/
+rds/
+salmon/
+tissue/
+tracks/
+wormcat/
+txt/

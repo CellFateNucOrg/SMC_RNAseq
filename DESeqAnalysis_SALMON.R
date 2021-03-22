@@ -844,13 +844,13 @@ for(grp in groupsOI){
    bkgrnd='#99999966'
    keyvals<-rep(bkgrnd, nrow(salmon))
    names(keyvals)<-rep('Other',nrow(salmon))
-   idx<-(salmon$wormbaseID %in% oscillating$WB_ID) & (salmon$wormbaseID %in% latorre$wormbaseID)
+   idx<-(salmon$wormbaseID %in% oscillating$wormbaseID) & (salmon$wormbaseID %in% latorre$wormbaseID)
    keyvals[idx]<-'blue'
    names(keyvals)[idx]<-"Both"
-   idx<-(salmon$wormbaseID %in% oscillating$WB_ID) & !(salmon$wormbaseID %in% latorre$wormbaseID)
+   idx<-(salmon$wormbaseID %in% oscillating$wormbaseID) & !(salmon$wormbaseID %in% latorre$wormbaseID)
    keyvals[idx]<-'red'
    names(keyvals)[idx]<-"Meeuse(2020)"
-   idx<-(salmon$wormbaseID %in% latorre$wormbaseID) & !(salmon$wormbaseID %in% oscillating$WB_ID)
+   idx<-(salmon$wormbaseID %in% latorre$wormbaseID) & !(salmon$wormbaseID %in% oscillating$wormbaseID)
    keyvals[idx]<-'green'
    names(keyvals)[idx]<-"Latorre(2015)"
    sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,

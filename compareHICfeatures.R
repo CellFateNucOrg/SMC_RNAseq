@@ -285,8 +285,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ####
 
 pcas<-data.frame(SMC=SMC,
-                 file=list.files(paste0(outPath,"/otherData",
-                                pattern="_5000_laminDamID_pca2.bw")))
+                 file=list.files(paste0(outPath,"/otherData"),
+                                pattern="_5000_laminDamID_pca2.bw"))
 
 listgr<-NULL
 for (grp in groupsOI){
@@ -507,8 +507,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ####
 
 pcas<-data.frame(SMC=SMC,
-                 file=list.files(paste0(outPath,"/otherData",
-                                 pattern="_5000_laminDamID_pca2.bw")))
+                 file=list.files(paste0(outPath,"/otherData"),
+                                 pattern="_5000_laminDamID_pca2.bw"))
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]

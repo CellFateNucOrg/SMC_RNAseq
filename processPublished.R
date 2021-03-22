@@ -108,19 +108,19 @@ JansNDCgr
 saveRDS(JansNDCgr,file=paste0(outPath,"/publicData/Jans2009_NDCgr.rds"))
 
 
-
-
 #######################
 ## Kramer 2015
 #######################
 kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
 kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
+
 if(remakeFiles){
-  file.remove(paste0(outPath,"/publicData/kramer2015_gr.rds"))
+  file.remove(paste0(outPath,"/publicData/kramer2015_L3_gr.rds"))
 }
 
-if(! file.exists(paste0(outPath,"/publicData/kramer2015_gr.rds"))){
-  download.file(url=kramerURL,destfile=paste0(outPath,"/publicData/",kramerFileName))
+if(! file.exists(paste0(outPath,"/publicData/kramer2015_L3_gr.rds"))){
+  download.file(url=kramerURL,
+                destfile=paste0(outPath,"/publicData/",kramerFileName))
 
   kramer<-readxl::read_excel(paste0(outPath,"/publicData/",kramerFileName),
                              col_types=c(rep("text",3),rep("numeric",30)))
@@ -135,36 +135,85 @@ if(! file.exists(paste0(outPath,"/publicData/kramer2015_gr.rds"))){
   kramergr$Sequence_Name_Gene<-NULL
   kramergr$Gene_Public_Name<-NULL
 
-  saveRDS(kramergr,file=paste0(outPath,"/publicData/kramer2015_gr.rds"))
-  file.remove(paste0(outPath,"/publicData/",kramerFileName))
+  saveRDS(kramergr,file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds"))
+  #file.remove(paste0(outPath,"/publicData/",kramerFileName))
 }
 
-kramergr<-readRDS(file=paste0(outPath,"/publicData/kramer2015_gr.rds"))
+kramergr<-readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds"))
 
-lfcVal<-0.5
-padjVal<-0.05
+localLFC<-0.5
+localPadj<-0.05
+
 idx<-!is.na(kramergr$dpy27_RNAi_L3_padj) &
-  kramergr$dpy27_RNAi_L3_padj < padjVal &
-  kramergr$dpy27_RNAi_L3_log2_fold_change > lfcVal &
+  kramergr$dpy27_RNAi_L3_padj < localPadj &
+  kramergr$dpy27_RNAi_L3_log2_fold_change > localLFC&
   seqnames(kramergr)=="chrX"
 kramerdpy27dc<-kramergr[idx,]
 colIdx<-grep("(set)|(dpy21)|(mixed_sex)",colnames(mcols(kramerdpy27dc)))
 mcols(kramerdpy27dc)[,colIdx]<-NULL
 saveRDS(kramerdpy27dc,file=paste0(outPath,"/publicData/kramer2015_chrXup_dpy27_lfc",
-                                  lfcVal,"_p", padjVal, "_gr.rds"))
+                                  localLFC,"_p", localPadj, "_gr.rds"))
 
 
 idx<-!is.na(kramergr$dpy21_mutant_L3_padj) &
-  kramergr$dpy21_mutant_L3_padj < padjVal &
-  kramergr$dpy21_mutant_L3_log2_fold_change > lfcVal &
+  kramergr$dpy21_mutant_L3_padj < localPadj &
+  kramergr$dpy21_mutant_L3_log2_fold_change > localLFC &
   seqnames(kramergr)=="chrX"
 kramerdpy21dc<-kramergr[idx,]
 colIdx<-grep("(set)|(dpy27)",colnames(mcols(kramerdpy21dc)))
 mcols(kramerdpy21dc)[,c(colIdx)]<-NULL
 saveRDS(kramerdpy21dc,file=paste0(outPath,"/publicData/kramer2015_chrXup_dpy21_lfc",
-                                  formatC(lfcVal,format="e",digits=0),"_p",
-                                  formatC(padjVal,format="e",digits=0),
-                                  "_gr.rds"))
+                                  localLFC,"_p", localPadj, "_gr.rds"))
+
+
+###############################
+## Jans 2009 vs Kramer
+###############################
+kramer<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds")))
+names(kramer)
+JansDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_DCgr.rds")))
+JansNDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_NDCgr.rds")))
+
+localPadj=0.05
+localLFC=0.25
+kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy27_RNAi_L3_padj",
+                                   nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="all", nameChrCol="seqnames",
+                                   outPath=outPath)
+dim(kramerdpy27dc)
+kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                   namePadjCol="dpy21_mutant_L3_padj",
+                                   nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                   direction="both",
+                                   chr="all", nameChrCol="seqnames",
+                                   outPath=outPath)
+
+x<-list(JansDC=JansDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+        dpy21=kramerdpy21dc$wormbaseID)
+names(x)<-c("JansDC", "dpy-27", "dpy-21")
+txtLabels<-list()
+txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
+txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
+p1<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", localLFC, ", padj<", localPadj), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+
+
+x<-list(JansNDC=JansNDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+        dpy21=kramerdpy21dc$wormbaseID)
+names(x)<-c("JansNDC", "dpy-27", "dpy-21")
+txtLabels<-list()
+txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
+txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
+p2<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", localLFC, ", padj<",localPadj), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+
+
+
+p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
+ggplot2::ggsave(filename=paste0(outPath,
+                                "/publicData/venn_Jans2009vKramer2015_padj",
+                                localLFC,"_lfc", localPadj,".pdf"),
+                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 
@@ -268,13 +317,15 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
   idx<-match(c("WormBase.ID","gene.name"),names(garrigues))
   names(garrigues)[idx]<-c("wormbaseID","publicID")
 
-  hsUP<-getSignificantGenes(garrigues, padj=0.05, lfc=1,
+  localPadj=0.05
+  localLFC=1
+  hsUP<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
                             namePadjCol="P-adj",
                             nameLfcCol="log2(FC)", direction="gt")
   hsUP
   saveRDS(hsUP,file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 
-  hsDOWN<-getSignificantGenes(garrigues, padj=0.05, lfc=1,
+  hsDOWN<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
                               namePadjCol="P-adj",
                               nameLfcCol="log2(FC)", direction="lt")
   hsDOWN
@@ -347,8 +398,10 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
 
   resLFCgermline<-resLFCgermline[!is.na(resLFCgermline$padj),]
 
-  germline<-resLFCgermline[resLFCgermline$padj<0.05 & resLFCgermline$log2FoldChange>0.5,]
-  nongl<-resLFCgermline[resLFCgermline$padj<0.05 & resLFCgermline$log2FoldChange< -0.5,]
+  localLFC=0.5
+  localPadj=0.05
+  germline<-resLFCgermline[resLFCgermline$padj<localPadj & resLFCgermline$log2FoldChange>localLFC,]
+  nongl<-resLFCgermline[resLFCgermline$padj<localPadj & resLFCgermline$log2FoldChange< -localLFC,]
   germline$wormbaseID<-rownames(germline)
   nongl$wormbaseID<-rownames(nongl)
   dim(germline) #2749
@@ -359,8 +412,8 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
   plotMA(resLFCsoma,main="soma")
 
   resLFCsoma<-resLFCsoma[!is.na(resLFCsoma$padj),]
-  soma<-resLFCsoma[resLFCsoma$padj<0.05 & resLFCsoma$log2FoldChange>0.5,]
-  nonsoma<-resLFCsoma[resLFCsoma$padj<0.05 & resLFCsoma$log2FoldChange< -0.5,]
+  soma<-resLFCsoma[resLFCsoma$padj<localPadj & resLFCsoma$log2FoldChange>localLFC,]
+  nonsoma<-resLFCsoma[resLFCsoma$padj<localPadj & resLFCsoma$log2FoldChange< -localLFC,]
   soma$wormbaseID<-rownames(soma)
   nonsoma$wormbaseID<-rownames(nonsoma)
   dim(soma) #2127

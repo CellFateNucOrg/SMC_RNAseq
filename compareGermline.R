@@ -22,9 +22,9 @@ if(filterData){
   fileNamePrefix=filterPrefix
 }
 
-#####################################################
-## compare to germline -soma data
-#####################################################
+#####################################################-
+## compare to germline -soma data-----
+#####################################################-
 
 boeck<-read.csv(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
                 stringsAsFactors=F)
@@ -91,7 +91,7 @@ for (grp in groupsOI){
 
 
 
-## upregulated genes
+## upregulated genes -----
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
@@ -131,7 +131,7 @@ p12<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes up: lfc>", l
 
 
 
-## downregulated genes
+## downregulated genes-----
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))

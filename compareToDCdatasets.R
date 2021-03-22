@@ -79,29 +79,31 @@ for (grp in groupsOI){
   ## compare to public data
   #####################################################
 
-  kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
-  kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
-  if(!file.exists(paste0(outPath,"/publicData/",kramerFileName))){
-    download.file(url=kramerURL,
-                  destfile=paste0(outPath,"/publicData/",kramerFileName))
-  }
-  kramer<-read_excel(paste0(outPath,"/publicData/",kramerFileName),
-                     col_types=c(rep("text",3),rep("numeric",30)))
-  names(kramer)
-  kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
+  # kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
+  # kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
+  # if(!file.exists(paste0(outPath,"/publicData/",kramerFileName))){
+  #   download.file(url=kramerURL,
+  #                 destfile=paste0(outPath,"/publicData/",kramerFileName))
+  # }
+  # kramer<-read_excel(paste0(outPath,"/publicData/",kramerFileName),
+  #                    col_types=c(rep("text",3),rep("numeric",30)))
+  # names(kramer)
+  # kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
+  kramer<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds")))
 
-
-  kramerDpy27<-getSignificantGenes(kramer, padj=0.05, lfc=0.5,
+  localPadj=0.05
+  localLFC=0.25
+  kramerDpy27<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy27_RNAi_L3_padj",
                                    nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
                                    direction="both",
-                                   chr="all", nameChrCol="chr", outPath=".")
+                                   chr="all", nameChrCol="seqnames", outPath=".")
 
-  kramerDpy21<-getSignificantGenes(kramer, padj=0.05, lfc=0.5,
+  kramerDpy21<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy21_mutant_L3_padj",
                                    nameLfcCol="dpy21_mutant_L3_log2_fold_change",
                                    direction="both",
-                                   chr="all", nameChrCol="chr")
+                                   chr="all", nameChrCol="seqnames")
 
   if(filterData){
     # remove filtered genes
@@ -119,8 +121,8 @@ for (grp in groupsOI){
                                  chr="all", nameChrCol="chr")
 
 
-  x<-list(salmon=salmonSig$wormbaseID, dpy27=kramerDpy27$Gene_WB_ID,
-          dpy21=kramerDpy21$Gene_WB_ID)
+  x<-list(salmon=salmonSig$wormbaseID, dpy27=kramerDpy27$wormbaseID,
+          dpy21=kramerDpy21$wormbaseID)
   names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
   txtLabels<-list()
   txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
@@ -141,28 +143,29 @@ for (grp in groupsOI){
 
     dim(kramer)
     dim(salmon)
-    idx<-match(kramer$Gene_WB_ID, salmon$wormbaseID)
-    kramer$chr<-salmon$chr[idx]
-    kramer<-kramer[!is.na(kramer$chr),]
+    #idx<-match(kramer$wormbaseID, salmon$wormbaseID)
+    #kramer$chr<-salmon$chr[idx]
+    #kramer<-kramer[!is.na(kramer$chr),]
 
 
     salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
 
-    idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-      kramer$dpy27_RNAi_L3_padj < padjVal &
-      kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-      kramer$chr=="chrX"
-    kramerdpy27dc<-kramer[idx,]
+    kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy27_RNAi_L3_padj",
+                                     nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                     direction="gt",
+                                     chr="chrX", nameChrCol="seqnames",
+                                     outPath=outPath)
 
+    kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy21_mutant_L3_padj",
+                                     nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                     direction="gt",
+                                     chr="chrX", nameChrCol="seqnames",
+                                     outPath=outPath)
 
-    idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-      kramer$dpy21_mutant_L3_padj < padjVal &
-      kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-      kramer$chr=="chrX"
-    kramerdpy21dc<-kramer[idx,]
-
-    x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$Gene_WB_ID,
-            dpy21=kramerdpy21dc$Gene_WB_ID)
+    x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+            dpy21=kramerdpy21dc$wormbaseID)
     names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
     txtLabels<-list()
     txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
@@ -184,33 +187,34 @@ for (grp in groupsOI){
 
   dim(kramer)
   dim(salmon)
-  idx<-match(kramer$Gene_WB_ID, salmon$wormbaseID)
-  kramer$chr<-salmon$chr[idx]
-  kramer<-kramer[!is.na(kramer$chr),]
+  #idx<-match(kramer$wormbaseID, salmon$wormbaseID)
+  #kramer$chr<-salmon$chr[idx]
+  #kramer<-kramer[!is.na(kramer$chr),]
 
 
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="both",chr="autosomes")
 
-  idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-    kramer$dpy27_RNAi_L3_padj < padjVal &
-    abs(kramer$dpy27_RNAi_L3_log2_fold_change) > lfcVal &
-    kramer$chr!="chrX"
-  kramerdpy27dc<-kramer[idx,]
+  kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy27_RNAi_L3_padj",
+                                     nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                     direction="both",
+                                     chr="autosomes", nameChrCol="seqnames",
+                                     outPath=outPath)
 
+  kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy21_mutant_L3_padj",
+                                     nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                     direction="both",
+                                     chr="autosomes", nameChrCol="seqnames",
+                                     outPath=outPath)
 
-  idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-    kramer$dpy21_mutant_L3_padj < padjVal &
-    abs(kramer$dpy21_mutant_L3_log2_fold_change) > lfcVal &
-    kramer$chr!="chrX"
-  kramerdpy21dc<-kramer[idx,]
-
-  x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$Gene_WB_ID,
-          dpy21=kramerdpy21dc$Gene_WB_ID)
+  x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$worbaseID,
+          dpy21=kramerdpy21dc$wormbaseID)
   names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
   txtLabels<-list()
   txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
   txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]], names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
 
 
   #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
@@ -301,51 +305,6 @@ if(includeChrX){
 }
 
 
-
-###############################
-## Jans 2009 vs Kramer
-###############################
-
-kramer<-readxl::read_excel(paste0(outPath,"/publicData/",kramerFileName),
-                           col_types=c(rep("text",3),rep("numeric",30)))
-names(kramer)
-kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-  abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal &
-  kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-  abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal &
-  kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-x<-list(JansDC=JansDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-names(x)<-c("JansDC", "dpy-27", "dpy-21")
-txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
-
-
-x<-list(JansNDC=JansNDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-names(x)<-c("JansNDC", "dpy-27", "dpy-21")
-txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
-
-
-
-p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "venn_Jans2009vKramer2015_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 
