@@ -11,7 +11,7 @@ genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
 remakeFiles=F # remake publicData files?
-combineChrAX=F # artificially combine chrA and X from different datasets
+combineChrAX=F # artificially combine chrA and X from different datasets?
 filterData=T
 if(filterData){
   oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T,
