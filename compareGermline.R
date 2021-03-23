@@ -162,13 +162,13 @@ kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
 scc1only<-base::setdiff(sigGenes[["scc-1cs"]],sigGenes[["kle-2cs"]])
 
 x<-list(kle2only=kle2only, scc1only=scc1only,germline=sigGenes[["germline"]])
-p13<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 or scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+p13<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 or scc-1 genes down: lfc>", lfcVal, ", padj<",padjVal))
 
 
 kle2scc1<-base::intersect(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
 
 x<-list(kle2andscc1=kle2scc1,germline=sigGenes[["germline"]])
-p14<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes up: lfc>", lfcVal, ", padj<",padjVal))
+p14<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes down: lfc>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p11,p12,p13,p14,ncol=2,nrow=2)
 
