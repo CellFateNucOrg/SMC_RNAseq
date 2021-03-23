@@ -3,6 +3,7 @@ library(rtracklayer)
 #library(ggVennDiagram)
 library(ggplot2)
 #library(EnhancedVolcano)
+library(BSgenome.Celegans.UCSC.ce11)
 library(zoo)
 library(dplyr)
 library(ggpubr)
@@ -1022,6 +1023,42 @@ if(plotPDFs==F){
                       flankSize/10000,"kb.png"),width=19,
     height=16, units="cm", res=150)
 }
+
+#############################
+##### subsitute for getREF function from seqplots thaht has an unfixed bug.
+##### Fix comes form  https://github.com/Przemol/seqplots/issues/58
+#' Get reference genome
+#'
+#' @param genome The filename of FASTA file or genome code for BSgenome
+#'
+#' @return \code{DNAStringSet}
+#'
+#' @export
+#'
+getREF <- function(genome) {
+
+  if( file.exists(file.path(Sys.getenv('root'), 'genomes', genome)) ) {
+    REF <- Biostrings::readDNAStringSet( file.path(Sys.getenv('root'), 'genomes', genome) )
+    names(REF) <- gsub(' .+', '', names(REF))
+  } else {
+
+    GENOMES <- BSgenome::installed.genomes(
+      splitNameParts=TRUE)$genome
+    if( length(GENOMES) )
+      names(GENOMES) <- gsub('^BSgenome.', '', BSgenome::installed.genomes())
+    if( !length(GENOMES) ) stop('No genomes installed!')
+
+    pkg <- paste0('BSgenome.', names(GENOMES[GENOMES %in% genome]))[[1]]
+    suppressPackageStartupMessages(
+      library(pkg, character.only = TRUE, quietly=TRUE)
+    )
+    REF <- get(pkg)
+  }
+  return(REF)
+}
+
+assignInNamespace("getREF",getREF,ns="seqplots")
+#####################
 
 p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(loopsAll),
