@@ -13,7 +13,11 @@ source("processPublished.R")
 
 # run core DESeq2 pipeline
 print("main DESeq2 analysis")
-source("DESeqAnalysis_SALMON.R")
+if(combineChrAX){
+  source("combine_chrAchrX.R")
+} else {
+  source("DESeqAnalysis_SALMON.R")
+}
 
 # compare different biological interventions to eachother
 print("comparing the datasets to one another")

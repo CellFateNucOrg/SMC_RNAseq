@@ -25,7 +25,7 @@ if(!dir.exists(paste0(outPath,"/publicData"))) {
   dir.create(paste0(outPath,"publicData"))
 }
 
-remakeFiles=TRUE
+
 # txdb<-AnnotationDbi::loadDb(paste0(genomeDir,
 #                                    "/annotations/c_elegans.PRJNA13758.",
 #                                    genomeVer, ".annotations.sqlite"))

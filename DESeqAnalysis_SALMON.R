@@ -906,7 +906,7 @@ for(grp in groupsOI){
    myCols<-c("#11111100","red","red") # background, dataset1, dataset2
    keyvals<-rep(myCols[1], nrow(salmon))
    names(keyvals)<-rep('Other',nrow(salmon))
-   idx<-salmon$wormbaseID %in% hsUp$WormBase.ID | salmon$wormbaseID %in% hsDown$WormBase.ID
+   idx<-salmon$wormbaseID %in% hsUp$wormbaseID | salmon$wormbaseID %in% hsDown$wormbaseID
    keyvals[idx]<-myCols[2]
    names(keyvals)[idx]<-"Heatshock"
    sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
