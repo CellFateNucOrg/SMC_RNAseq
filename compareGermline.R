@@ -106,9 +106,9 @@ for (grp in groupsOI){
 
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 sigGenes[["germline"]]<-reinke$wormbaseID
-p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(grp, " genes up: lfc>", lfcVal, ", padj<",padjVal))
-p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(grp," genes up: lfc>", lfcVal, ", padj<",padjVal))
-p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(grp," genes up: lfc>", lfcVal, ", padj<",padjVal))
+p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(groupsOI[1], " genes up: lfc>", lfcVal, ", padj<",padjVal))
+p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(groupsOI[2]," genes up: lfc>", lfcVal, ", padj<",padjVal))
+p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(groupsOI[3]," genes up: lfc>", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
@@ -146,9 +146,9 @@ for (grp in groupsOI){
 
 sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 sigGenes[["germline"]]<-reinke$wormbaseID
-p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(grp, " genes down: lfc < -", lfcVal, ", padj<",padjVal))
-p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(grp," genes down: lfc < -", lfcVal, ", padj<",padjVal))
-p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(grp," genes down: lfc < -", lfcVal, ", padj<",padjVal))
+p1<-ggVennDiagram(sigGenes[c(1,4)]) + ggtitle(label=paste0(groupsOI[1], " genes down: lfc < -", lfcVal, ", padj<",padjVal))
+p2<-ggVennDiagram(sigGenes[c(2,4)]) + ggtitle(label=paste0(groupsOI[2]," genes down: lfc < -", lfcVal, ", padj<",padjVal))
+p3<-ggVennDiagram(sigGenes[c(3,4)]) + ggtitle(label=paste0(groupsOI[3]," genes down: lfc < -", lfcVal, ", padj<",padjVal))
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 
