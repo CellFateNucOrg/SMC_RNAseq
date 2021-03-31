@@ -174,6 +174,7 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   thresholds$totalAnalysed<-NA
   thresholds$baseMeanGt10<-NA
   thresholds$numSignificant<-NA
+  thresholds$numSigGt10<-NA
 
   for(pval in padjVals){
     res<-resLFC<-NULL
@@ -218,24 +219,28 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                                             chr=chr, writeTable=F,
                                             IDcolName="ID",
                                             colsToCopy=c("chr")))
+      thresholds$numSigGt10[i]<-sum(filterResults(res,
+                                              padj=thresholds$padj[i],
+                                              lfc=thresholds$lfc[i],
+                                              direction=thresholds$direction[i],
+                                              chr=chr, writeTable=F,
+                                              IDcolName="ID",
+                                              colsToCopy=c("chr"))$baseMean>10)
     }
     thresholds$percentSignificant<-round(100*thresholds$numSignificant/thresholds$totalAnalysed,2)
-    thresholds$percentSigGt10<-round(100*thresholds$numSignificant/thresholds$baseMeanGt10,2)
+    thresholds$percentSigGt10<-round(100*thresholds$numSigGt10/thresholds$baseMeanGt10,2)
   }
   return(thresholds)
 }
 
 
-
-
-
-
-#' Calculate number of significant genes at a range of thresholds
+' Calculate number of significant genes at a range of thresholds
 #'
 #' @param dds DESeq2 object
-#' @param contrastOI vector of values for contrast argument for DESeq2 results
+#' @param contrastOI Vector of values for contrast argument for DESeq2 results
 #' function in the format of c("condition","treated","untreated")
-#' @param padjVals vector of adjusted p value thresholds to explore
+#' @param padjVals Vector of adjusted p value thresholds to explore
+#' @param breaks Vector of numbers to serve as breaks for binning the data
 #' @param direction String to indicate whether to find genes that are
 #' less than (lt), or greater than (gt) the log fold change threshold,
 #' or both extreme tails ("both")
@@ -264,7 +269,7 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
     res$ID<-rowData(dds)$gene
     res$chr<-rowData(dds)$chr
     sig<-filterResults(res, padj=pval, lfc=0, direction=c(direction),
-                    chr=chr, writeTable=F, IDcolName="ID", colsToCopy=c("chr"))
+                       chr=chr, writeTable=F, IDcolName="ID", colsToCopy=c("chr"))
     group_tags<-cut(abs(na.omit(sig$log2FoldChange)), breaks=breaks, include.lowest=TRUE, right=TRUE)
     print(pval)
     #print(summary(group_tags))

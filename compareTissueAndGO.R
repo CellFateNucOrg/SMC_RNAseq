@@ -12,7 +12,7 @@ source("./variableSettings.R")
 if(filterData){
   fileNamePrefix<-filterPrefix
 }
-
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
 
@@ -343,3 +343,60 @@ system(paste0("grep -v '^>' ",outPath,"/runTea.sh > ",outPath,"/runTea1.sh"))
 file.remove(paste0(outPath,"/runTea.sh"))
 system(paste0("chmod +x ",outPath,"/runTea1.sh"))
 system(paste0(outPath,"/runTea1.sh"),wait=F)
+
+
+
+
+##########################
+##  Broadly Expressed genes Gernstein (2014)
+##########################
+broad<-read.csv(file=paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"),
+        stringsAsFactors=T)
+
+sigTables<-list()
+for (grp in groupsOI){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+
+  sigTables[[paste0(grp)]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        namePadjCol="padj",
+                        nameLfcCol="log2FoldChange",
+                        direction="both",
+                        chr="all", nameChrCol="chr"))
+  sigTables[[paste0(grp)]]$SMC<-grp
+}
+sigGenes<-lapply(sigTables, "[", ,c("wormbaseID","sequenceID", "baseMean",
+                                    "log2FoldChange","padj","SMC"))
+lapply(sigGenes,dim)
+#sigGenes<-lapply(sigGenes,na.omit)
+sig<-do.call(rbind,sigGenes)
+row.names(sig)<-NULL
+sig<-inner_join(sig,broad,by="sequenceID")
+sig$upVdown<-NA
+sig$upVdown[sig$log2FoldChange>0]<-"up"
+sig$upVdown[sig$log2FoldChange<0]<-"down"
+sig$upVdown<-factor(sig$upVdown,levels=c("up","down"))
+
+p1<-ggplot2::ggplot(sig, aes(x=category, y=abs(log2FoldChange), fill=upVdown))+
+  geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
+  facet_wrap(~SMC)+ ylim(c(0,4))+theme_classic()+
+  theme(axis.text.x = element_text(angle = 90))
+
+
+p2<-ggplot2::ggplot(sig, aes(x=category, y=-log10(padj), fill=upVdown))+
+  geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
+  facet_wrap(~SMC)+ ylim(c(0,4))+theme_classic()+
+  theme(axis.text.x = element_text(angle = 90))
+
+
+p3<-ggplot2::ggplot(sig, aes(x=category, y=log2(baseMean), fill=upVdown))+
+  geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
+  facet_wrap(~SMC)+theme_classic()+
+  theme(axis.text.x = element_text(angle = 90))
+
+
+p<-ggpubr::ggarrange(p1,p3,p2,ncol=1,nrow=3)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"broadExpn_",
+                                paste(groupsOI, collapse="_"),"_padj",
+                                padjVal, "_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=19,height=29,units="cm")
