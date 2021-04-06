@@ -596,7 +596,7 @@ if(!file.exists(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))) {
   #5180            6367            7990             840
   #    broad       low    reg_L3 reg_nonL3
   #   5180      7266      7120       811
-  write.csv(broad,file=paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"),
+  write.csv(broad,file=paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"),
             row.names=F,quote=F)
   file.remove(paste0(outPath,"/publicData/worm_gene.xlsx"))
 }
