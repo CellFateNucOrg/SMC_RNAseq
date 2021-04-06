@@ -35,6 +35,13 @@ source("compareHICfeatures.R")
 print("check tissue and GO enrichment")
 source("compareTissueAndGO.R")
 
+source("variableSettings.R")
+if(filterData){
+  fileNamePrefix<-filterPrefix
+}
+rmarkdown::render(input="AllPlots_TEA.Rmd",output_format="pdf_document",
+                  output_file=paste0(outPath,"/tissue/tea/",fileNamePrefix,"allPlots_TEA.pdf"))
+
 # compare to dosage compensation data sets
 print("compare to public DC data sets")
 source("compareToDCdatasets.R")
