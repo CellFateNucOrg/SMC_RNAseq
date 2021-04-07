@@ -34,7 +34,7 @@ groupsOI<-levels(SMC)[-1]
 geneTable<-NULL
 for (grp in groupsOI){
   salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, grp,
-                                       "_DESeq2_fullResults.rds")))
+                                       "_DESeq2_fullResults_p",padjVal,".rds")))
   colnames(salmon)[colnames(salmon)=="baseMean"]<-paste0(grp,"_baseMean")
   colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
   colnames(salmon)[colnames(salmon)=="padj"]<-paste0(grp,"_padj")

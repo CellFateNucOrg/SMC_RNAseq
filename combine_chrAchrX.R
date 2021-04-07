@@ -201,16 +201,16 @@ chrAprefix<-paste0("/../SMC_RNAseq_prefiltCyc2xChrA/rds/p",padjVal,"_lfc",lfcVal
 
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  Xdata<-readRDS(paste0(outPath, chrXprefix, grp, "_DESeq2_fullResults.rds"))
+  Xdata<-readRDS(paste0(outPath, chrXprefix, grp, "_DESeq2_fullResults_p",padjVal,".rds"))
   table(Xdata$chr)
-  Adata<-readRDS(paste0(outPath, chrAprefix, grp, "_DESeq2_fullResults.rds"))
+  Adata<-readRDS(paste0(outPath, chrAprefix, grp, "_DESeq2_fullResults_p",padjVal,".rds"))
   table(Adata$chr)
   resLFC<-rbind(Adata,Xdata[Xdata$chr=="chrX",])
-  saveRDS(resLFC,paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  saveRDS(resLFC,paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   #export csv with ordered results
   write.csv(resLFC[order(resLFC$padj),],
             file=paste0(outPath,"/txt/", fileNamePrefix,grp,
-                        "_DESeq2_resultsTable.csv"),
+                        "_DESeq2_resultsTable_p",padjVal,".csv"),
             quote=F,row.names=F)
 
   # remove NAs from chr (unmapped or mtDNA) and padj (below filter threshold) columns
@@ -616,7 +616,7 @@ for (grp in groupsOI){
   sink()
 
   if(length(chrXgenes)>0) {
-    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
     salmondc<-filterResults(salmon,padj=padjVal,lfc=lfcVal,"gt","chrX", writeTable=F)
     salmondcgr<-metadata[metadata$wormbaseID %in% salmondc$wormbaseID]
     mcols(salmondcgr)<-cbind(mcols(salmondcgr),
@@ -645,7 +645,7 @@ amplicons<-readRDS(paste0(outPath,"/otherData/ampliconMaxTSSgr.RDS"))
 #grp=groupsOI[3]
 
 for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   #### oscillating genes
   bkgrnd='#99999966'
@@ -705,7 +705,7 @@ for(grp in groupsOI){
   }
 
 
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
 
 
@@ -828,7 +828,7 @@ localPadj=0.05
 localLFC=0
 for (grp in groupsOI){
   print(grp)
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   print(dim(salmon))
   print(sum(is.na(salmon$log2FoldChange)))
   #salmon$expressed<-sum(salmon$baseMean>10)

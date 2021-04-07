@@ -34,7 +34,7 @@ sigGR<-list()
 df<-data.frame(matrix(nrow=10,ncol=3))
 names(df)<-groupsOI
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   n<-prettyGeneName(grp)
   sigTables[[n]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -65,7 +65,7 @@ df
 
 for (grp in groupsOI){
   #grp="dpy26cs"
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
     # remove filtered genes
@@ -319,7 +319,7 @@ if(!filterData){
   hsDOWN<-readRDS(file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds")) #455
 
   for (grp in groupsOI){
-    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
     salmonSig<-getSignificantGenes(salmon, padj=padjVal,
                                    lfc=lfcVal,
                                    namePadjCol="padj",

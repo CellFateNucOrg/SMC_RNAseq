@@ -36,7 +36,7 @@ groupsOI<-levels(SMC)[-1]
 ## significantly changed genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                  namePadjCol="padj",
@@ -75,7 +75,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -111,7 +111,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_
 ## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -150,7 +150,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGene
 ########-
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
                                                   padj=padjVal, lfc=lfcVal,
@@ -181,7 +181,7 @@ p1<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
 
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
                                                       padj=padjVal, lfc=lfcVal,
@@ -213,7 +213,7 @@ p2<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) + facet_grid(cols=vars(SMC))
 
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(
                                         salmon, padj=padjVal,
@@ -254,7 +254,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ########-
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[!is.na(salmon$chr),]
   rownames(salmon)<-NULL
   sigTables[[grp]]<-as.data.frame(getSignificantGenes(salmon,
@@ -385,7 +385,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 
 geneTable<-NULL
 for (grp in groupsOI){
-  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds")))
   colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
   if(is.null(geneTable)){
     geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
@@ -528,7 +528,7 @@ if(!combineChrAX){
 
   geneTable<-NULL
   for (grp in groupsOI){
-    salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
+    salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds")))
     colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
     if(is.null(geneTable)){
       geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr", paste0(grp,"_lfc"))]

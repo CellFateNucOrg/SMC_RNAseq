@@ -38,7 +38,7 @@ if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
 # ## all genes
 # sigTables<-list()
 # for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 #
 #   sigTables[[paste0(grp,"_all")]]<-as.data.frame(
 #     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -55,7 +55,7 @@ if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
 ### upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp,"_up")]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -71,7 +71,7 @@ sigGenesUp<-lapply(sigTables, "[", ,"wormbaseID")
 ### down regulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp,"_down")]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -124,7 +124,7 @@ if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))
 # ## significantly changed genes
 # sigTables<-list()
 # for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 #
 #   sigTables[[paste0(grp)]]<-as.data.frame(
 #     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -147,7 +147,7 @@ if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -170,7 +170,7 @@ for (grp in groupsOI){
 ## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -196,7 +196,7 @@ for (grp in groupsOI){
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -218,7 +218,7 @@ for (grp in groupsOI){
 ## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -252,7 +252,7 @@ if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
 # ## significantly changed genes
 # sigTables<-list()
 # for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 #
 #   sigTables[[paste0(grp)]]<-as.data.frame(
 #     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -286,7 +286,7 @@ sink()
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -313,7 +313,7 @@ for (grp in groupsOI){
 ## downregulated genes
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -355,7 +355,7 @@ broad<-read.csv(file=paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"),
 
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,

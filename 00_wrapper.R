@@ -1,5 +1,12 @@
 ### make sure to put the correct settings in variableSettings.R
 
+source("variableSettings.R")
+
+# make metadata object
+if(!file.exists(paste0(outPath,"/wbGeneGR_WS275.rds"))){
+  source("./createMetadataObj.R")
+}
+
 # process some public datasets required later (only do once)
 print("processing published datasets")
 source("processPublished.R")
@@ -35,7 +42,7 @@ source("compareHICfeatures.R")
 print("check tissue and GO enrichment")
 source("compareTissueAndGO.R")
 
-source("variableSettings.R")
+
 if(filterData){
   fileNamePrefix<-filterPrefix
 }

@@ -43,7 +43,7 @@ if(filterData){
 
 for (grp in groupsOI){
   #grp="dpy26cs"
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
     # remove filtered genes
@@ -94,7 +94,7 @@ for (grp in groupsOI){
 ## upregulated genes -----
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -134,7 +134,7 @@ p12<-ggVennDiagram(x) + ggtitle(label=paste0("kle-2 and scc-1 genes up: lfc>", l
 ## downregulated genes-----
 sigTables<-list()
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,

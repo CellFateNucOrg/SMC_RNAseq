@@ -169,8 +169,9 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                         direction=c("both","lt","gt"), chr="all",
                         outPath=".",fileNamePrefix="",shrink=F){
   # make table of all combinations
-  thresholds<-expand.grid(group=grp, direction=c("both","lt","gt"),
-                          padj=padjVals, lfc=lfcVals, stringsAsFactors=F)
+  thresholds<-expand.grid(group=grp, lfc=lfcVals, padj=padjVals,
+                          direction=c("both","lt","gt"),
+                          stringsAsFactors=F)
   thresholds$totalAnalysed<-NA
   thresholds$baseMeanGt10<-NA
   thresholds$numSignificant<-NA
@@ -207,6 +208,7 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
       res<-res[na.omit(which(res$chr!="chrX")),]
     }
 
+    res<-res[!is.na(res$padj),]
     currentPidx<-which(thresholds$padj==pval)
     thresholds$totalAnalysed[currentPidx]<-sum(!is.na(res$padj))
     thresholds$baseMeanGt10[currentPidx]<-sum(res$baseMean>10,na.rm=T)
@@ -219,13 +221,13 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
                                             chr=chr, writeTable=F,
                                             IDcolName="ID",
                                             colsToCopy=c("chr")))
-      thresholds$numSigGt10[i]<-sum(filterResults(res,
+      thresholds$numSigGt10[i]<-nrow(filterResults(res[res$baseMean>10,],
                                               padj=thresholds$padj[i],
                                               lfc=thresholds$lfc[i],
                                               direction=thresholds$direction[i],
                                               chr=chr, writeTable=F,
                                               IDcolName="ID",
-                                              colsToCopy=c("chr"))$baseMean>10)
+                                              colsToCopy=c("chr")))
     }
     thresholds$percentSignificant<-round(100*thresholds$numSignificant/thresholds$totalAnalysed,2)
     thresholds$percentSigGt10<-round(100*thresholds$numSigGt10/thresholds$baseMeanGt10,2)
@@ -234,7 +236,73 @@ varyThreshold<-function(dds, contrastOI, padjVals=c(0.05,0.01),
 }
 
 
-' Calculate number of significant genes at a range of thresholds
+#' Calculate number of significant genes at a range of thresholds
+#'
+#' @param res DESeq2 results table
+#' @param pval vector of adjusted p value thresholds to explore
+#' @param lfcVals vector of log2 fold change thresholds to explore
+#' @param direction Vector of strings to indicate whether to find genes that are
+#' less than (lt), or greater than (gt) the log fold change threshold,
+#' or both extreme tails ("both")
+#' @param chrs Vector of strings to indicate whether to analyse all genes in
+#' genome ("all") only those on the X chromosome ("chrX"), or only autosomes
+#' ("autosomes")
+#' @return A table of the number of significant genes at different threshold values
+#' @export
+varyThreshold1<-function(res, pval=0.05,
+                        lfcVals=c(0,0.25,0.5,1),
+                        direction=c("both","lt","gt"),
+                        chrs=c("all","chrX","autosomes")){
+  # make table of all combinations
+  thresholds<-expand.grid(group=grp, lfc=lfcVals, padj=pval,
+                          direction=direction, chr=chrs,
+                          stringsAsFactors=F)
+  thresholds$totalAnalysed<-NA
+  thresholds$baseMeanGt10<-NA
+  thresholds$numSignificant<-NA
+  thresholds$numSigGt10<-NA
+  res<-res[!is.na(res$padj),]
+
+  for(i in 1:nrow(thresholds)){
+    if(thresholds$chr[i]=="chrX"){
+      res1<-res[na.omit(which(res$chr=="chrX")),]
+    }
+    if(thresholds$chr[i]=="autosomes"){
+      res1<-res[na.omit(which(res$chr!="chrX")),]
+    } else {
+      res1<-res
+    }
+
+    thresholds$totalAnalysed[i]<-sum(!is.na(res1$padj))
+    thresholds$baseMeanGt10[i]<-sum(res1$baseMean>10,na.rm=T)
+
+    thresholds$numSignificant[i]<-nrow(filterResults(res1,
+                                                     padj=thresholds$padj[i],
+                                                     lfc=thresholds$lfc[i],
+                                                     direction=thresholds$direction[i],
+                                                     chr=thresholds$chr[i],
+                                                     writeTable=F,
+                                                     IDcolName="wormbaseID",
+                                                     colsToCopy=c("chr")))
+    thresholds$numSigGt10[i]<-nrow(filterResults(res1[res1$baseMean>10,],
+                                                 padj=thresholds$padj[i],
+                                                 lfc=thresholds$lfc[i],
+                                                 direction=thresholds$direction[i],
+                                                 chr=thresholds$chr[i],
+                                                 writeTable=F,
+                                                 IDcolName="wormbaseID",
+                                                 colsToCopy=c("chr")))
+  }
+  thresholds$percentSignificant<-round(100*thresholds$numSignificant/thresholds$totalAnalysed,2)
+  thresholds$percentSigGt10<-round(100*thresholds$numSigGt10/thresholds$baseMeanGt10,2)
+
+  return(thresholds)
+}
+
+
+
+
+#' Calculate number of significant genes at a range of thresholds
 #'
 #' @param dds DESeq2 object
 #' @param contrastOI Vector of values for contrast argument for DESeq2 results
@@ -271,9 +339,7 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
     sig<-filterResults(res, padj=pval, lfc=0, direction=c(direction),
                        chr=chr, writeTable=F, IDcolName="ID", colsToCopy=c("chr"))
     group_tags<-cut(abs(na.omit(sig$log2FoldChange)), breaks=breaks, include.lowest=TRUE, right=TRUE)
-    print(pval)
-    #print(summary(group_tags))
-    #print(length(summary(group_tags)))
+
     if(asCounts){
       groupCounts[groupCounts$pvals==pval,"counts"]<-summary(group_tags)
     } else {
@@ -283,4 +349,37 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   return(list(groupCounts,sig))
 }
 
+
+#' Calculate number of significant genes at a range of thresholds
+#'
+#' @param res DESeq2 results table
+#' @param pval Adjusted p value threshold to use
+#' @param breaks Vector of numbers to serve as breaks for binning the data
+#' @param chr String to indicate whether to analyse all genes in
+#' genome ("all") only those on the X chromosome ("chrX"), or only autosomes
+#' ("autosomes")
+#' @param direction String to indicate whether to find genes that are
+#' less than (lt), or greater than (gt) the log fold change threshold,
+#' or both extreme tails ("both")
+#' @param asCounts Logical value to indicate if the function should return counts or proportions
+#' @return A table of the number of significant genes at different threshold values
+#' @export
+getDensity1<-function(res, pval=0.05,
+                     breaks=c(seq(0,2,0.1),Inf), chr="all",
+                     direction="both",asCounts=F){
+  breakLabels<-levels(cut(breaks[-1],breaks))
+  groupCounts<-data.frame(breaks=breakLabels,
+                          pvals=rep(pval,each=(length(breaks)-1)), counts=NA)
+
+  sig<-filterResults(res, padj=pval, lfc=0, direction=c(direction),
+                     chr=chr, writeTable=F, IDcolName="wormbaseID", colsToCopy=c("chr"))
+  group_tags<-cut(abs(na.omit(sig$log2FoldChange)), breaks=breaks, include.lowest=TRUE, right=TRUE)
+
+  if(asCounts){
+      groupCounts[groupCounts$pvals==pval,"counts"]<-summary(group_tags)
+  } else {
+      groupCounts[groupCounts$pvals==pval,"counts"]<-summary(group_tags)/length(group_tags)
+  }
+  return(list(groupCounts,sig))
+}
 

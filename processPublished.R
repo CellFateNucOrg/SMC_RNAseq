@@ -24,7 +24,7 @@ source("./variableSettings.R")
 source("./functions.R")
 
 if(!dir.exists(paste0(outPath,"/publicData"))) {
-  dir.create(paste0(outPath,"publicData"))
+  dir.create(paste0(outPath,"/publicData"))
 }
 
 ce11seqinfo<-seqinfo(Celegans)

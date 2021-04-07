@@ -59,7 +59,7 @@ pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds")))
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds")))
 
   salmon<-salmon[!is.na(salmon$chr),]
   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
@@ -292,7 +292,7 @@ pcas<-data.frame(SMC=SMC,
 listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
 
   salmon<-salmon[!is.na(salmon$chr),]
@@ -514,7 +514,7 @@ listgr<-NULL
 for (grp in groupsOI){
   #grp=groupsOI[1]
   salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,
-                              "_DESeq2_fullResults.rds"))
+                              "_DESeq2_fullResults_p",padjVal,".rds"))
   pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
   pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
 
