@@ -835,7 +835,7 @@ for (grp in groupsOI){
   print(paste0(nrow(salmon)," genes before filtering"))
   print(paste0(sum(is.na(salmon$log2FoldChange))," have log2FoldChange that is NA"))
   #salmon$expressed<-sum(salmon$baseMean>10)
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon)
   print(paste0(nrow(sigTables[[prettyGeneName(grp)]])," genes after automatic threshold filter"))
 }
 
