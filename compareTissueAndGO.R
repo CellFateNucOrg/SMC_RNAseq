@@ -5,7 +5,10 @@ library(EnhancedVolcano)
 library(wormcat)
 library(xlsx)
 library(reticulate)
-conda_install(envname="tea",packages="tissue_enrichment_analysis",pip=T)
+#conda_install(envname="tea",packages="tissue_enrichment_analysis",pip=T, pip_options="git+https://github.com/dangeles/TissueEnrichmentAnalysis.git")
+## note: there is a bug in this version of tea which need to be corrected in the
+## code. Go to this file: vi ~/miniconda3/envs/tea/bin/tea and on line 66 change args.tisse_dictionary to args.dictionary
+conda_install(envname="wormcat",packages="wormcat_batch",pip=T)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -25,9 +28,9 @@ controlGrp<-levels(SMC)[1] # control group
 groupsOI<-levels(SMC)[-1]
 
 
-############################
-## Gene name lists for wormcat
-############################
+############################-
+## Gene name lists for wormcat-----
+############################-
 ## need to process by dropping excel file into http://www.wormcat.com
 ## since r function does not seem to work.
 
@@ -92,20 +95,25 @@ wormcatIn<-lapply(wormcatIn,function (x) c("Wormbase ID",x))
 openxlsx::write.xlsx(wormcatIn,
                      file=paste0(outPath,"/wormcat/",fileNamePrefix,"wormcat.xlsx"))
 
-
-#worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/wormcat.xlsx"), output_dir=paste0(outPath,"/wormcat/"), input_type="Wormbase.ID")
+wormcatDataURL="http://www.wormcat.com/static/download/whole_genome_nov-16-2019.csv"
+wormcatData=paste0(getwd(),"/publicData/",basename(wormcatDataURL))
+if(!file.exists(wormcatData)){
+  download.file(url=wormcatDataURL,destfile=wormcatData)
+}
+wcd<-read.csv(wormcatData)
+worm_cat_fun( file_to_process=paste0(getwd(),"/wormcat/",fileNamePrefix,"wormcat.xlsx"), title="bug",output_dir=paste0(getwd(),"/wormcat/wormcat_out"), annotation_file="whole_genome_jul-03-2019.csv", input_type="Wormbase.ID")
 
 #if(!dir.exists(paste0(outPath,"/tissue")) { dir.create(paste0(outPath,"/tissue")) }
 
-#####################
-## worm tissue
-#####################
+#####################-
+## worm tissue-----
+#####################-
 #http://worm-tissue.princeton.edu/search
 # need lists of sequence IDs.
 
 # read in tissue prediction data set to screen out entrez ids not included
 if(!file.exists(paste0(outPath,"/publicData/all_tissue_prediction_scores.txt"))){
-  system(paste0("wget https://worm.princeton.edu/media/download/all_tissue_prediction_scores.txt -o ",outPath,"/publicData/all_tissue_prediction_scores.txt"))
+  system(paste0("wget https://worm.princeton.edu/media/download/all_tissue_prediction_scores.txt -O ",outPath,"/publicData/all_tissue_prediction_scores.txt"))
 }
 tissueScores<-read.delim(paste0(outPath,"/publicData/all_tissue_prediction_scores.txt"))
 write.table(tissueScores$entrez,
@@ -191,7 +199,7 @@ for (grp in groupsOI){
 
 
 
-####### sequenceID
+####### sequenceID-----
 
 ## upregulated genes
 sigTables<-list()
@@ -238,9 +246,9 @@ for (grp in groupsOI){
 
 
 
-########
-## TEA - tissue enrichment analysis
-########
+########-
+## TEA - tissue enrichment analysis-----
+########-
 # https://www.micropublication.org/media/2018/03/microPublication.biology-10.17912-W25Q2N.pdf
 
 if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
@@ -249,6 +257,27 @@ if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
 }
 
 
+# fetch dictionaries
+# anatomy
+anaURL=paste0("http://caltech.wormbase.org/TissueEnrichmentAnalysis/DICTs/anatomy_dict_95_33_", genomeVer, ".csv")
+anaDict=paste0(outPath, "/publicData/",basename(anaURL))
+if(!file.exists(anaDict)){
+  download.file(url=anaURL, destfile=anaDict)
+}
+
+# go
+goURL=paste0("http://caltech.wormbase.org/TissueEnrichmentAnalysis/DICTs/go_dict_95_100_", genomeVer, ".csv")
+goDict=paste0(outPath, "/publicData/",basename(goURL))
+if(!file.exists(goDict)){
+  download.file(url=goURL, destfile=goDict)
+}
+
+# phenotype
+pheURL=paste0("http://caltech.wormbase.org/TissueEnrichmentAnalysis/DICTs/phenotype_dict_95_50_", genomeVer, ".csv")
+pheDict=paste0(outPath,"/publicData/",basename(pheURL))
+if(!file.exists(pheDict)){
+  download.file(url=pheURL, destfile=pheDict)
+}
 # ## significantly changed genes
 # sigTables<-list()
 # for (grp in groupsOI){
@@ -303,9 +332,9 @@ partialPrefix=gsub(paste0("p",padjVal,"_lfc",lfcVal,"/"),"",fileNamePrefix)
 for (grp in groupsOI){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_upGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_tissue tissue\n"))
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_phe phenotype\n"))
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_go go\n"))
+  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_tissue tissue\n"))
+  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_phe phenotype\n"))
+  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_go go\n"))
   sink()
 }
 
@@ -329,9 +358,9 @@ sigGenes<-lapply(sigGenes,na.omit)
 for (grp in groupsOI){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_downGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp,"_down_tissue tissue\n"))
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix ,grp,"_down_phe phenotype\n"))
-  cat(paste0("tea -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp, "_down_go go\n"))
+  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp,"_down_tissue tissue\n"))
+  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix ,grp,"_down_phe phenotype\n"))
+  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp, "_down_go go\n"))
   sink()
 }
 
@@ -347,13 +376,13 @@ system(paste0(outPath,"/runTea1.sh"),wait=F)
 
 
 
-##########################
-##  Broadly Expressed genes Gernstein (2014)
-##########################
+##########################-
+##  Broadly Expressed genes Gernstein (2014)------
+##########################-
 broad<-read.csv(file=paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"),
         stringsAsFactors=T)
 
-sigTables<-list()
+  sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
@@ -400,3 +429,4 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"broadExpn_",
                                 paste(groupsOI, collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
+
