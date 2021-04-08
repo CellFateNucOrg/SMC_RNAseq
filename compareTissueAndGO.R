@@ -101,7 +101,8 @@ if(!file.exists(wormcatData)){
   download.file(url=wormcatDataURL,destfile=wormcatData)
 }
 wcd<-read.csv(wormcatData)
-worm_cat_fun( file_to_process=paste0(getwd(),"/wormcat/",fileNamePrefix,"wormcat.xlsx"), title="bug",output_dir=paste0(getwd(),"/wormcat/wormcat_out"), annotation_file="whole_genome_jul-03-2019.csv", input_type="Wormbase.ID")
+write.csv(wcd[,1:5],wormcatData,row.names=F,quote=T)
+worm_cat_fun( file_to_process=paste0(getwd(),"/wormcat/",fileNamePrefix,"wormcat.xlsx"), title="bug",output_dir=paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/wormcat_out"), annotation_file=wormcatData, input_type="Wormbase.ID")
 
 #if(!dir.exists(paste0(outPath,"/tissue")) { dir.create(paste0(outPath,"/tissue")) }
 

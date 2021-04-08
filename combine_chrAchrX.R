@@ -823,25 +823,27 @@ for(grp in groupsOI){
 ## ECDF of data -----
 ########################-
 
+# ecdf automatic filtering threshold-----
 sigTables<-list()
-localPadj=0.05
+localPadj=padjVal
 localLFC=0
 for (grp in groupsOI){
   print(grp)
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-  print(dim(salmon))
-  print(sum(is.na(salmon$log2FoldChange)))
+  salmon<-salmon[!is.na(salmon$padj),]
+  #nrow(filterResults(salmon,padj=0.05,lfc=0.5,direction="lt",chr="autosomes"))
+  print(paste0(nrow(salmon)," genes before filtering"))
+  print(paste0(sum(is.na(salmon$log2FoldChange))," have log2FoldChange that is NA"))
   #salmon$expressed<-sum(salmon$baseMean>10)
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon[salmon$baseMean>10,])
-  print(dim(sigTables[[prettyGeneName(grp)]]))
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
+  print(paste0(nrow(sigTables[[prettyGeneName(grp)]])," genes after automatic threshold filter"))
 }
-
-# check if datasets have chrX genes included
-includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
 SMC<-rep(names(sigTables),lapply(sigTables,nrow))
 sig<-do.call(rbind,sigTables)
 sig$SMC<-SMC
+#sum(is.na(sig$padj))
+#sig<-sig[!is.na(sig$padj),]
 #sig$SMC<-factor(SMC)
 table(sig$SMC)
 sig$XvA<-"Autosomes"
@@ -856,71 +858,143 @@ table(sig$upVdown)
 row.names(sig)<-NULL
 SMC<-NULL
 
-
-dd<-plyr::ddply(sig,.(SMC,upVdown,XvA),transform,
-                ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
-
-dd1<-sig %>% dplyr::group_by(SMC,upVdown,XvA) %>%
+# check if datasets have chrX genes included
+includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+options(tibble.width=Inf)
+dd1<-sig %>% filter(padj<localPadj) %>%
+  dplyr::group_by(SMC,upVdown,XvA) %>%
   mutate(ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
 
-sig %>% dplyr::group_by(SMC,XvA) %>%
-  mutate(countOnChr=n()) %>% group_by(SMC,XvA,upVdown) %>%
-  mutate(countOnChr=unique(countOnChr),countInGrp=n(),
-         fractionInGrp=countInGrp/countOnChr) %>%
-  summarise(ecd=1-ecdf(abs(log2FoldChange))(c(0)),
-            fractionInGrp=unique(fractionInGrp),
-            countOnChr=unique(countOnChr),
-            countInGrp=unique(countInGrp),
-            countPosInGrp=ecd*countInGrp,
-            percentPosInGrp=ecd*countInGrp/countOnChr)
-
-sig %>% dplyr::group_by(SMC,XvA) %>%
-  mutate(countOnChr=n()) %>% group_by(SMC,XvA,upVdown) %>%
-  mutate(countOnChr=unique(countOnChr),countInGrp=n(),
-         fractionInGrp=countInGrp/countOnChr) %>%
-  summarise(ecd=1-ecdf(abs(log2FoldChange))(c(0)),
-            fractionInGrp=unique(fractionInGrp),
-            countOnChr=unique(countOnChr),
-            countInGrp=unique(countInGrp),
-            countPosInGrp=ecd*countInGrp,
-            percentPosInGrp=ecd*countInGrp/countOnChr,
-            sig=sum(abs(log2FoldChange)>localLFC & padj<localPadj))
-
-ss<- sig %>% filter(abs(log2FoldChange)>localLFC,padj<localPadj) %>%
-  group_by(SMC,XvA,upVdown) %>% summarise(count=n())
-
- ss
+ss1<-sig %>% group_by(SMC,XvA) %>% mutate(expOnChr=n()) %>% filter(padj<localPadj) %>%
+  mutate(sigOnChr=n())%>% group_by(SMC,XvA,upVdown) %>%
+  mutate(sigInGrp=n(), ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange))) %>%
+  summarise(expOnChr=unique(expOnChr),
+            sigOnChr=unique(sigOnChr),
+            sigInGrp=unique(sigInGrp),
+            qnt0=1-ecdf(abs(log2FoldChange))(c(0)),
+            qnt25=1-ecdf(abs(log2FoldChange))(0.25),
+            qnt50=1-ecdf(abs(log2FoldChange))(0.5),
+            fractionSig=sigInGrp/sigOnChr,
+            count0Sig=sigInGrp*qnt0,
+            countq25Sig=sigInGrp*qnt25,
+            countq50Sig=sigInGrp*qnt50,
+            percentq0Exp=sigInGrp*qnt0*100/expOnChr,
+            percentq25Exp=sigInGrp*qnt25*100/expOnChr,
+            percentq50Exp=sigInGrp*qnt50*100/expOnChr,
+            .groups="keep")
+write.table(ss1,file=paste0(outPath,"/txt/ecdf_lfcThresholds_p",padjVal,".tsv"),
+            sep="\t",row.names=F,quote=F)
 
 
 p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
-  geom_line(size=1)+ facet_wrap(vars(upVdown),nrow=2)+
+  geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
   theme_classic() + xlim(c(0,1.5)) +
-  xlab("Absolute log2 fold change")+ylab("Fraction genes rejected")
-p
+  xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
+#p
 
 #stat_ecdf(aes(colour=SMC,linetype=XvA),alpha=0.7)
 p1<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
   annotate("text",label="0.5",size=3, x=0.5, y=0,hjust=-0.05,color="grey") +
   geom_vline(aes(xintercept = 0.25), color="grey") +
   annotate("text",label="0.25",size=3, x=0.25, y=0,hjust=-0.05,color="grey")
-p1
+#p1
 
 if(plotPDFs==T){
   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                         "lfcValueCDF.pdf"), plot=p1,
+                         "lfcValueCDF_p",padjVal,".pdf"), plot=p1,
          device="pdf",path=outPath, width=10,height=10,units="cm")
 } else {
   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                         "lfcValueCDF.png"), plot=p1,
+                         "lfcValueCDF_p",padjVal,".png"), plot=p1,
          device="png",path=outPath, width=10,height=10,units="cm")
 }
 
-dd %>% group_by(SMC,XvA) %>% mutate(expressed=n()) %>% group_by(SMC,XvA,upVdown) %>%
-  summarise(qnt25=1-ecdf(abs(log2FoldChange))(0.25),
+
+
+
+
+# ecdf baseMean>10 threshold-----
+sigTables<-list()
+localPadj=padjVal
+localLFC=0
+for (grp in groupsOI){
+  print(grp)
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-salmon[!is.na(salmon$padj),]
+  #nrow(filterResults(salmon,padj=0.05,lfc=0.5,direction="lt",chr="autosomes"))
+  print(paste0(nrow(salmon)," genes before filtering"))
+  print(paste0(sum(is.na(salmon$log2FoldChange))," have log2FoldChange that is NA"))
+  #salmon$expressed<-sum(salmon$baseMean>10)
+  sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon[salmon$baseMean>10,])
+  print(paste0(nrow(sigTables[[prettyGeneName(grp)]])," genes after >10 baseMean filter"))
+}
+
+SMC<-rep(names(sigTables),lapply(sigTables,nrow))
+sig<-do.call(rbind,sigTables)
+sig$SMC<-SMC
+#sum(is.na(sig$padj))
+#sig<-sig[!is.na(sig$padj),]
+#sig$SMC<-factor(SMC)
+table(sig$SMC)
+sig$XvA<-"Autosomes"
+sig$XvA[sig$chr=="chrX"]<-"chrX"
+#sig$XvA<-factor(sig$XvA)
+table(sig$XvA)
+sig$upVdown<-"0"
+sig$upVdown[sig$log2FoldChange<0]<-"down"
+sig$upVdown[sig$log2FoldChange>0]<-"up"
+#sig$upVdown<-factor(sig$upVdown,levels=c("0","up","down"))
+table(sig$upVdown)
+row.names(sig)<-NULL
+SMC<-NULL
+
+# check if datasets have chrX genes included
+includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+options(tibble.width=Inf)
+dd1<-sig %>% filter(padj<localPadj) %>%
+  dplyr::group_by(SMC,upVdown,XvA) %>%
+  mutate(ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
+
+ss1<-sig %>% group_by(SMC,XvA) %>% mutate(expOnChr=n()) %>% filter(padj<localPadj) %>%
+  mutate(sigOnChr=n())%>% group_by(SMC,XvA,upVdown) %>%
+  mutate(sigInGrp=n(), ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange))) %>%
+  summarise(expOnChr=unique(expOnChr),
+            sigOnChr=unique(sigOnChr),
+            sigInGrp=unique(sigInGrp),
+            qnt0=1-ecdf(abs(log2FoldChange))(c(0)),
+            qnt25=1-ecdf(abs(log2FoldChange))(0.25),
             qnt50=1-ecdf(abs(log2FoldChange))(0.5),
-            count=n(), expressed=unique(expressed)) %>%
-  mutate(percent0.25=100*count*qnt25/expressed,
-         percent0.5=100*count*qnt50/expressed)
+            fractionSig=sigInGrp/sigOnChr,
+            count0Sig=sigInGrp*qnt0,
+            countq25Sig=sigInGrp*qnt25,
+            countq50Sig=sigInGrp*qnt50,
+            percentq0Exp=sigInGrp*qnt0*100/expOnChr,
+            percentq25Exp=sigInGrp*qnt25*100/expOnChr,
+            percentq50Exp=sigInGrp*qnt50*100/expOnChr,
+            .groups="keep")
+write.table(ss1,file=paste0(outPath,"/txt/ecdf_lfcThresholds_p",padjVal,"_gt10.tsv"),
+            sep="\t",row.names=F,quote=F)
 
 
-table(sig$SMC,sig$XvA,sig$upVdown)
+p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
+  geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
+  theme_classic() + xlim(c(0,1.5)) +
+  xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
+#p
+
+#stat_ecdf(aes(colour=SMC,linetype=XvA),alpha=0.7)
+p1<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
+  annotate("text",label="0.5",size=3, x=0.5, y=0,hjust=-0.05,color="grey") +
+  geom_vline(aes(xintercept = 0.25), color="grey") +
+  annotate("text",label="0.25",size=3, x=0.25, y=0,hjust=-0.05,color="grey")
+#p1
+
+if(plotPDFs==T){
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                         "lfcValueCDF_p",padjVal,"gt10.pdf"), plot=p1,
+         device="pdf",path=outPath, width=10,height=10,units="cm")
+} else {
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "lfcValueCDF_p",padjVal,"gt10.png"), plot=p1,
+         device="png",path=outPath, width=10,height=10,units="cm")
+}

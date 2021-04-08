@@ -1142,14 +1142,14 @@ p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
    geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
    theme_classic() + xlim(c(0,1.5)) +
    xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
-p
+#p
 
 #stat_ecdf(aes(colour=SMC,linetype=XvA),alpha=0.7)
 p1<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
    annotate("text",label="0.5",size=3, x=0.5, y=0,hjust=-0.05,color="grey") +
    geom_vline(aes(xintercept = 0.25), color="grey") +
    annotate("text",label="0.25",size=3, x=0.25, y=0,hjust=-0.05,color="grey")
-p1
+#p1
 
 if(plotPDFs==T){
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
@@ -1224,7 +1224,7 @@ ss1<-sig %>% group_by(SMC,XvA) %>% mutate(expOnChr=n()) %>% filter(padj<localPad
              percentq25Exp=sigInGrp*qnt25*100/expOnChr,
              percentq50Exp=sigInGrp*qnt50*100/expOnChr,
              .groups="keep")
-write.table(ss1,file=paste0(outPath,"/txt/ecdf_lfcThresholds_p",padjVal,".tsv"),
+write.table(ss1,file=paste0(outPath,"/txt/ecdf_lfcThresholds_p",padjVal,"_gt10.tsv"),
             sep="\t",row.names=F,quote=F)
 
 
@@ -1232,22 +1232,22 @@ p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
    geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
    theme_classic() + xlim(c(0,1.5)) +
    xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
-p
+#p
 
 #stat_ecdf(aes(colour=SMC,linetype=XvA),alpha=0.7)
 p1<-p+geom_vline(aes(xintercept = 0.5), color="grey") +
    annotate("text",label="0.5",size=3, x=0.5, y=0,hjust=-0.05,color="grey") +
    geom_vline(aes(xintercept = 0.25), color="grey") +
    annotate("text",label="0.25",size=3, x=0.25, y=0,hjust=-0.05,color="grey")
-p1
+#p1
 
 if(plotPDFs==T){
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                          "lfcValueCDF_p",padjVal,".pdf"), plot=p1,
+                          "lfcValueCDF_p",padjVal,"gt10.pdf"), plot=p1,
           device="pdf",path=outPath, width=10,height=10,units="cm")
 } else {
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                          "lfcValueCDF_p",padjVal,".png"), plot=p1,
+                          "lfcValueCDF_p",padjVal,"gt10.png"), plot=p1,
           device="png",path=outPath, width=10,height=10,units="cm")
 }
 
