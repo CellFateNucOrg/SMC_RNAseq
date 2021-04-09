@@ -266,8 +266,7 @@ varyThreshold1<-function(res, pval=0.05,
   for(i in 1:nrow(thresholds)){
     if(thresholds$chr[i]=="chrX"){
       res1<-res[na.omit(which(res$chr=="chrX")),]
-    }
-    if(thresholds$chr[i]=="autosomes"){
+    } else if(thresholds$chr[i]=="autosomes"){
       res1<-res[na.omit(which(res$chr!="chrX")),]
     } else {
       res1<-res

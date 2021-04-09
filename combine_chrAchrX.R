@@ -398,12 +398,16 @@ for (grp in groupsOI){
 
 
   #############-
-  # Volcano plots -----------------------------------------------------------
+  # Volcano plots --------------------------------------------------
   #############-
   #https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html
   #all black plot for manual changing of colours.
   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
   #                "_volcanoPlot_allGenes.pdf"), width=8,height=6,paper="a4")
+
+  #resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+  #resLFC<-resLFC[!is.na(resLFC$padj)]
+
   keyvals<-rep('black', nrow(resLFC))
   names(keyvals)<-rep('NS',nrow(resLFC))
   keyvals[which(resLFC$padj<padjVal & abs(resLFC$log2FoldChange)>lfcVal)]<-'red'
@@ -421,7 +425,7 @@ for (grp in groupsOI){
                       ylim=c(0,65),
                       title= paste0(grp," vs ", controlGrp),
                       subtitle=NULL,
-                      caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp,
+                      caption = paste0(sum(!is.na(resLFC$padj)), ' detected genes. ',sigUp,
                                        " up, ",sigDown," down."),
                       captionLabSize = 12,
                       pCutoff=padjVal,
@@ -482,7 +486,7 @@ for (grp in groupsOI){
                       ylim=c(0,65),
                       title= paste0(grp," vs ",controlGrp),
                       subtitle=NULL,
-                      caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                      caption = paste0(sum(!is.na(resLFC$padj)), ' detected genes. ',sigUp, " up, ",sigDown," down."),
                       captionLabSize = 12,
                       pCutoff=padjVal,
                       FCcutoff=lfcVal,
@@ -507,7 +511,7 @@ for (grp in groupsOI){
   }
 
   if(length(chrXgenes)>0) {
-    idx<-resByChr$chr=="chrX"
+    idx<-resByChr$chr=="chrX" & !is.na(resByChr$padj)
     #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
     #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
     sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
@@ -520,7 +524,7 @@ for (grp in groupsOI){
                         ylim=c(0,65),
                         title= paste0(grp," vs ",controlGrp,": chrX genes"),
                         subtitle=NULL,
-                        caption = paste0(sum(resByChr$chr=="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                        caption = paste0(sum(idx), ' detected genes. ',sigUp, " up, ",sigDown," down."),
                         captionLabSize = 12,
                         pCutoff=padjVal,
                         FCcutoff=lfcVal,
@@ -545,7 +549,7 @@ for (grp in groupsOI){
     }
   }
 
-  idx<-resByChr$chr!="chrX"
+  idx<-resByChr$chr!="chrX" & !is.na(resByChr$padj)
   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
   #                "_volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
@@ -560,7 +564,7 @@ for (grp in groupsOI){
                       ylim=c(0,65),
                       title= paste0(grp," vs ",controlGrp,": autosomal genes"),
                       subtitle=NULL,
-                      caption = paste0(sum(resByChr$chr!="chrX"), ' expressed genes. ',sigUp, " up, ",sigDown," down."),
+                      caption = paste0(sum(idx), ' detected genes. ',sigUp, " up, ",sigDown," down."),
                       captionLabSize = 12,
                       pCutoff=padjVal,
                       FCcutoff=lfcVal,
@@ -816,6 +820,115 @@ for(grp in groupsOI){
   }
 
 }
+
+
+##########-
+# LFC density plots------
+##########-
+
+#padjVals=c(0.05,0.99)
+lfcDensity<-NULL
+for(grp in groupsOI) {
+  #######-
+  # vary filtering threshold ----------------------------------------
+  #######-
+  resLFC<-readRDS(paste0(outPath,"/rds/", fileNamePrefix, grp,
+                         "_DESeq2_fullResults_p",padjVal,".rds"))
+  ## Count significant genes at different thresholds and plot
+  thresholds<-varyThreshold1(resLFC,
+                             pval=padjVal, lfcVals=c(0,0.25,0.5,1),
+                             direction=c("both","lt","gt"),
+                             chr=c("all","chrX","autosomes"))
+
+  thresholds<-thresholds[order(thresholds$group,thresholds$padj,thresholds$direction,thresholds$lfc),]
+  write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                   "_numSignificant_p",padjVal,".csv"),quote=F,row.names=F)
+
+  ####### plot percentSignificant
+  p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
+    facet_grid(rows=vars(direction),cols=vars(chr))+
+    ggtitle(paste0(grp))+geom_bar(stat="identity")+
+    xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+    geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
+              vjust=0,size=3,lineheight=0.9)+
+    ylim(0,1.2*max(thresholds$percentSignificant))
+
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "_thresholds_percentSig_p",padjVal,".png"), plot=p1,
+         device="png",path=outPath,width=14,height=12,units="cm")
+
+  p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
+    facet_grid(rows=vars(direction),cols=vars(chr))+
+    ggtitle(paste0(grp))+geom_bar(stat="identity")+
+    xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+    geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSigGt10)),
+              vjust=0,size=3,lineheight=0.9)+
+    ylim(0,1.2*max(thresholds$percentSigGt10))
+
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "_thresholds_percentSigGt10_p",padjVal,".png"), plot=p2,
+         device="png",path=outPath,width=14,height=12,units="cm")
+
+
+  ### plot distribution in full-----
+  dd<-getDensity1(resLFC, pval=padjVal, breaks=c(seq(0,2,0.05),Inf),
+                  chr="all", asCounts=F)[[1]]
+  dd$group<-grp
+  if(is.null(lfcDensity)){
+    lfcDensity<-dd
+  } else {
+    lfcDensity<-rbind(lfcDensity,dd)
+  }
+
+
+  if(length(chrXgenes)>0){
+    dd<-getDensity1(resLFC, pval=padjVal,
+                    breaks=c(seq(0,2,0.05),Inf), chr="chrX",
+                    direction="gt", asCounts=F)
+    rawX<-dd[[2]]
+    dd<-dd[[1]]
+    dd$group<-paste0(grp,"_chrX")
+    lfcDensity<-rbind(lfcDensity,dd)
+  }
+
+  dd<-getDensity1(resLFC, pval=padjVal,
+                  breaks=c(seq(0,2,0.05),Inf), chr="autosomes",
+                  direction="both", asCounts=F)[[1]]
+  dd$group<-paste0(grp,"_chrA")
+  lfcDensity<-rbind(lfcDensity,dd)
+
+  lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
+  lfcDensity$breaks<-factor(lfcDensity$breaks)
+
+  p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
+    geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +xlab("Absolute log2 fold change bins")+ylab("Density")
+
+
+  p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
+    annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
+             hjust=0.1,color="red")
+
+  p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
+    annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
+             hjust=-0.1,color="red")
+
+  if(plotPDFs==T){
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                           "lfcValueDistribution_p",padjVal,"_0.5.pdf"), plot=p1,
+           device="pdf",path=outPath, width=15,height=25,units="cm")
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                           "lfcValueDistribution_p",padjVal,"_0.25.pdf"), plot=p2,
+           device="pdf",path=outPath, width=15,height=25,units="cm")
+  } else {
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                           "lfcValueDistribution_p",padjVal,"_0.5.png"), plot=p1,
+           device="png",path=outPath, width=15,height=25,units="cm")
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                           "lfcValueDistribution_p",padjVal,"_0.25.png"), plot=p2,
+           device="png",path=outPath, width=15,height=25,units="cm")
+  }
+}
+
 
 
 
