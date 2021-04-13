@@ -1,9 +1,11 @@
 library(readxl)
-library(ggVennDiagram)
 library(ggplot2)
 library(EnhancedVolcano)
 library(dplyr)
 library(tidyr)
+library(eulerr)
+library(lattice)
+library(gridExtra)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -22,6 +24,8 @@ levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
 controlGrp<-levels(SMC)[1] # control group
 groupsOI<-levels(SMC)[-1]
 
+eulerLabelsType<-c("counts","percent")
+eulerLabelsType<-c("counts")
 
 ###########################
 ## compare samples
@@ -37,7 +41,6 @@ groupsOI<-levels(SMC)[-1]
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                                  namePadjCol="padj",
                                  nameLfcCol="log2FoldChange",
@@ -48,20 +51,57 @@ for (grp in groupsOI){
 # check if datasets have chrX genes included
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
-sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
-p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal))
+
+
+sigGenes<-lapply(sigTables,"[[","wormbaseID")
+fit<-euler(sigGenes)
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+          paste(lapply(row.names(fit$ellipses), function(x){
+          paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+          }), collapse="  ")), fontsize=8))
+
+
+# dotplot(resid(fit), xlab = "Residuals",
+#         panel = function(...) {
+#           panel.abline(v = 0, lty = 2)
+#           panel.dotplot(...)
+#         })
+# error_plot(fit)
+# coef(fit)
+#
+# #http://www.pangloss.com/wiki/VennSignificance
+# sigResult$phyper<-1-phyper(q=sum(subTbl[,1]*subTbl[,2]),#overlap
+# m=sum(subTbl[,1]), #changed in first dataset
+# n=nrow(subTbl)-sum(subTbl[,1]), #not changed in first dataset
+# k=sum(subTbl[,2])) #changed in second dataset
+
 
 if(includeChrX){
   xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes: |lfc|>", lfcVal, ", padj<",padjVal))
+  sigGenes<-lapply(xchr,"[[","wormbaseID")
+  fit<-euler(sigGenes)
+  fit
+  p2<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste0("chrX: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+                       paste(lapply(row.names(fit$ellipses), function(x){
+             paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+           }), collapse="  ")), fontsize=8))
 } else {
   p2<-NULL
 }
+#p2
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[", ,"wormbaseID")
-p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(achr, "[[", "wormbaseID")
+fit<-euler(sigGenes)
+p3<-plot(fit, quantities=list(type=eulerLabelsType),
+       main=list(label=paste0("Autosomal: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+            paste(lapply(row.names(fit$ellipses), function(x){
+            paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+            }), collapse="  ")), fontsize=8))
+
+#p<-arrangeGrob(grobs=list(p1,p2,p3), ncol=3,padding=2)
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
@@ -71,12 +111,10 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes
 
 
 
-
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
   sigTables[[prettyGeneName(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
@@ -85,20 +123,39 @@ for (grp in groupsOI){
                         chr="all", nameChrCol="chr"))
 }
 
-sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
-p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(sigTables, "[[" ,"wormbaseID")
+fit<-euler(sigGenes)
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("All genes up: lfc>", lfcVal, ", padj<",padjVal,"\n",
+                     paste(lapply(row.names(fit$ellipses), function(x){
+                       paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                     }), collapse="  ")), fontsize=8))
+
+
 
 if(includeChrX){
   xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX genes up: lfc>", lfcVal, ", padj<",padjVal))
+  sigGenes<-lapply(xchr, "[[","wormbaseID")
+  fit<-euler(sigGenes)
+  p2<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste("chrX up: lfc>", lfcVal, ", padj<",padjVal,"\n",
+                       paste(lapply(row.names(fit$ellipses), function(x){
+                         paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                       }), collapse="  ")), fontsize=8))
+
 } else {
   p2<-NULL
 }
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[", ,"wormbaseID")
-p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal genes up: lfc>", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(achr, "[[","wormbaseID")
+fit<-euler(sigGenes)
+p3<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste("Autosomal up: lfc>", lfcVal, ", padj<",padjVal,"\n",
+                     paste(lapply(row.names(fit$ellipses), function(x){
+                       paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                     }), collapse="  ")), fontsize=8))
+
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
@@ -121,20 +178,40 @@ for (grp in groupsOI){
                         chr="all", nameChrCol="chr"))
 }
 
-sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
-p1<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("All genes down: lfc< -", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(sigTables, "[[","wormbaseID")
+fit<-euler(sigGenes)
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste("All genes down: lfc< -", lfcVal, ", padj<",padjVal,"\n",
+                     paste(lapply(row.names(fit$ellipses), function(x){
+                       paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                     }), collapse="  ")), fontsize=8))
+
+
 
 if(includeChrX){
   xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-  sigGenes<-lapply(xchr, "[", ,"wormbaseID")
-  p2<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("chrX down: lfc< -", lfcVal, ", padj<",padjVal))
+  sigGenes<-lapply(xchr, "[[","wormbaseID")
+  fit<-euler(sigGenes)
+  p2<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste("chrX down: lfc< -", lfcVal, ", padj<",padjVal,"\n",
+                       paste(lapply(row.names(fit$ellipses), function(x){
+                         paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                       }), collapse="  ")), fontsize=8))
+
 } else {
   p2<-NULL
 }
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[", ,"wormbaseID")
-p3<-ggVennDiagram(sigGenes) + ggtitle(label=paste0("Autosomal down: lfc< -", lfcVal, ", padj<",padjVal))
+sigGenes<-lapply(achr, "[[","wormbaseID")
+fit<-euler(sigGenes)
+p3<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste("Autosomal down: lfc< -", lfcVal, ", padj<",padjVal,"\n",
+                     paste(lapply(row.names(fit$ellipses), function(x){
+                       paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                     }), collapse="  ")), fontsize=8))
+
+
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
