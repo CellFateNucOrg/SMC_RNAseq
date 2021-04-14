@@ -14,7 +14,8 @@
 
 library(magrittr)
 library(GenomicRanges)
-library(ggVennDiagram)
+library(eulerr)
+library(lattice)
 library(ggplot2)
 library(DESeq2)
 library(rtracklayer)
@@ -27,6 +28,7 @@ if(!dir.exists(paste0(outPath,"/publicData"))) {
   dir.create(paste0(outPath,"/publicData"))
 }
 
+eulerLabelsType<-c("counts")
 ce11seqinfo<-seqinfo(Celegans)
 
 # txdb<-AnnotationDbi::loadDb(paste0(genomeDir,
@@ -193,30 +195,49 @@ kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    chr="all", nameChrCol="seqnames",
                                    outPath=outPath)
 
-x<-list(JansDC=JansDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+DC<-list(JansDC=JansDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
         dpy21=kramerdpy21dc$wormbaseID)
-names(x)<-c("JansDC", "dpy-27", "dpy-21")
+names(DC)<-c("JansDC", "dpy-27", "dpy-21")
+
+pdf(file=paste0(outPath,
+                "/publicData/venn_Jans2009vKramer2015_padj", localLFC,"_lfc",
+                localPadj,".pdf"),width=5, height=10, paper="a4")
 txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", localLFC, ", padj<", localPadj), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
+
+fit<-euler(DC)
+percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                    txtLabels[[2]], names(txtLabels)[2])
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Jans DC vs Kramer(2015): lfc>", localLFC,
+                    ", padj<", localPadj,"\n",percentages), fontsize=8, y=0.7))
+print(p1)
 
 
-x<-list(JansNDC=JansNDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+
+
+DC<-list(JansNDC=JansNDC$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
         dpy21=kramerdpy21dc$wormbaseID)
-names(x)<-c("JansNDC", "dpy-27", "dpy-21")
+names(DC)<-c("JansNDC", "dpy-27", "dpy-21")
 txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", localLFC, ", padj<",localPadj), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
 
+fit<-euler(DC)
+percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                    txtLabels[[2]], names(txtLabels)[2])
+p2<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Jans NDC vs Kramer(2015): lfc>", localLFC,
+                  ", padj<",localPadj,"\n",percentages), fontsize=8, y=0.7))
+print(p2)
+dev.off()
 
-
-p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath,
-                                "/publicData/venn_Jans2009vKramer2015_padj",
-                                localLFC,"_lfc", localPadj,".pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
+# p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
+# ggplot2::ggsave(filename=paste0(outPath,
+#                                 "/publicData/venn_Jans2009vKramer2015_padj",
+#                                 localLFC,"_lfc", localPadj,".pdf"),
+#                 plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 
@@ -289,13 +310,22 @@ dim(latorre)
 dim(osc)
 #3739
 
-x<-list(Meeuse=osc$wormbaseID,Latorre=latorre$wormbaseID)
-length(unique(unlist(x))) #4522
-p<-ggVennDiagram(x) +
-  ggtitle(label=paste0("Meeuse(2020) vs Latorre(2015) oscillating genes"))
+OSC<-list(Meeuse=osc$wormbaseID,Latorre=latorre$wormbaseID)
+length(unique(unlist(OSC))) #4522
+fit<-euler(OSC)
+pdf(paste0(outPath, "/publicData/venn_MeeuseVsLatorre.pdf"),width=5, height=10,
+    paper="a4")
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Meeuse(2020) vs Latorre(2015) oscillating genes"),
+                   fontsize=8, y=0.7))
+print(p1)
+dev.off()
 
-ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_MeeuseVsLatorre.pdf"),
-                plot=p, device="pdf",width=12,height=11,units="cm")
+# p<-ggVennDiagram(x) +
+#   ggtitle(label=paste0("Meeuse(2020) vs Latorre(2015) oscillating genes"))
+#
+# ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_MeeuseVsLatorre.pdf"),
+#                 plot=p, device="pdf",width=12,height=11,units="cm")
 
 
 
@@ -485,31 +515,56 @@ if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
 ######################
 ## compare germline datasets
 ######################
+pdf(paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),width=5, height=10,
+    paper="a4")
 
 glData<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))
 glvSoma<-read.csv(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))
-x<-list(germline=glData$wormbaseID,
+germsoma<-list(germline=glData$wormbaseID,
         germlineL4=glvSoma$wormbaseID[glvSoma$germline=="germlineL4"],
         somaL4=glvSoma$wormbaseID[glvSoma$germline=="somaL4"])
 
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) L4 soma"))
+fit<-euler(germsoma)
+totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
+                sum(fit$original.values[grep(x, names(fit$original.values))]))}),
+                 collapse="  ")
+p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Reinke(2004) vs Boeck(2016) L4 soma\n",totalSums),
+                   fontsize=8))
+print(p1)
+#p1<-ggVennDiagram(germsoma) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) L4 soma"))
 
-x<-list(germline=glData$wormbaseID,
+germsoma<-list(germline=glData$wormbaseID,
         gonadYA=glvSoma$wormbaseID[glvSoma$germline=="gonadYA"],
         somaYA=glvSoma$wormbaseID[glvSoma$germline=="somaYA"])
 
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) YA gonad"))
+fit<-euler(germsoma)
+totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
+        sum(fit$original.values[grep(x, names(fit$original.values))]))}),
+                 collapse="  ")
+p2<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Reinke(2004) vs Boeck(2016) YA gonad\n",totalSums),
+                   fontsize=8))
+print(p2)
+#p2<-ggVennDiagram(germsoma) + ggtitle(label=paste0("Reinke(2004) vs Boeck(2016) YA gonad"))
 
-x<-list(germlineL4=glvSoma$wormbaseID[glvSoma$germline=="germlineL4"],
+germsoma<-list(germlineL4=glvSoma$wormbaseID[glvSoma$germline=="germlineL4"],
         gonadYA=glvSoma$wormbaseID[glvSoma$germline=="gonadYA"],
         somaL4=glvSoma$wormbaseID[glvSoma$germline=="somaL4"],
         somaYA=glvSoma$wormbaseID[glvSoma$germline=="somaYA"])
-
-p3<-ggVennDiagram(x) + ggtitle(label=paste0("Boeck(2016) L4 vs YA soma/germline"))
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
+fit<-euler(germsoma)
+totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
+             sum(fit$original.values[grep(x, names(fit$original.values))]))}),
+                 collapse="  ")
+p3<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("Boeck(2016) L4 vs YA soma/germline\n",totalSums),
+                   fontsize=8))
+print(p3)
+#p3<-ggVennDiagram(germsoma) + ggtitle(label=paste0("Boeck(2016) L4 vs YA soma/germline"))
+dev.off()
+#p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+#ggplot2::ggsave(filename=paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),
+#                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 

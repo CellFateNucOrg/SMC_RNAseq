@@ -23,6 +23,8 @@ if(filterData){
   fileNamePrefix=filterPrefix
 }
 
+eulerLabelsType<-c("counts")
+
 #####################################################-
 ## compare to germline -soma data-----
 #####################################################-
@@ -61,6 +63,10 @@ for (grp in groupsOI){
 
   germsoma<-list(salmon=salmonSig$wormbaseID, germline=reinke$wormbaseID)
   names(germsoma)<-c(prettyGeneName(grp),"germline")
+
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+                  "VsGermline_padj", padjVal, "_lfc", lfcVal,".pdf"),
+                  width=5,height=10,paper="a4")
   fit<-euler(germsoma)
   totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
               sum(fit$original.values[grep(x, names(fit$original.values))]))}),
@@ -68,7 +74,7 @@ for (grp in groupsOI){
   p1<-plot(fit, quantities=list(type=eulerLabelsType),
            main=list(label=paste0(grp," vs Reinke(2004): |lfc|>", lfcVal,
                                   ", padj<",padjVal,"\n",totalSums), fontsize=8))
-
+  print(p1)
 
   germsoma<-list(salmon=salmonSig$wormbaseID,
           germlineL4=boeck$wormbaseID[boeck$germline=="germlineL4"],
@@ -83,7 +89,7 @@ for (grp in groupsOI){
   p2<-plot(fit, quantities=list(type=eulerLabelsType),
            main=list(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal,
                                   ", padj<",padjVal,"\n",percentages), fontsize=8))
-
+  print(p2)
 
 
   germsoma<-list(salmon=salmonSig$wormbaseID,
@@ -99,14 +105,14 @@ for (grp in groupsOI){
   p3<-plot(fit, quantities=list(type=eulerLabelsType),
            main=list(label=paste0(grp," vs Boeck(2016): |lfc|>", lfcVal,
                                   ", padj<",padjVal,"\n",percentages), fontsize=8))
+  print(p3)
+  dev.off()
 
-
-
-  p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
-                                  grp,"VsGermline_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p, device="pdf",width=29,height=11,units="cm")
+  #p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+  # ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+  #                                 grp,"VsGermline_padj",
+  #                                 padjVal,"_lfc", lfcVal,".pdf"),
+  #                 plot=p, device="pdf",width=29,height=11,units="cm")
 }
 
 
@@ -129,6 +135,11 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[[" ,"wormbaseID")
 sigGenes[["germline"]]<-reinke$wormbaseID
 
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+                "venn_UpVsGermline_padj",
+                padjVal,"_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
+
 fit<-euler(sigGenes[c(1,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
               sum(fit$original.values[grep(x, names(fit$original.values))]))}),
@@ -136,6 +147,7 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p1<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[1], " genes up: lfc>", lfcVal, ", padj<",
                                 padjVal,"\n",totalSums), fontsize=8))
+print(p1)
 
 fit<-euler(sigGenes[c(2,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
@@ -144,6 +156,7 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p2<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[2], " genes up: lfc>", lfcVal, ", padj<",
                                 padjVal,"\n",totalSums), fontsize=8))
+print(p2)
 
 fit<-euler(sigGenes[c(3,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
@@ -152,12 +165,13 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p3<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[3], " genes up: lfc>", lfcVal, ", padj<",
                                 padjVal,"\n",totalSums), fontsize=8))
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "venn_UpVsGermline_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
+print(p3)
+dev.off()
+# p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+#                                 "venn_UpVsGermline_padj",
+#                                 padjVal,"_lfc", lfcVal,".pdf"),
+#                 plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 
@@ -172,7 +186,6 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p11<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0("kle-2 or scc-1 genes up: lfc>", lfcVal,
                                 ", padj<",padjVal,"\n",totalSums), fontsize=8))
-
 
 
 kle2scc1<-base::intersect(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
@@ -202,6 +215,12 @@ for (grp in groupsOI){
 sigGenes<-lapply(sigTables, "[[","wormbaseID")
 sigGenes[["germline"]]<-reinke$wormbaseID
 
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+                "venn_DownVsGermline_padj",
+                padjVal,"_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
+
+
 fit<-euler(sigGenes[c(1,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
               sum(fit$original.values[grep(x, names(fit$original.values))]))}),
@@ -209,6 +228,7 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p1<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[1], " genes down: lfc < -", lfcVal,
                                 ", padj<",padjVal,"\n",totalSums), fontsize=8))
+print(p1)
 
 fit<-euler(sigGenes[c(2,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
@@ -217,7 +237,7 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p2<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[2], " genes down: lfc < -", lfcVal,
                                 ", padj<",padjVal,"\n",totalSums), fontsize=8))
-
+print(p2)
 
 fit<-euler(sigGenes[c(3,4)])
 totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
@@ -226,13 +246,14 @@ totalSums<-paste(lapply(row.names(fit$ellipses), function(x){paste(x,
 p3<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(groupsOI[3], " genes down: lfc < -", lfcVal,
                                 ", padj<",padjVal,"\n",totalSums), fontsize=8))
+print(p3)
 
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "venn_DownVsGermline_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
+dev.off()
+#p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+#ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+#                                "venn_DownVsGermline_padj",
+#                                padjVal,"_lfc", lfcVal,".pdf"),
+#                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
@@ -260,9 +281,18 @@ p14<-plot(fit, quantities=list(type=eulerLabelsType),
           main=list(label=paste0("kle-2 and scc-1 genes down: lfc>", lfcVal,
                                  ", padj<",padjVal,"\n",totalSums), fontsize=8))
 
-p<-ggpubr::ggarrange(p11,p12,p13,p14,ncol=2,nrow=2)
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+                "venn_kle2scc1setsVsGermline_padj",
+                padjVal,"_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
+print(p11)
+print(p12)
+print(p13)
+print(p14)
+dev.off()
 
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "venn_kle2scc1setsVsGermline_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=21,height=19,units="cm")
+# p<-ggpubr::ggarrange(p11,p12,p13,p14,ncol=2,nrow=2)
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+#                                 "venn_kle2scc1setsVsGermline_padj",
+#                                 padjVal,"_lfc", lfcVal,".pdf"),
+#                 plot=p, device="pdf",width=21,height=19,units="cm")

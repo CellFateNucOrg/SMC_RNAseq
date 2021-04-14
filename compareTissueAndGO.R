@@ -1,7 +1,5 @@
 library(readxl)
-library(ggVennDiagram)
 library(ggplot2)
-library(EnhancedVolcano)
 library(wormcat)
 library(xlsx)
 library(reticulate)

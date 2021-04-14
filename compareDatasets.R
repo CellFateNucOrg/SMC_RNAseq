@@ -51,6 +51,10 @@ for (grp in groupsOI){
 # check if datasets have chrX genes included
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
+                paste(groupsOI, collapse="_"),"_padj",
+                padjVal, "_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
 
 
 sigGenes<-lapply(sigTables,"[[","wormbaseID")
@@ -61,6 +65,7 @@ p1<-plot(fit, quantities=list(type=eulerLabelsType),
           paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
           }), collapse="  ")), fontsize=8))
 
+print(p1)
 
 # dotplot(resid(fit), xlab = "Residuals",
 #         panel = function(...) {
@@ -90,7 +95,7 @@ if(includeChrX){
 } else {
   p2<-NULL
 }
-#p2
+print(p2)
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[[", "wormbaseID")
@@ -101,13 +106,14 @@ p3<-plot(fit, quantities=list(type=eulerLabelsType),
             paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
             }), collapse="  ")), fontsize=8))
 
+print(p3)
+dev.off()
 #p<-arrangeGrob(grobs=list(p1,p2,p3), ncol=3,padding=2)
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
-                                paste(groupsOI, collapse="_"),"_padj",
-                                padjVal, "_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
+# p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
+#                                 paste(groupsOI, collapse="_"),"_padj",
+#                                 padjVal, "_lfc", lfcVal,".pdf"),
+#                 plot=p, device="pdf",width=29,height=16,units="cm")
 
 
 
@@ -123,6 +129,11 @@ for (grp in groupsOI){
                         chr="all", nameChrCol="chr"))
 }
 
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
+                paste(groupsOI,collapse="_"),"_padj",
+                padjVal, "_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
+
 sigGenes<-lapply(sigTables, "[[" ,"wormbaseID")
 fit<-euler(sigGenes)
 p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -130,7 +141,7 @@ p1<-plot(fit, quantities=list(type=eulerLabelsType),
                      paste(lapply(row.names(fit$ellipses), function(x){
                        paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
                      }), collapse="  ")), fontsize=8))
-
+print(p1)
 
 
 if(includeChrX){
@@ -146,6 +157,7 @@ if(includeChrX){
 } else {
   p2<-NULL
 }
+print(p2)
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[[","wormbaseID")
@@ -155,13 +167,14 @@ p3<-plot(fit, quantities=list(type=eulerLabelsType),
                      paste(lapply(row.names(fit$ellipses), function(x){
                        paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
                      }), collapse="  ")), fontsize=8))
+print(p3)
+dev.off()
 
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
-                                paste(groupsOI,collapse="_"),"_padj",
-                                padjVal, "_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
+# p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
+#                                 paste(groupsOI,collapse="_"),"_padj",
+#                                 padjVal, "_lfc", lfcVal,".pdf"),
+#                 plot=p, device="pdf",width=29,height=16,units="cm")
 
 
 
@@ -178,6 +191,12 @@ for (grp in groupsOI){
                         chr="all", nameChrCol="chr"))
 }
 
+
+pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
+                paste(groupsOI,collapse="_"),"_padj",
+                padjVal, "_lfc", lfcVal,".pdf"),
+    width=5,height=10,paper="a4")
+
 sigGenes<-lapply(sigTables, "[[","wormbaseID")
 fit<-euler(sigGenes)
 p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -185,7 +204,7 @@ p1<-plot(fit, quantities=list(type=eulerLabelsType),
                      paste(lapply(row.names(fit$ellipses), function(x){
                        paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
                      }), collapse="  ")), fontsize=8))
-
+print(p1)
 
 
 if(includeChrX){
@@ -201,6 +220,7 @@ if(includeChrX){
 } else {
   p2<-NULL
 }
+print(p2)
 
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[[","wormbaseID")
@@ -210,14 +230,14 @@ p3<-plot(fit, quantities=list(type=eulerLabelsType),
                      paste(lapply(row.names(fit$ellipses), function(x){
                        paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
                      }), collapse="  ")), fontsize=8))
+print(p3)
+dev.off()
 
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
-                                paste(groupsOI,collapse="_"),"_padj",
-                                padjVal, "_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
+# p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
+#                                 paste(groupsOI,collapse="_"),"_padj",
+#                                 padjVal, "_lfc", lfcVal,".pdf"),
+#                 plot=p, device="pdf",width=29,height=16,units="cm")
 
 
 

@@ -1,6 +1,5 @@
 library(rtracklayer)
 #library(GenomicInteractions)
-#library(ggVennDiagram)
 library(ggplot2)
 #library(EnhancedVolcano)
 library(BSgenome.Celegans.UCSC.ce11)

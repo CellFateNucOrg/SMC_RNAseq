@@ -210,3 +210,45 @@ p<-ggarrange(p1,p2,nrow=2)
 
 ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_smc.pdf"),height=19,width=29,units="cm",device="pdf")
 
+
+
+######################-
+## relative abundance of subunits
+######################-
+
+# dds<-readRDS(paste0(outPath,"/rds/dds_object.rds"))
+# smc<-read.delim(file=paste0(outPath,"/otherData/SMCgenes.txt"),header=T)
+#
+# metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+#
+# smc1<-dplyr::left_join(smc,as.data.frame(metadata),by="publicID")
+#
+# smc1<-smc1[!is.na(smc1$wormbaseID),]
+#
+# #complex="Cohesin"
+# smc1$baseMean<-NA
+# idx<-match(smc1$wormbaseID,rowData(dds)$gene)
+# smc1[!is.na(idx),"baseMean"]<-rowData(dds)$baseMean[na.omit(idx)]
+#
+# pdf(paste0(outPath,"/plots/baseMeanAbundanceSMC.pdf"))
+# complexes=c("Cohesin","CondensinII","CondensinI","CondensinIDC","SDC")
+# par(mfrow=c(3,2))
+# for(complex in complexes){
+#   hist(log2(rowData(dds)$baseMean),breaks=50,xlab="log2 baseMean",
+#      main=paste(complex),col.main="#2222FFFF",col="grey90")
+#   abline(v=median(log2(rowData(dds)$baseMean)),col="red")
+#   rug(log2(smc1$baseMean[smc1[,complex]==1]),col="#2222FFFF",ticksize=1,lwd=1,
+#       side=3)
+# }
+#
+# hist(log2(rowData(dds)$baseMean),breaks=50,xlab="log2 baseMean",
+#      main=paste("RNApol"),col.main="#2222FFFF")
+# abline(v=median(log2(rowData(dds)$baseMean)),col="red")
+# rug(log2(smc1$baseMean[smc1[,"SMC"]=="RNApol"]),col="#2222FFFF",ticksize=1,lwd=1)
+#
+# hist(log2(rowData(dds)$baseMean),breaks=50,xlab="log2 baseMean",
+#      main=paste("topoisomerase"),col.main="#2222FFFF")
+# rug(log2(smc1$baseMean[smc1[,"SMC"]=="topoisomerase"]),col="#2222FFFF",ticksize=1,lwd=1)
+# dev.off()
+#
+# par(mfrow=c(1,1))
