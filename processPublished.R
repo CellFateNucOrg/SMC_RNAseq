@@ -51,9 +51,9 @@ ce11seqinfo<-seqinfo(Celegans)
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 
-#######################
-## manually curated from papers
-#######################
+#######################-
+## manually curated from papers------
+#######################-
 
 
 pubDC<-readxl::read_excel(paste0(outPath,"/publicData/DCgenes_published.xlsx"),sheet="DC")
@@ -83,9 +83,9 @@ pubNDCgr$publicid<-NULL
 saveRDS(pubNDCgr,file=paste0(outPath,"/publicData/published_NDCgr.rds"))
 
 
-#######################
-## Jans 2009
-#######################
+#######################-
+## Jans 2009-----
+#######################-
 
 JansDC<-data.table::fread(input=paste0(outPath,"/publicData/Jans2009_DC_suplTable4.txt"))
 JansNDC<-data.table::fread(input=paste0(outPath,"/publicData/Jans2009_notDC_suplTable5.txt"))
@@ -113,9 +113,9 @@ JansNDCgr
 saveRDS(JansNDCgr,file=paste0(outPath,"/publicData/Jans2009_NDCgr.rds"))
 
 
-#######################
-## Kramer 2015
-#######################
+#######################-
+## Kramer 2015-----
+#######################-
 kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
 kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
 
@@ -171,9 +171,9 @@ saveRDS(kramerdpy21dc,file=paste0(outPath,"/publicData/kramer2015_chrXup_dpy21_l
                                   localLFC,"_p", localPadj, "_gr.rds"))
 
 
-###############################
-## Jans 2009 vs Kramer
-###############################
+###############################-
+## Jans 2009 vs Kramer-----
+###############################-
 kramer<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds")))
 names(kramer)
 JansDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_DCgr.rds")))
@@ -243,7 +243,7 @@ dev.off()
 
 
 ###############-
-#  Meeuse et al 2020 - Oscillating genes ----------------------------------
+#  Meeuse et al 2020 - Oscillating genes -----------
 ###############-
 # Developmental function and state transitions of a gene expression oscillator in Caenorhabditis elegan Meeuse...Grosshans Mol Syst Biol (2020)
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7370751/
@@ -269,7 +269,7 @@ if(!file.exists(paste0(outPath,"/publicData/oscillatingGenes.tsv"))){
 }
 
 ###############-
-#  Latorre et al 2015 - Oscillating genes ----------------------------------
+#  Latorre et al 2015 - Oscillating genes ------------------
 ###############-
 # The DREAM complex promotes gene body H2A.Z for target repression Latorre..Ahringer (2015)
 # https://pubmed.ncbi.nlm.nih.gov/25737279/
@@ -331,7 +331,7 @@ dev.off()
 
 
 ###############-
-# Garrigues 2019 - Heatshock L2 -------------------------------------------
+# Garrigues 2019 - Heatshock L2 -----------------
 ###############-
 
 #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6927752/pdf/elife-51139.pdf
@@ -370,9 +370,9 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 
 
 
-###############################
-## get germline-soma genes from Boeck-Waterston_GR2016
-###############################
+###############################-
+## get germline-soma genes from Boeck-Waterston_GR2016-----
+###############################-
 
 #soma: JK1107(glp-1(q224)) mid-L4 30 h post-L1 stage larvae.
 #Dissected gonads were from N2 (wild type) animals grown for 48 h at 20°C
@@ -473,9 +473,9 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
 }
 
 
-###############################
-## get germline-soma genes from Reinke_DEV2004
-###############################
+###############################-
+## get germline-soma genes from Reinke_DEV2004-----
+###############################-
 
 glFile="germlineVsoma_Reinke_Dev2004"
 
@@ -512,9 +512,9 @@ if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
 
 
 
-######################
-## compare germline datasets
-######################
+######################-
+## compare germline datasets-------
+######################-
 pdf(paste0(outPath, "/publicData/venn_ReinkeVsBoeck.pdf"),width=5, height=10,
     paper="a4")
 
@@ -569,9 +569,9 @@ dev.off()
 
 
 
-#######################
-## Aging microarrays (Stuart Kim lab)
-#######################
+#######################-
+## Aging microarrays (Stuart Kim lab)------
+#######################-
 # https://www.cell.com/fulltext/S0092-8674%2808%2900707-1
 
 # Probably same data as:  https://www.sciencedirect.com/science/article/pii/S0960982202011466?via%3Dihub
@@ -611,17 +611,17 @@ elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/a
 
 
 
-######################
-## gene expression map (mountains, stuart kim)
-######################
+######################-
+## gene expression map (mountains, stuart kim)-----
+######################-
 # https://science.sciencemag.org/content/293/5537/2087/tab-figures-data
 
 
 
 
-#####################
-## Borad expression vs regulated Gerstein et al. (2014) (modEncode)
-#####################
+#####################-
+## Borad expression vs regulated Gerstein et al. (2014) (modEncode)------
+#####################-
 #https://www.encodeproject.org/comparative/transcriptome/
 wormGeneURL<-"http://cmptxn.gersteinlab.org/worm_gene.xlsx"
 
@@ -658,9 +658,9 @@ if(!file.exists(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))) {
 
 
 
-#####################
-## Chromatin states Evans et al. (2016) (Ahinger lab)
-#####################
+#####################-
+## Chromatin states Evans et al. (2016) (Ahinger lab)------
+#####################-
 # https://www.pnas.org/content/pnas/113/45/E7020.full.pdf
 
 # Dataset S1. Coordinates of EE and L3 chromatin states
@@ -732,3 +732,20 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   file.remove(paste0(outPath,"/publicData/pnas.1608162113.sd02.xlsx"))
 }
 
+###################-
+## tissue specificity Kalezsky et al. 2018-----
+###################-
+# https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1007559#pgen.1007559.s017
+# Transcriptome analysis of adult Caenorhabditis elegans cells reveals tissue-specific gene and isoform expression
+#Rachel Kaletsky , Victoria Yao , April Williams, Alexi M. Runnels, Alicja Tadych, Shiyi Zhou, Olga G. Troyanskaya , Coleen T. Murphy
+
+### ubiquitously (?) expressed  - Table S1
+ubiqURL<-"https://doi.org/10.1371/journal.pgen.1007559.s010"
+
+
+### Tissue enriched  - Table S8
+tissueEnrichURL<-"https://doi.org/10.1371/journal.pgen.1007559.s017"
+
+
+### Tissue specific - Table S9
+tissueSpecificURL<-"https://doi.org/10.1371/journal.pgen.1007559.s018"

@@ -1113,7 +1113,7 @@ SMC<-NULL
 # check if datasets have chrX genes included
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 options(tibble.width=Inf)
-dd1<-sig %>% filter(padj<localPadj) %>%
+dd1<-sig %>% dplyr::filter(padj<localPadj) %>%
    dplyr::group_by(SMC,upVdown,XvA) %>%
    dplyr::mutate(ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange)))
 
@@ -1212,7 +1212,7 @@ ss1<-sig %>% dplyr::group_by(SMC,XvA) %>% dplyr::mutate(expOnChr=n()) %>%
    dplyr::filter(padj<localPadj) %>%
    dplyr::mutate(sigOnChr=n())%>% dplyr::group_by(SMC,XvA,upVdown) %>%
    dplyr::mutate(sigInGrp=n(), ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange))) %>%
-   summarise(expOnChr=unique(expOnChr),
+   dplyr::summarise(expOnChr=unique(expOnChr),
              sigOnChr=unique(sigOnChr),
              sigInGrp=unique(sigInGrp),
              qnt0=1-ecdf(abs(log2FoldChange))(c(0)),
