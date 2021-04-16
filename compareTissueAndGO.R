@@ -130,34 +130,12 @@ if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))
              recursive=T)
 }
 
-# ## significantly changed genes
-# sigTables<-list()
-# for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-#
-#   sigTables[[paste0(grp)]]<-as.data.frame(
-#     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-#                         namePadjCol="padj",
-#                         nameLfcCol="log2FoldChange",
-#                         direction="both",
-#                         chr="all", nameChrCol="chr"))
-# }
-# sigGenes<-lapply(sigTables, "[", ,"entrezID")
-# lapply(sigGenes,length)
-# sigGenes<-lapply(sigGenes,na.omit)
-#
-# for (grp in groupsOI){
-#   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
-#   print(paste(grp,length(subset),"genes"))
-#   write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",grp,"_allGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
-# }
-
 
 ## upregulated genes
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
+  salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
@@ -180,7 +158,7 @@ for (grp in groupsOI){
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
+  salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
@@ -206,7 +184,7 @@ for (grp in groupsOI){
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
+  salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
@@ -228,7 +206,7 @@ for (grp in groupsOI){
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
+  salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
