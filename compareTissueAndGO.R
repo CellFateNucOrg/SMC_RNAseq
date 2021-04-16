@@ -3,10 +3,11 @@ library(ggplot2)
 library(wormcat)
 library(xlsx)
 library(reticulate)
+library(dplyr)
 #conda_install(envname="tea",packages="tissue_enrichment_analysis",pip=T, pip_options="git+https://github.com/dangeles/TissueEnrichmentAnalysis.git")
 ## note: there is a bug in this version of tea which need to be corrected in the
 ## code. Go to this file: vi ~/miniconda3/envs/tea/bin/tea and on line 66 change args.tisse_dictionary to args.dictionary
-conda_install(envname="wormcat",packages="wormcat_batch",pip=T)
+# install wormcat from my fork on github devtools::install_github("jsemple19/Wormcat")
 
 source("functions.R")
 source("./variableSettings.R")
@@ -36,6 +37,13 @@ if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
   dir.create(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"),
              recursive=T)
 }
+
+wormcatDataURL="http://www.wormcat.com/static/download/whole_genome_nov-16-2019.csv"
+wormcatData=paste0(getwd(),"/publicData/",basename(wormcatDataURL))
+if(!file.exists(wormcatData)){
+  download.file(url=wormcatDataURL,destfile=wormcatData)
+}
+#read.csv(wormcatData)
 # ## all genes
 # sigTables<-list()
 # for (grp in groupsOI){
@@ -52,55 +60,47 @@ if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
 
 
 
-
-### upregulated genes
-sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[paste0(grp,"_up")]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+  ### upregulated genes
+  sigTable<-data.frame(Wormbase.ID=getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="gt",
-                        chr="all", nameChrCol="chr"))
-}
-sigGenesUp<-lapply(sigTables, "[", ,"wormbaseID")
+                        chr="all", nameChrCol="chr")$wormbaseID)
+  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+                              "_up_wormcat.csv"),
+            row.names=F,quote=F,col.names=T)
+  worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+                                       "_up_wormcat.csv"),
+                title=paste(grp,"up"),
+                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up"),
+                annotation_file=wormcatData,
+                input_type="Wormbase.ID", rm_dir=FALSE,
+                zip_files=FALSE)
 
-
-
-### down regulated genes
-sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-
-  sigTables[[paste0(grp,"_down")]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+  ### down regulated genes
+  sigTable<-data.frame(Wormbase.ID=getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
-                        chr="all", nameChrCol="chr"))
-
+                        chr="all", nameChrCol="chr")$wormbaseID)
+  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_down_wormcat.csv"),
+              row.names=F,quote=F,col.names=T)
+  worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/", fileNamePrefix, grp,
+                                       "_down_wormcat.csv"),
+                title=paste(grp,"down"),
+                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_down"),
+                annotation_file=wormcatData,
+                input_type="Wormbase.ID", rm_dir=FALSE,
+                zip_files=FALSE)
 }
 
-sigGenesDown<-lapply(sigTables, "[", ,"wormbaseID")
 
 
-wormcatIn<-c(sigGenesUp,sigGenesDown)
 
-wormcatIn<-lapply(wormcatIn,function (x) c("Wormbase ID",x))
 
-openxlsx::write.xlsx(wormcatIn,
-                     file=paste0(outPath,"/wormcat/",fileNamePrefix,"wormcat.xlsx"))
-
-wormcatDataURL="http://www.wormcat.com/static/download/whole_genome_nov-16-2019.csv"
-wormcatData=paste0(getwd(),"/publicData/",basename(wormcatDataURL))
-if(!file.exists(wormcatData)){
-  download.file(url=wormcatDataURL,destfile=wormcatData)
-}
-wcd<-read.csv(wormcatData)
-write.csv(wcd[,1:5],wormcatData,row.names=F,quote=T)
-worm_cat_fun( file_to_process=paste0(getwd(),"/wormcat/",fileNamePrefix,"wormcat.xlsx"), title="bug",output_dir=paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/wormcat_out"), annotation_file=wormcatData, input_type="Wormbase.ID")
 
 #if(!dir.exists(paste0(outPath,"/tissue")) { dir.create(paste0(outPath,"/tissue")) }
 
@@ -108,13 +108,15 @@ worm_cat_fun( file_to_process=paste0(getwd(),"/wormcat/",fileNamePrefix,"wormcat
 ## worm tissue-----
 #####################-
 #http://worm-tissue.princeton.edu/search
+#http://worm.princeton.edu/
 # need lists of sequence IDs.
 
 # read in tissue prediction data set to screen out entrez ids not included
-if(!file.exists(paste0(outPath,"/publicData/all_tissue_prediction_scores.txt"))){
-  system(paste0("wget https://worm.princeton.edu/media/download/all_tissue_prediction_scores.txt -O ",outPath,"/publicData/all_tissue_prediction_scores.txt"))
+tissuePredScores<-paste0(outPath,"/publicData/all_tissue_prediction_scores.txt")
+if(!file.exists(tissuePredScores)){
+  download.file(url="https://worm.princeton.edu/media/download/all_tissue_prediction_scores.txt", destfile=tissuePredScores)
 }
-tissueScores<-read.delim(paste0(outPath,"/publicData/all_tissue_prediction_scores.txt"))
+tissueScores<-read.delim(tissuePredScores)
 write.table(tissueScores$entrez,
             paste0(outPath,"/publicData/tissueScoresEntrezIDs.txt"),
             quote=F,row.names=F,col.names=F)

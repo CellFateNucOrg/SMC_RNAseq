@@ -48,6 +48,8 @@ if(filterData){
 }
 rmarkdown::render(input="AllPlots_TEA.Rmd",output_format="pdf_document",
                   output_file=paste0(outPath,"/tissue/tea/",fileNamePrefix,"allPlots_TEA.pdf"))
+rmarkdown::render(input="AllPlots_WORMCAT.Rmd", output_format="pdf_document",
+                  output_file=paste0(outPath,"/wormcat/",fileNamePrefix,"allPlots_WORMCAT.pdf"))
 
 # compare to dosage compensation data sets
 print("compare to public DC data sets")
