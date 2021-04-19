@@ -358,7 +358,7 @@ system(paste0(outPath,"/runTea1.sh"),wait=F)
 ##########################-
 ##  Broadly Expressed genes Gernstein (2014)------
 ##########################-
-broad<-read.csv(file=paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"),
+broad<-read.csv(file=paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"),
         stringsAsFactors=T)
 
   sigTables<-list()

@@ -484,7 +484,8 @@ if(remakeFiles){
 }
 
 if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
-  link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
+  #link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
+  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1618920247&Signature=NfiCpZCFbYZGB5dJv7y1rZALgeZuxonneXeV3SRqPlisi2dDl1Dcq6CYYZ3P-utcJcIv8u6eBV96J6guU8Taj0RNGV-eB25BxOvWtl~QW~Ho-opNLAW4yJaIk4ySp~i9oPbVozElk3su1ollgMMQi1TMVlllzGB0tbr9k-5YZ9XjgPTV1FirG5UP95ZOn1WNqhlAb7D7qXi4U1iiVmLYl73KQqD1bET44b2RZDE0UMPkprEBF75BnwzcpeDKrWUHR36G0qVRQA1I3sE~euco9aPusRkFSMXcMcpv813APIByQJuy6OnGoiH4Uzz9OKsRaD3-fi1Ee3yrWOMmEUCRVA__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
   download.file(link2,paste0("publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
   system(paste0("unzip ",outPath,"/publicData/",glFile,".zip -d ",outPath,"/publicData/",glFile))
