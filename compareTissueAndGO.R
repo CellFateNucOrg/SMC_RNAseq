@@ -28,7 +28,7 @@ groupsOI<-levels(SMC)[-1]
 
 
 ############################-
-## Gene name lists for wormcat-----
+## Wormcat-----
 ############################-
 ## need to process by dropping excel file into http://www.wormcat.com
 ## since r function does not seem to work.
@@ -72,7 +72,7 @@ for (grp in groupsOI){
   write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                               "_up_wormcat.csv"),
             row.names=F,quote=F,col.names=T)
-  worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+  worm_cat_fun(file_to_process=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                                        "_up_wormcat.csv"),
                 title=paste(grp,"up"),
                 output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up"),
