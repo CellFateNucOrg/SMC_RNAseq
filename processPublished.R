@@ -669,7 +669,7 @@ if(!file.exists(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))) {
 
 if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2016_ce11.bed"))){
   chromStatesURL<-"https://www.pnas.org/highwire/filestream/623778/field_highwire_adjunct_files/0/pnas.1608162113.sd01.xlsx"
-  download.file(chromStatesURL,paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"))
+  download.file(chromStatesURL,paste0(outPath,"/",basename(chromStatesURL)))
   ce10toCe11url<-"http://hgdownload.soe.ucsc.edu/goldenPath/ce10/liftOver/ce10ToCe11.over.chain.gz"
   ce10toCe11<-"ce10Toce11.over.chain"
   download.file(ce10toCe11url,paste0(outPath,"/publicData/",ce10toCe11,".gz"))
@@ -692,13 +692,12 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   export(chrStatesGR_ce11,
          con=paste0(outPath,"/publicData/chromStates_L3_Evans2016_ce11.bed"),
          format="bed")
-  file.remove(paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"))
+  file.remove(paste0(outPath,"/",chromStatesURL))
 
   # Dataset S2. Coordinates of EE and L3 domains
   # Excel file of chromosome, start position, end position of EE and L3 active domains, border regions, and regulated domains (each in separate tab). Additionally, border regions have strand information in column six to indicate if active domain is on the left (−) or on the right (+). Coordinates are in WS220 and follow BED conventions.
   chromDomainsURL<-"https://www.pnas.org/highwire/filestream/623778/field_highwire_adjunct_files/1/pnas.1608162113.sd02.xlsx"
   download.file(chromDomainsURL,paste0(outPath,"/",basename(chromDomainsURL)))
-
 
   l3active<-readxl::read_excel(paste0(outPath,"/",
                                       basename(chromDomainsURL)),
@@ -730,7 +729,7 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   export(chrDomainsGR_ce11,
          con=paste0(outPath,"/publicData/chromDomains_L3_Evans2016_ce11.bed"),
          format="bed")
-  file.remove(paste0(outPath,"/publicData/pnas.1608162113.sd02.xlsx"))
+  file.remove(paste0(outPath,"/",basename(chromDomainsURL)))
 }
 
 ###################-
