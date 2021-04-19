@@ -42,12 +42,12 @@ source("compareHICfeatures.R")
 print("check tissue and GO enrichment")
 source("compareTissueAndGO.R")
 
-
 if(filterData){
   fileNamePrefix<-filterPrefix
 }
 rmarkdown::render(input="AllPlots_TEA.Rmd",output_format="pdf_document",
                   output_file=paste0(outPath,"/tissue/tea/",fileNamePrefix,"allPlots_TEA.pdf"))
+
 rmarkdown::render(input="AllPlots_WORMCAT.Rmd", output_format="pdf_document",
                   output_file=paste0(outPath,"/wormcat/",fileNamePrefix,"allPlots_WORMCAT.pdf"))
 
