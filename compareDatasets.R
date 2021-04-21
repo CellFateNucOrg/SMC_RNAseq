@@ -81,7 +81,7 @@ print(p1)
 # n=nrow(subTbl)-sum(subTbl[,1]), #not changed in first dataset
 # k=sum(subTbl[,2])) #changed in second dataset
 
-
+####### chrX----
 if(includeChrX){
   xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
   sigGenes<-lapply(xchr,"[[","wormbaseID")
@@ -97,6 +97,7 @@ if(includeChrX){
 }
 print(p2)
 
+##### autosomes -----
 achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
 sigGenes<-lapply(achr, "[[", "wormbaseID")
 fit<-euler(sigGenes)
@@ -117,7 +118,7 @@ dev.off()
 
 
 
-## upregulated genes
+## upregulated genes -----
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
@@ -178,7 +179,7 @@ dev.off()
 
 
 
-## downregulated genes
+## downregulated genes -----
 sigTables<-list()
 for (grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
