@@ -37,27 +37,6 @@ ce11seqinfo<-seqinfo(Celegans)
 makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),paste0("p",padjVal,"_lfc",lfcVal)))
 
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
-
-
-sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum, sep="_")
-
-fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
-
-sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
-
-# extract the technical replicate variable
-sampleTable$replicate=factor(fileList$repeatNum)
-sampleTable$lane=factor(fileList$laneNum)
-
-# extract the strain variable
-sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("366","382","775","784"))
-sampleTable$SMC<-sampleTable$strain
-levels(sampleTable$SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
-
-controlGrp<-levels(sampleTable$SMC)[1] # control group
-groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to control
-
 
 # Create metadata object --------------------------------------------------
 ###############################################################-

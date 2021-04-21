@@ -19,15 +19,6 @@ ce11seqinfo<-seqinfo(Celegans)
 makeDirs(outPath,dirNameList=c("tracks"))
 
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
-
-# extract the strain variable
-strain<-factor(as.character(unique(fileList$sampleName),levels=c("366","382","775","784")))
-SMC<-strain
-levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
-
-controlGrp<-levels(SMC)[1] # control group
-groupsOI<-levels(SMC)[-1]
 
 
 #######-
