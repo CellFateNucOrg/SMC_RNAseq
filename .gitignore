@@ -1,2 +1,16 @@
 slurm*
 .Rproj.user
+publicData/*.rds
+publicData/*.pdf
+variableSettings.R
+plots/
+qc/
+rds/
+salmon/
+tissue/
+tracks/
+wormcat/
+txt/
+runTea1.sh
+.Rhistory
+.DS_Store

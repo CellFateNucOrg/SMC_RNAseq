@@ -1,7 +1,6 @@
-library(readxl)
-library(ggVennDiagram)
+library(eulerr)
+library(lattice)
 library(ggplot2)
-library(EnhancedVolcano)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -19,6 +18,7 @@ levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
 controlGrp<-levels(SMC)[1] # control group
 groupsOI<-levels(SMC)[-1]
 
+eulerLabelsType<-c("counts")
 
 ###########################
 ## compare samples
@@ -34,7 +34,7 @@ sigGR<-list()
 df<-data.frame(matrix(nrow=10,ncol=3))
 names(df)<-groupsOI
 for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   n<-prettyGeneName(grp)
   sigTables[[n]]<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -65,7 +65,7 @@ df
 
 for (grp in groupsOI){
   #grp="dpy26cs"
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
     # remove filtered genes
@@ -79,34 +79,38 @@ for (grp in groupsOI){
   ## compare to public data
   #####################################################
 
-  kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
-  kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
-  if(!file.exists(kramerFileName)){
-    download.file(url=kramerURL,destfile=kramerFileName)
-  }
-  kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
-  names(kramer)
-  kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
+  # kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
+  # kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
+  # if(!file.exists(paste0(outPath,"/publicData/",kramerFileName))){
+  #   download.file(url=kramerURL,
+  #                 destfile=paste0(outPath,"/publicData/",kramerFileName))
+  # }
+  # kramer<-read_excel(paste0(outPath,"/publicData/",kramerFileName),
+  #                    col_types=c(rep("text",3),rep("numeric",30)))
+  # names(kramer)
+  # kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
+  kramer<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/kramer2015_L3_gr.rds")))
 
-
-  kramerDpy27<-getSignificantGenes(kramer, padj=padjVal, lfc=lfcVal,
+  localPadj=0.05
+  localLFC=0.25
+  kramerDpy27<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy27_RNAi_L3_padj",
                                    nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
                                    direction="both",
-                                   chr="all", nameChrCol="chr", outPath=".")
+                                   chr="all", nameChrCol="seqnames", outPath=".")
 
-  kramerDpy21<-getSignificantGenes(kramer, padj=padjVal, lfc=lfcVal,
+  kramerDpy21<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy21_mutant_L3_padj",
                                    nameLfcCol="dpy21_mutant_L3_log2_fold_change",
                                    direction="both",
-                                   chr="all", nameChrCol="chr")
+                                   chr="all", nameChrCol="seqnames")
 
   if(filterData){
     # remove filtered genes
-    idx<-kramerDpy27$Gene_WB_ID %in% toFilter
+    idx<-kramerDpy27$wormbaseID %in% toFilter
     kramerDpy27<-kramerDpy27[!idx,]
 
-    idx<-kramerDpy21$Gene_WB_ID %in% toFilter
+    idx<-kramerDpy21$wormbaseID %in% toFilter
     kramerDpy21<-kramerDpy21[!idx,]
   }
 
@@ -117,18 +121,25 @@ for (grp in groupsOI){
                                  chr="all", nameChrCol="chr")
 
 
-  x<-list(salmon=salmonSig$wormbaseID, dpy27=kramerDpy27$Gene_WB_ID,
-          dpy21=kramerDpy21$Gene_WB_ID)
-  names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
+  DC<-list(salmon=salmonSig$wormbaseID, dpy27=kramerDpy27$wormbaseID,
+          dpy21=kramerDpy21$wormbaseID)
+  names(DC)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
   txtLabels<-list()
-  txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-  txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs Kramer(2015): |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+  txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
+  fit<-euler(DC)
+  percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                      txtLabels[[2]], names(txtLabels)[2])
 
-  #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsKarmer_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=15,height=11,units="cm")
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+                  grp,"VsKarmer_padj",
+                  padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
+  p1<-plot(fit, quantities=list(type=eulerLabelsType),
+       main=list(label=paste0(grp," vs Kramer(2015): |lfc|>", lfcVal,
+                              ", padj<",padjVal,"\n",percentages), fontsize=8, y=0.7))
+  print(p1)
+  dev.off()
+
 
 
   if(includeChrX){
@@ -138,42 +149,47 @@ for (grp in groupsOI){
 
     dim(kramer)
     dim(salmon)
-    idx<-match(kramer$Gene_WB_ID, salmon$wormbaseID)
-    kramer$chr<-salmon$chr[idx]
-    kramer<-kramer[!is.na(kramer$chr),]
+    #idx<-match(kramer$wormbaseID, salmon$wormbaseID)
+    #kramer$chr<-salmon$chr[idx]
+    #kramer<-kramer[!is.na(kramer$chr),]
 
 
     salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
 
-    idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-      kramer$dpy27_RNAi_L3_padj < padjVal &
-      kramer$dpy27_RNAi_L3_log2_fold_change > lfcVal &
-      kramer$chr=="chrX"
-    kramerdpy27dc<-kramer[idx,]
+    kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy27_RNAi_L3_padj",
+                                     nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                     direction="gt",
+                                     chr="chrX", nameChrCol="seqnames",
+                                     outPath=outPath)
 
+    kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy21_mutant_L3_padj",
+                                     nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                     direction="gt",
+                                     chr="chrX", nameChrCol="seqnames",
+                                     outPath=outPath)
 
-    idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-      kramer$dpy21_mutant_L3_padj < padjVal &
-      kramer$dpy21_mutant_L3_log2_fold_change > lfcVal &
-      kramer$chr=="chrX"
-    kramerdpy21dc<-kramer[idx,]
-
-    x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$Gene_WB_ID,
-            dpy21=kramerdpy21dc$Gene_WB_ID)
-    names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
+    DC<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$wormbaseID,
+            dpy21=kramerdpy21dc$wormbaseID)
+    names(DC)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
     txtLabels<-list()
-    txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-    txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
+    txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+    txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
 
-    p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX DC genes: lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+    fit<-euler(DC)
+    percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                        txtLabels[[2]], names(txtLabels)[2])
 
-
-    #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-    ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                    "venn_chrXup_",grp, "VsKramer_padj",
-                                    padjVal,"_lfc", lfcVal,".pdf"),
-                    plot=p1, device="pdf",width=15,height=11,units="cm")
-  }
+    pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+                    "venn_chrXup_",grp, "VsKramer_padj",
+                    padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
+    p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0("chrX DC genes: lfc>", lfcVal,
+                                ", padj<",padjVal,"\n",percentages), fontsize=8, y=0.7))
+    print(p1)
+    dev.off()
+}
 
   ###############################
   ## autosome changed
@@ -181,41 +197,46 @@ for (grp in groupsOI){
 
   dim(kramer)
   dim(salmon)
-  idx<-match(kramer$Gene_WB_ID, salmon$wormbaseID)
-  kramer$chr<-salmon$chr[idx]
-  kramer<-kramer[!is.na(kramer$chr),]
+  #idx<-match(kramer$wormbaseID, salmon$wormbaseID)
+  #kramer$chr<-salmon$chr[idx]
+  #kramer<-kramer[!is.na(kramer$chr),]
 
 
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="both",chr="autosomes")
 
-  idx<-!is.na(kramer$dpy27_RNAi_L3_padj) &
-    kramer$dpy27_RNAi_L3_padj < padjVal &
-    abs(kramer$dpy27_RNAi_L3_log2_fold_change) > lfcVal &
-    kramer$chr!="chrX"
-  kramerdpy27dc<-kramer[idx,]
+  kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy27_RNAi_L3_padj",
+                                     nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
+                                     direction="both",
+                                     chr="autosomes", nameChrCol="seqnames",
+                                     outPath=outPath)
 
+  kramerdpy21dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
+                                     namePadjCol="dpy21_mutant_L3_padj",
+                                     nameLfcCol="dpy21_mutant_L3_log2_fold_change",
+                                     direction="both",
+                                     chr="autosomes", nameChrCol="seqnames",
+                                     outPath=outPath)
 
-  idx<-!is.na(kramer$dpy21_mutant_L3_padj) &
-    kramer$dpy21_mutant_L3_padj < padjVal &
-    abs(kramer$dpy21_mutant_L3_log2_fold_change) > lfcVal &
-    kramer$chr!="chrX"
-  kramerdpy21dc<-kramer[idx,]
-
-  x<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$Gene_WB_ID,
-          dpy21=kramerdpy21dc$Gene_WB_ID)
-  names(x)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
+  DC<-list(salmon=salmondc$wormbaseID, dpy27=kramerdpy27dc$worbaseID,
+          dpy21=kramerdpy21dc$wormbaseID)
+  names(DC)<-c(prettyGeneName(grp), "dpy-27", "dpy-21")
   txtLabels<-list()
-  txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-  txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("Autosomal genes: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+  txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
 
+  fit<-euler(DC)
+  percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                      txtLabels[[2]], names(txtLabels)[2])
 
-  #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                  "venn_chrAall_",grp, "VsKramer_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=15,height=11,units="cm")
-
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+                  "venn_chrAall_",grp, "VsKramer_padj",
+                  padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,  paper="a4")
+  p1<-plot(fit, quantities=list(type=eulerLabelsType),
+       main=list(label=paste0("Autosomal genes: |lfc|>", lfcVal,
+                              ", padj<",padjVal,"\n",percentages), fontsize=8, y=0.7))
+  print(p1)
+  dev.off()
 }
 
 
@@ -225,34 +246,40 @@ grp="dpy26cs"
 ## classical dc genes
 ###############################
 
-pubDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_DCgr.rds")
-pubNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/published_NDCgr.rds")
+pubDC<-readRDS(paste0(outPath,"/publicData/published_DCgr.rds"))
+pubNDC<-readRDS(paste0(outPath,"/publicData/published_NDCgr.rds"))
 
 if(filterData){
   # remove filtered genes
-  idx<-pubDC$wormbase %in% toFilter
+  idx<-pubDC$wormbaseID %in% toFilter
   pubDC<-pubDC[!idx,]
 
-  idx<-pubNDC$wormbase %in% toFilter
+  idx<-pubNDC$wormbaseID %in% toFilter
   pubNDC<-pubNDC[!idx,]
 }
 
 if(includeChrX){
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-  x<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbase,
-          nonDC=pubNDC$wormbase)
-  names(x)<-c(prettyGeneName(grp), "DC", "nonDC")
+  DC<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbaseID,
+          nonDC=pubNDC$wormbaseID)
+  names(DC)<-c(prettyGeneName(grp), "DC", "nonDC")
   txtLabels<-list()
-  txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-  txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+  txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
 
+  fit<-euler(DC)
+  percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                      txtLabels[[2]], names(txtLabels)[2])
 
-  #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
-                                  grp, "VsPapers_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=15,height=11,units="cm")
+  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+                      grp, "VsPapers_padj",
+                      padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,
+      paper="a4")
+  p1<-plot(fit, quantities=list(type=eulerLabelsType),
+       main=list(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",
+                              padjVal,"\n",percentages), fontsize=8, y=0.7))
+  print(p1)
+  dev.off()
 }
 
 
@@ -263,76 +290,43 @@ if(includeChrX){
 ## Jans 2009
 ###############################
 
-JansDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_DCgr.rds")
-JansNDC<-readRDS("/Users/semple/Documents/MeisterLab/dSMF/DCgenes/Jans2009_NDCgr.rds")
+JansDC<-readRDS(paste0(outPath,"/publicData/Jans2009_DCgr.rds"))
+JansNDC<-readRDS(paste0(outPath,"/publicData/Jans2009_NDCgr.rds"))
 
 if(filterData){
   # remove filtered genes
-  idx<-JansDC$wormbase %in% toFilter
+  idx<-JansDC$wormbaseID %in% toFilter
   JansDC<-JansDC[!idx,]
 
-  idx<-JansNDC$wormbase %in% toFilter
+  idx<-JansNDC$wormbaseID %in% toFilter
   JansNDC<-JansNDC[!idx,]
 }
 
 
 if(includeChrX){
   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-  x<-list(salmon=salmondc$wormbaseID, JansDC=JansDC$wormbase,
-          JansNDC=JansNDC$wormbase)
-  names(x)<-c(prettyGeneName(grp), "JansDC", "JansNDC")
+  DC<-list(salmon=salmondc$wormbaseID, JansDC=JansDC$wormbaseID,
+          JansNDC=JansNDC$wormbaseID)
+  names(DC)<-c(prettyGeneName(grp), "JansDC", "JansNDC")
   txtLabels<-list()
-  txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-  txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-  p1<-ggVennDiagram(x) + ggplot2::ggtitle(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
+  txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+  txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
 
-  #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsJans2009_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p1, device="pdf",width=15,height=11,units="cm")
+  fit<-euler(DC)
+  percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                      txtLabels[[2]], names(txtLabels)[2])
+
+  pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,
+             "VsJans2009_padj", padjVal,"_lfc", lfcVal,".pdf"),
+      width=5, height=10, paper="a4")
+  p1<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",
+                                  padjVal,"\n",percentages), fontsize=8,
+                     y=0.7))
+  print(p1)
+  dev.off()
 }
 
-
-
-###############################
-## Jans 2009 vs Kramer
-###############################
-
-kramer<-read_excel(kramerFileName,col_types=c(rep("text",3),rep("numeric",30)))
-names(kramer)
-kramer<-kramer[,c(1:3,grep("_L3_",names(kramer)))]
-
-idx<-!is.na(kramer$dpy27_RNAi_L3_padj) & abs(kramer$dpy27_RNAi_L3_log2_fold_change)>lfcVal & kramer$dpy27_RNAi_L3_padj<padjVal
-kramerDpy27<-kramer[idx,]
-
-idx<-!is.na(kramer$dpy21_mutant_L3_padj) & abs(kramer$dpy21_mutant_L3_log2_fold_change)>lfcVal & kramer$dpy21_mutant_L3_padj<padjVal
-kramerDpy21<-kramer[idx,]
-
-
-x<-list(JansDC=JansDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-names(x)<-c("JansDC", "dpy-27", "dpy-21")
-txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p1<-ggVennDiagram(x) + ggtitle(label=paste0("Jans DC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
-
-
-x<-list(JansNDC=JansNDC$wormbase, dpy27=kramerDpy27$Gene_WB_ID,
-        dpy21=kramerDpy21$Gene_WB_ID)
-names(x)<-c("JansNDC", "dpy-27", "dpy-21")
-txtLabels<-list()
-txtLabels[paste0("% ",names(x)[2]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[2]]),1)
-txtLabels[paste0("% ",names(x)[3]," in ",names(x)[1])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[3]]),1)
-p2<-ggVennDiagram(x) + ggtitle(label=paste0("Jans NDC vs Kramer(2015): lfc>", lfcVal, ", padj<",padjVal), subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2]))
-
-
-
-p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "venn_Jans2009vKramer2015_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
 
@@ -340,14 +334,14 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## intersection oscillating -----
 ###############-
 if(!filterData){
-  oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
+  oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"),header=T,
                           stringsAsFactors=F) #3739
-  latorre<-read.delim(paste0(outPath,"/oscillatingGenes_latorre.tsv")) #3235
-  hsUP<-readRDS(file="hsUp_garrigues2019.rds") #1680
-  hsDOWN<-readRDS(file="hsDown_garrigues2019.rds") #455
+  latorre<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv")) #3235
+  hsUP<-readRDS(file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds")) #1680
+  hsDOWN<-readRDS(file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds")) #455
 
   for (grp in groupsOI){
-    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
+    salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
     salmonSig<-getSignificantGenes(salmon, padj=padjVal,
                                    lfc=lfcVal,
                                    namePadjCol="padj",
@@ -355,19 +349,28 @@ if(!filterData){
                                    direction="both",
                                    chr="all", nameChrCol="chr")
 
-    x<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$WB_ID,
+    OSC<-list(salmon=salmonSig$wormbaseID, Meeuse=oscillating$wormbaseID,
             Latorre=latorre$wormbaseID)
-    names(x)<-c(prettyGeneName(grp), "Meeuse", "Latorre")
+    names(OSC)<-c(prettyGeneName(grp), "Meeuse", "Latorre")
     txtLabels<-list()
-    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[2])]<-round(100*length(intersect(x[[1]],x[[2]]))/length(x[[1]]),1)
-    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
-    txtLabels[paste0("% ",names(x)[1]," in union")]<-round(100*length(intersect(x[[1]],union(x[[2]],x[[3]])))/length(x[[1]]),1)
-    p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs oscillating: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]],names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2], "\n",txtLabels[[3]],names(txtLabels)[3]))
+    txtLabels[paste0("% ",names(OSC)[1]," in ",names(OSC)[2])]<-round(100*length(intersect(OSC[[1]],OSC[[2]]))/length(OSC[[1]]),1)
+    txtLabels[paste0("% ",names(OSC)[1]," in ",names(OSC)[3])]<-round(100*length(intersect(OSC[[1]],OSC[[3]]))/length(OSC[[1]]),1)
+    txtLabels[paste0("% ",names(OSC)[1]," in union")]<-round(100*length(intersect(OSC[[1]],union(OSC[[2]],OSC[[3]])))/length(OSC[[1]]),1)
 
-    #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-    ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsOscillating_padj",
-                                    padjVal,"_lfc", lfcVal,".pdf"),
-                    plot=p1, device="pdf",width=15,height=11,units="cm")
+    fit<-euler(OSC)
+    percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " &\n",
+                        txtLabels[[2]], names(txtLabels)[2], " & ",
+                        txtLabels[[3]], names(txtLabels)[3])
+
+    pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsOscillating_padj",
+               padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
+    p1<-plot(fit, quantities=list(type=eulerLabelsType),
+         main=list(label=paste0(grp," vs oscillating: |lfc|>", lfcVal,
+                                ", padj<",padjVal,"\n",percentages), fontsize=8, y=0.7))
+    print(p1)
+    dev.off()
+
+
 
     # hsUP
     salmonUp<-getSignificantGenes(salmon, padj=padjVal,
@@ -383,21 +386,30 @@ if(!filterData){
                                   direction="lt",
                                   chr="all", nameChrCol="chr")
 
-    x<-list(up=salmonUp$wormbaseID, down=salmonDown$wormbaseID,
-            hs_up=hsUP$WormBase.ID, hs_down=hsDOWN$WormBase.ID)
-    names(x)<-c(paste0(prettyGeneName(grp),c("_up","_down")),
+    HS<-list(up=salmonUp$wormbaseID, down=salmonDown$wormbaseID,
+            hs_up=hsUP$wormbaseID, hs_down=hsDOWN$wormbaseID)
+    names(HS)<-c(paste0(prettyGeneName(grp),c("_up","_down")),
                        "hs_up", "hs_down")
     txtLabels<-list()
-    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[3])]<-round(100*length(intersect(x[[1]],x[[3]]))/length(x[[1]]),1)
-    txtLabels[paste0("% ",names(x)[1]," in ",names(x)[4])]<-round(100*length(intersect(x[[1]],x[[4]]))/length(x[[1]]),1)
-    txtLabels[paste0("% ",names(x)[2]," in ",names(x)[3])]<-round(100*length(intersect(x[[2]],x[[3]]))/length(x[[2]]),1)
-    txtLabels[paste0("% ",names(x)[2]," in ",names(x)[4])]<-round(100*length(intersect(x[[2]],x[[4]]))/length(x[[2]]),1)
-    p1<-ggVennDiagram(x) + ggtitle(label=paste0(grp," vs oscillating: |lfc|>", lfcVal, ", padj<",padjVal),subtitle=paste0(txtLabels[[1]], names(txtLabels)[1], " & ", txtLabels[[2]], names(txtLabels)[2], " & \n", txtLabels[[3]], names(txtLabels)[3], " & ", txtLabels[[4]], names(txtLabels)[4]))
+    txtLabels[paste0("% ",names(HS)[1]," in ",names(HS)[3])]<-round(100*length(intersect(HS[[1]],HS[[3]]))/length(HS[[1]]),1)
+    txtLabels[paste0("% ",names(HS)[1]," in ",names(HS)[4])]<-round(100*length(intersect(HS[[1]],HS[[4]]))/length(HS[[1]]),1)
+    txtLabels[paste0("% ",names(HS)[2]," in ",names(HS)[3])]<-round(100*length(intersect(HS[[2]],HS[[3]]))/length(HS[[2]]),1)
+    txtLabels[paste0("% ",names(HS)[2]," in ",names(HS)[4])]<-round(100*length(intersect(HS[[2]],HS[[4]]))/length(HS[[2]]),1)
 
-    #p<-ggpubr::ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
-    ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsHeatshock_padj",
-                                    padjVal,"_lfc", lfcVal,".pdf"),
-                    plot=p1, device="pdf",width=15,height=11,units="cm")
+    fit<-euler(HS)
+    percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+                        txtLabels[[2]], names(txtLabels)[2], " &\n",
+                        txtLabels[[3]], names(txtLabels)[3], " & ",
+                        txtLabels[[4]], names(txtLabels)[4])
+    pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsHeatshock_padj",
+               padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
+    p1<-plot(fit, quantities=list(type=eulerLabelsType),
+          main=list(label=paste0(grp," vs heatshock: |lfc|>", lfcVal,
+                                    ", padj<",padjVal,"\n",percentages), fontsize=8, y=0.7))
+    print(p1)
+    dev.off()
 
   }
 }
+
+
