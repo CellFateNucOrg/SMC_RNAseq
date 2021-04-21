@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=all
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=1
+#SBATCH --array=1-8
 
 module add vital-it
 module add UHTS/Quality_control/fastqc/0.11.7;
@@ -28,11 +28,29 @@ git branch
 echo "current git version"
 git log -1 --format="%H"
 
+# check if paired end or single end
+grep "\sfileName2\s" fastqList.txt
+if [ "$?"==0  ]
+then
+	isPE=true
+	echo "running paired end commands" $isPE
+else
+	echo "running single end commands"
+fi
+
 fastqFileList=./fastqList.txt
-fastqFile=(`cut -f1 $fastqFileList`)
-sampleNames=(`cut -f2 $fastqFileList`)
-repeatNums=(`cut -f3 $fastqFileList`)
-laneNums=(`cut -f4 $fastqFileList`)
+if [ "$isPE" eq "true" ]; then
+	fastqFile1s=(`cut -f1 $fastqFileList`)
+	fastqFile2s=(`cut -f2 $fastqFileList`)
+	sampleNames=(`cut -f3 $fastqFileList`)
+	repeatNums=(`cut -f4 $fastqFileList`)
+	laneNums=(`cut -f5 $fastqFileList`)
+else
+	fastqFile1s=(`cut -f1 $fastqFileList`)
+	sampleNames=(`cut -f2 $fastqFileList`)
+	repeatNums=(`cut -f3 $fastqFileList`)
+	laneNums=(`cut -f4 $fastqFileList`)
+fi
 
 i=${SLURM_ARRAY_TASK_ID}
 
@@ -44,8 +62,11 @@ i=${SLURM_ARRAY_TASK_ID}
 ########### VARIABLES #########
 ###############################
 
-mRNAonly=false #false or true
-fastqFile=${fastqFile[$i]}
+mRNAonly=true #false or true
+fastqFile1=${fastqFile1s[$i]}
+if [ "$isPE" eq "true" ]; then
+	fastqFile2=${fastqFile2s[$i]}
+fi
 sampleName=${sampleNames[$i]}
 repeatNum=${repeatNums[$i]}
 laneNum=${laneNums[$i]}
@@ -56,21 +77,15 @@ genomeVer=WS275
 GENOME_DIR=${HOME}/genomeVer/${genomeVer}
 genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
 chromSizesFile=$GENOME_DIR/annotation/ws235.chrom.sizes
-# annotFile=/home/ubelix/izb/semple/genomeVer/${genomeVer}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations.gff3.gz
-# gunzip $annotFile
-# annotFile=${annotFile%.gz}
-# use gffread from cufflinks to convert gff to gtf
-# module add UHTS/Assembler/cufflinks/2.2.1
-# b=(`basename -s .gff3 ${annotFile}`)
-# gffread $annotFile -T -o ${annotFile%/*}/${b}.gtf
-# need to remove wierd exons:
-# grep WormBase c_elegans.PRJNA13758.${genomeVer}.annotations.gtf > c_elegans.PRJNA13758.WS260.annotations1.gtf
-# mv c_elegans.PRJNA13758.${genomeVer}.annotations1.gtf c_elegans.PRJNA13758.${genomeVer}.annotations.gtf
-#mRNAseqFile=${genomeDir}/c_elegans.PRJNA13758.${genomeVer}.mRNA_transcripts.fa.gz
+
+
+
 mRNAindex=${GENOME_DIR}/sequence/${genomeVer}_mRNA_index
 ncRNAindex=${GENOME_DIR}/sequence/${genomeVer}_ncRNA_index
 pseudoIndex=${GENOME_DIR}/sequence/${genomeVer}_pseudogenic_index
 tnIndex=${GENOME_DIR}/sequence/${genomeVer}_transposon_index
+#kmerSize=15
+rptIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index
 
 
 WORK_DIR=$PWD
@@ -86,7 +101,10 @@ baseName=${sampleName}_${repeatNum}_${laneNum}
 
 #run fastqc on sequences
 mkdir -p ${WORK_DIR}/qc/rawData
-fastqc ${fastqFile} -t $nThreads -o ${WORK_DIR}/qc/rawData 
+fastqc ${fastqFile1} -t $nThreads -o ${WORK_DIR}/qc/rawData 
+if [ "$isPE" eq "true" ]; then
+	fastqc ${fastqFile2} -t $nThreads -o ${WORK_DIR}/qc/rawData
+fi
 	
 #######################################################
 ## trim adaptors with cutadapt                       ##
@@ -94,12 +112,18 @@ fastqc ${fastqFile} -t $nThreads -o ${WORK_DIR}/qc/rawData
 
 # use cutadapt to trim
 mkdir -p cutadapt
-cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o cutadapt/${baseName}.fastq.gz -j $nThreads ${fastqFile}
+if [ "$isPE" eq "true" ]; then
+	cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT  -o cutadapt/${baseName}_R1.fastq.gz -p cutadapt/${baseName}_R2.fastq.gz -j $nThreads ${fastqFile1} ${fastqFile2} > ${WORK_DIR}/qc/cutadapt/report_cutadapt_${baseName}.txt
+else
+	cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o cutadapt/${baseName}_R1.fastq.gz -j $nThreads ${fastqFile1} > ${WORK_DIR}/qc/cutadapt/report_cutadapt_${baseName}.txt
+fi
 
 #redo fastQC on trimmed reads
 mkdir -p ${WORK_DIR}/qc/cutadapt
-fastqc cutadapt/${baseName}.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
-
+fastqc cutadapt/${baseName}_R1.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
+if [ "$isPE" eq "true" ]; then
+	fastqc cutadapt/${baseName}_R2.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
+fi
 		
 #######################################################
 ## Align to genome with STAR                         ##
@@ -109,7 +133,11 @@ fastqc cutadapt/${baseName}.fastq.gz -t $nThreads -o ${WORK_DIR}/qc/cutadapt
 # align to genome
 echo "aligning to genome..."
 mkdir -p ${WORK_DIR}/bamSTAR
-STAR --genomeDir ${GENOME_DIR}/sequence  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTAR/${baseName}_ --runThreadN $nThreads --outSAMmultNmax 1 --alignIntronMax 5000 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --outWigType wiggle --outWigNorm RPM
+if [ "$isPE" eq "true" ]; then
+	STAR --genomeDir ${GENOME_DIR}/sequence  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTAR/${baseName}_ --runThreadN $nThreads --outSAMmultNmax 1 --alignIntronMax 5000 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --outWigType wiggle --outWigNorm RPM
+else
+	STAR --genomeDir ${GENOME_DIR}/sequence  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTAR/${baseName}_ --runThreadN $nThreads --outSAMmultNmax 1 --alignIntronMax 5000 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --outWigType wiggle --outWigNorm RPM
+fi
 
 samtools index ${WORK_DIR}/bamSTAR/${baseName}_Aligned.sortedByCoord.out.bam
 
@@ -147,29 +175,46 @@ rm ${WORK_DIR}/bamSTAR/${baseName}_Signal.Unique.str2.out.wig
 ######## NOTE: I do not have estimates for --fldMean and --fldSD as i have no access to the bioanalyser files #########
 #######  therefore the quantification based on the effective transcript length will be wrong!!!! Not sure how important this ${WIGtoBW_DIR}#
 # quantify mRNA transcripts
-${SALMON_SING} salmon quant -i ${mRNAindex} -l A -r ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/mRNA/${baseName} --seqBias --gcBias --numBootstraps 100 
+if [ "$isPE" eq "true" ]; then
+	${SALMON_SING} salmon quant -i ${mRNAindex} -l A -1 ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz -2 ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz  --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/mRNA/${baseName} --seqBias --gcBias --numBootstraps 100 
+else
+	${SALMON_SING} salmon quant -i ${mRNAindex} -l A -r ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/mRNA/${baseName} --seqBias --gcBias --numBootstraps 100 
+fi
+
+echo "finished mRNA alignment"
 
 
-
-
-if [[ "${mRNAonly}"=="false" ]]
+if [[ "${mRNAonly}" eq "false" ]]
     then
     
     # quantify ncRNA transcripts
-    ${SALMON_SING} salmon quant -i ${ncRNAindex} -l A -r ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/ncRNA/${baseName} --seqBias --gcBias --numBootstraps 100  
-     
+    if [ "$isPE" eq "true" ]; then
+	${SALMON_SING} salmon quant -i ${ncRNAindex} -l A -1 ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz -2 ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/ncRNA/${baseName} --seqBias --gcBias --numBootstraps 100
+    else
+	${SALMON_SING} salmon quant -i ${ncRNAindex} -l A -r ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/ncRNA/${baseName} --seqBias --gcBias --numBootstraps 100  
+    fi
+
     # quantify pseudoRNA transcripts
-    ${SALMON_SING} salmon quant -i ${pseudoIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/pseudoRNA/${baseName} --seqBias --gcBias --numBootstraps 100  
-     
+    if [ "$isPE" eq "true" ]; then
+	${SALMON_SING} salmon quant -i ${pseudoIndex} -l A -1 ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz -2 ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/pseudoRNA/${baseName} --seqBias --gcBias --numBootstraps 100
+    else
+	${SALMON_SING} salmon quant -i ${pseudoIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/pseudoRNA/${baseName} --seqBias --gcBias --numBootstraps 100  
+     fi
+
     # quantify TnRNA transcripts
-    ${SALMON_SING} salmon quant -i ${tnIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/tnRNA/${baseName} --seqBias --gcBias --numBootstraps 100 
+    if [ "$isPE" eq "true" ]; then
+	${SALMON_SING} salmon quant -i ${tnIndex} -l A -1 ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz -2 ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/tnRNA/${baseName} --seqBias --gcBias --numBootstraps 100
+    else
+    	${SALMON_SING} salmon quant -i ${tnIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/tnRNA/${baseName} --seqBias --gcBias --numBootstraps 100 
+    fi
     
-    
-    kmerSize=15
-    rptIndex=${GENOME_DIR}/sequence/${genomeVer}_repeats_index_${kmerSize}
     # quantify repeat transcripts
-    ${SALMON_SING} salmon quant -i ${rptIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/rptRNA_${kmerSize}/${baseName} --seqBias --gcBias --numBootstraps 100
-    
+    if [ "$isPE" eq "true" ]; then
+	${SALMON_SING} salmon quant -i ${rptIndex} -l A -1 ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz -2 ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/rptRNA/${baseName} --seqBias --gcBias --numBootstraps 100
+    else
+	${SALMON_SING} salmon quant -i ${rptIndex} -l A -r ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --validateMappings -p ${nThreads} -o ${WORK_DIR}/salmon/rptRNA/${baseName} --seqBias --gcBias --numBootstraps 100
+    fi
+
     #######################################################
     ## Align to genome with STAR                         ##
     #######################################################
@@ -178,7 +223,11 @@ if [[ "${mRNAonly}"=="false" ]]
     # align to genome
     echo "aligning to genome..."
     mkdir -p ${WORK_DIR}/bamSTARrpts
-    STAR --genomeDir ${GENOME_DIR}/sequence/repeats  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_ --runThreadN $nThreads --outFilterMultimapNmax 6000 --outSAMmultNmax 1 --outFilterMismatchNmax 3 --alignIntronMax 1 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --winAnchorMultimapNmax 6000 --outWigType wiggle --outWigNorm RPM 
+    if [ "$isPE" eq "true" ]; then
+	STAR --genomeDir ${GENOME_DIR}/sequence/repeats  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_ --runThreadN $nThreads --outFilterMultimapNmax 6000 --outSAMmultNmax 1 --outFilterMismatchNmax 3 --alignIntronMax 1 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --winAnchorMultimapNmax 6000 --outWigType wiggle --outWigNorm RPM
+    else
+    	STAR --genomeDir ${GENOME_DIR}/sequence/repeats  --readFilesIn ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz --readFilesCommand zcat --outFileNamePrefix ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_ --runThreadN $nThreads --outFilterMultimapNmax 6000 --outSAMmultNmax 1 --outFilterMismatchNmax 3 --alignIntronMax 1 --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outMultimapperOrder Random --winAnchorMultimapNmax 6000 --outWigType wiggle --outWigNorm RPM 
+    fi
     
     samtools index ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Aligned.sortedByCoord.out.bam
 
@@ -204,14 +253,22 @@ if [[ "${mRNAonly}"=="false" ]]
     ########
     mkdir -p ${WORK_DIR}/bamBWA
     echo "aligning $baseName to genome with BWA aln..."
-    bwa aln -t $nThreads $genomeFile ${WORK_DIR}/cutadapt/${baseName}.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}.sai
-    bwa samse $genomeFile ${WORK_DIR}/bamBWA/${baseName}.sai ${WORK_DIR}/cutadapt/${baseName}.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}.sam
-    
+    bwa aln -t $nThreads $genomeFile ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}_R1.sai
+    if [ "$isPE" eq "true" ]; then
+	bwa aln -t $nThreads $genomeFile ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}_R2.sai
+    	bwa sampe $genomeFile ${WORK_DIR}/bamBWA/${baseName}_R1.sai ${WORK_DIR}/bamBWA/${baseName}_R2.sai ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz ${WORK_DIR}/cutadapt/${baseName}_R2.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}.sam
+    else
+    	bwa samse $genomeFile ${WORK_DIR}/bamBWA/${baseName}_R1.sai ${WORK_DIR}/cutadapt/${baseName}_R1.fastq.gz > ${WORK_DIR}/bamBWA/${baseName}.sam
+    fi
+
     echo "Removing unmapped reads and converting $baseName SAM to BAM..."
     samtools view -b -F 4 -@ $nThreads ${WORK_DIR}/bamBWA/${baseName}.sam > ${WORK_DIR}/bamBWA/${baseName}.bam
     
     rm ${WORK_DIR}/bamBWA/${baseName}.sam
-    rm ${WORK_DIR}/bamBWA/${baseName}.sai
+    rm ${WORK_DIR}/bamBWA/${baseName}_R1.sai
+    if [ "$isPE" eq "true" ]; then
+    	rm ${WORK_DIR}/bamBWA/${baseName}_R2.sai
+    fi
     
     
     #gtfFile=${GENOME_DIR}/annotation/c_elegans.PRJNA13758.${genomeVer}.annotations_rpt.gtf
