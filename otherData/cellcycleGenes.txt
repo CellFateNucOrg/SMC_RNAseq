@@ -1,0 +1,41 @@
+publicID	complex	role
+cyd-1	cdk4/6-cyclinD	G0/G1
+cdk-4	cdk4/6-cyclinD	G0/G1
+cdk-2	cdk2-cyclinE	G1/S
+cye-1	cdk2-cyclinE	G1/S
+cya-1	cdk2-cyclinA	S/G2
+cdk-2	cdk2-cyclinA	S/G2
+cyb-1	cdk1-cyclinB	G2/M
+cyb-2.1	cdk1-cyclinB	G2/M
+cyb-2.2	cdk1-cyclinB	G2/M
+cyb-3	cdk1-cyclinB	G2/M
+cdk-1	cdk1-cyclinB	G2/M
+fzy-1	APC/C	anaphase
+fzr-1	APC/C	M/G1
+gfi-2	APC/C	M/G1
+apc-10	APC/C	M/G1
+apc-2	APC/C	M/G1
+apc-11	APC/C	M/G1
+mat-1	APC/C	M/G1
+emb-30	APC/C	M/G1
+plk-1	PLK	cyclinB activator
+plk-2	PLK	cyclinB activator
+air-1	AuroraB	cyclinB activator
+cdc-25.1	cdc25	Cyclin activator
+cdc-25.2	cdc25	Cyclin activator
+cdc-25.3	cdc25	Cyclin activator
+cdc-25.4	cdc25	Cyclin activator
+cdk-7	cak/cdk7	Cyclin activator
+wee-1.1	wee1/myt1	Cyclin inhibitor
+wee-1.3	wee1/myt1	Cyclin inhibitor
+cul-1	SCF-bTrCP	cyclinD inhhibtor
+lin-23	SCF-bTrCP	cyclinD inhhibtor
+cki-1	p21CIP	cyclinE inhibitor
+cki-2	p27KIP	cyclinE inhibitor
+lin-35	Rb	cyclinE inhibitor
+cdc-14	cyclinE inhibitor	cyclinE inhibitor
+mdf-1	SAC	SAC
+mdf-2	SAC	SAC
+san-1	SAC	SAC
+bub-1	SAC	SAC
+bub-3	SAC	SAC
