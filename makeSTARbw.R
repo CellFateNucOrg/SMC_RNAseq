@@ -108,3 +108,6 @@ if(length(finalFilesExist)==0){
       }
    }
 }
+
+file.remove(list.files(paste0(outPath,"/tracks"),pattern="STAR_.*\\.wig",
+            full.names=T))
