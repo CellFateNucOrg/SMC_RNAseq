@@ -48,7 +48,7 @@ if(length(finalFilesExist)==0){
       wigFile<-paste0(outPath,"/tracks/STAR_",sampleTable$sampleName[i],".wig")
       wigFiles<-paste0(outPath,"/tracks/STAR_",sampleTable$sampleName[i],
                        c("_F.wig","_R.wig"))
-      system(paste0("wiggletools mean ", paste0(wigFiles,collapse=" "),
+      system(paste0("wiggletools sum ", paste0(wigFiles,collapse=" "),
                     " > ", wigFile ))
       file.remove(wigFiles)
    }
@@ -70,7 +70,8 @@ if(length(finalFilesExist)==0){
                          "_",unique(sampleTable$strain[idx]) ,"_Avr.wig")
          logwigFile<-gsub("_Avr","_logAvr", wigFile )
 
-         finalOutputFile<-paste0(outPath,"/tracks/STAR_lfc_", grp, "_", controlGrp, "_ce11.bw")
+         finalOutputFile<-paste0(outPath,"/tracks/STAR_lfc_", grp, "_",
+                                 controlGrp, "_ce11.bw")
 
          if(!file.exists(finalOutputFile)){
             system(paste0("wiggletools mean ", paste0(bwFiles,collapse=" "),
@@ -84,7 +85,7 @@ if(length(finalFilesExist)==0){
             #wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
             #            dest=gsub("\\.wig$","\\.bw",logwigFile))
             file.remove(wigFile)
-            file.remove(bwFiles)
+            #file.remove(bwFiles)
          }
          avrFiles<-c(avrFiles,logwigFile)
       }
@@ -103,7 +104,7 @@ if(length(finalFilesExist)==0){
          export.bw(bw,finalOutputFile)
          file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".wig"))
          file.remove(paste0(outPath,"/tracks/lfc_",grp,"_",controlGrp,".bw"))
-         file.remove(avrFiles)
+         #file.remove(avrFiles)
       }
    }
 }
