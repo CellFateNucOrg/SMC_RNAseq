@@ -50,8 +50,8 @@ if(length(finalFilesExist)==0){
                        c("_F.wig","_R.wig"))
       system(paste0("wiggletools sum ", paste0(wigFiles,collapse=" "),
                     " > ", wigFile ))
-      wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
-                   dest=gsub("\\.wig$","\\.bw",wigFile))
+      #wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
+      #             dest=gsub("\\.wig$","\\.bw",wigFile))
       file.remove(wigFiles)
    }
 
@@ -82,8 +82,8 @@ if(length(finalFilesExist)==0){
             system(paste0("wiggletools offset 1 ", wigFile, " | wiggletools log 2 - >",
                           logwigFile))
 
-            #wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
-            #             dest=gsub("\\.wig$","\\.bw",wigFile))
+            wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
+                         dest=gsub("\\.wig$","\\.bw",wigFile))
             #wigToBigWig(x=logwigFile, seqinfo=wbseqinfo,
             #            dest=gsub("\\.wig$","\\.bw",logwigFile))
             file.remove(wigFile)
