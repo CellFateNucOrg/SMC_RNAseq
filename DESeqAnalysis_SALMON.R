@@ -69,7 +69,7 @@ txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
 # read samples into DESeq2
 dds <- DESeqDataSetFromTximport(txi=txi,
                                 colData=sampleTable,
-                          design=~replicate+lane+SMC)
+                          design=~lane+SMC)
 
 
 ###############################################################-
@@ -309,7 +309,7 @@ for(grp in groupsOI){
    # and average linkage clustering as agglomeration criteria
    heatmap.2(as.matrix(countTable.kept),
              scale="row",
-             hclust=function(x) hclust(x,method="average"),
+             hclust=function(x) stats::hclust(x,method="average"),
              distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
              margin=c(6,0),
              trace="none",

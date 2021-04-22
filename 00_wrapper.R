@@ -10,13 +10,6 @@ if(!file.exists(paste0(outPath,"/wbGeneGR_WS275.rds"))){
 # process some public datasets required later (only do once)
 print("processing published datasets")
 source("processPublished.R")
-#
-#make bigwigs from STAR data
-#source("makeSTARbw.R")
-
-# get read counts for each sample
-#print("collecting read counts from qc files")
-#source("collectAllCountData.R")
 
 # run core DESeq2 pipeline
 print("main DESeq2 analysis")
@@ -25,6 +18,15 @@ if(combineChrAX){
 } else {
   source("DESeqAnalysis_SALMON.R")
 }
+
+#
+#make bigwigs from STAR data
+source("makeSTARbw.R")
+
+
+# get read counts for each sample
+print("collecting read counts from qc files")
+source("collectAllCountData.R")
 
 # compare different biological interventions to eachother
 print("comparing the datasets to one another")

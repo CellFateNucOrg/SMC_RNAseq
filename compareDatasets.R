@@ -608,7 +608,7 @@ if(!combineChrAX){
   #########################
   ## compare LFC to wt mean
   #########################
-    dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
+  dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
   wtMean<-rowMeans(counts(dds)[,colData(dds)$SMC==controlGrp])
   idx<-wtMean!=0
   logwtcounts<-log2(wtMean[idx])
@@ -657,9 +657,10 @@ if(!combineChrAX){
     abline(bestFitLine,col="red")
     title(paste0(prettyGeneName(grp)," LFC vs ",controlGrp,
                  " log counts (R=", Rval,")"))
-    if(plotPDFs==F){
+    if(plotPDFs==T){
       dev.off()
     }
   }
   dev.off()
 }
+

@@ -112,9 +112,9 @@ text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
 dev.off()
 
 
-####
-## AB compartment by chromosome
-####
+####-
+## AB compartment by chromosome-----
+####-
 # genes that change significantly
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=lfcVal,direction="both")
@@ -182,9 +182,9 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 
 
 
-####
-## AB comp LFC
-####
+####-
+## AB comp LFC-----
+####-
 
 # genes that change significantly
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
@@ -272,525 +272,523 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## sample specific compartments -----
 ####
 
-pcas<-data.frame(SMC=SMC,
-                 file=list.files(paste0(outPath,"/otherData"),
-                                pattern="_5000_laminDamID_pca2.bw"))
+if(all(c("366","382","775","784") %in% varOIlevels)){
+  pcas<-data.frame(SMC=c("366","382","775","784"),
+                   file=list.files(paste0(outPath,"/otherData"),
+                                   pattern="_5000_laminDamID_pca2\\.bw"))
+  listgr<-NULL
+  for (grp in groupsOI){
+    #grp=groupsOI[1]
+    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
 
-listgr<-NULL
-for (grp in groupsOI){
-  #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-  pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
+    salmon<-salmon[!is.na(salmon$chr),]
+    salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
 
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+    salmongr<-sort(salmongr)
 
-  salmongr<-sort(salmongr)
+    salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
+    listgr[[prettyGeneName(grp)]]<-salmongr
+  }
 
-  salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
-  listgr[[prettyGeneName(grp)]]<-salmongr
+
+
+  pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+                         "ABcomp_geneCount_padj",
+                         padjVal,"_lfc", lfcVal,".pdf")),
+      width=19, height=4, paper="a4r")
+  par(mfrow=c(1,3))
+  # genes that change significantly
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="both")
+
+  compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"compartment"),table))
+
+  yminmax=c(0,max(compartmentTable))
+  xx<-barplot(t(compartmentTable),beside=T,col=c("grey80","grey20"),
+              main="Significantly changed genes by compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=yminmax*1.1)
+  legend("top",legend = colnames(compartmentTable),fill=c("grey80","grey20"))
+  text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.3,col="black")
+
+
+  # upregulated genes
+  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                    padj=padjVal,lfc=lfcVal,direction="gt")
+
+  compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"compartment"),table))
+  colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
+
+
+  # downregulated genes
+  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                      padj=padjVal,lfc=-lfcVal,direction="lt")
+
+  compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"compartment"),table))
+  colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
+
+  compartmentTable<-cbind(compartmentTableUp,compartmentTableDown)
+
+
+
+  Acomp<-compartmentTable[,grep("A",colnames(compartmentTable))]
+  xx<-barplot(t(Acomp),beside=T,col=c("grey80","grey20"),
+              main="Number of up/down regulated in A compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=c(yminmax)*1.1)
+  legend("top", legend=gsub("A_","",colnames(Acomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(Acomp), label=t(Acomp), pos=3,cex=1.3,col="black")
+
+
+  Bcomp<-compartmentTable[,grep("B",colnames(compartmentTable))]
+  barplot(t(Bcomp),beside=T,col=c("grey80","grey20"),
+          main="Number of up/down regulated in B compartment",cex.axis=1.2,
+          cex.names=1.5, ylim=c(yminmax)*1.1)
+  legend("top", legend=gsub("B_","",colnames(Bcomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
+
+  dev.off()
+
+
+  ####
+  ## AB compartment by chromosome -----
+  ####
+
+  # genes that change significantly
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="both")
+
+  # count genes by category (chr & A/B)
+  dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  # add name of SMC protein
+  dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
+  dfl$seqnames<-gsub("chr","",dfl$seqnames)
+  ymax=max(dfl$n)
+  p1<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=compartment)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle("Significantly changed genes per chromosome by N2 compartment")
+
+
+
+  # upregulated genes
+  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                    padj=padjVal,lfc=lfcVal,direction="gt")
+  # count genes by category (chr & A/B)
+  dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  # add name of SMC protein
+  dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
+  dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
+  dflUp$expression<-"up"
+
+  # downregulated genes
+  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                      padj=padjVal,lfc=-lfcVal,direction="lt")
+  dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  # add name of SMC protein
+  dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
+  dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
+  dflDown$expression<-"down"
+
+  dfl<-rbind(dflUp,dflDown)
+  dfl$expression<-factor(dfl$expression,levels=c("up","down"))
+
+  yminmax=c(0,max(dfl$n))
+  p2<-ggplot(dfl[dfl$compartment=="A",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle("Up/down regulated in A compartment")
+
+
+  yminmax=c(0,max(dfl$n))
+  p3<-ggplot(dfl[dfl$compartment=="B",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC),switch="x") +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle("Up/down regulated in B compartment")
+
+
+  p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                  "ABcomp_countsPerChr_padj",
+                                  padjVal,"_lfc", lfcVal,".pdf"),
+                  plot=p, device="pdf",width=19,height=29,units="cm")
+
+
+
+  ####
+  ## AB comp LFC -----
+  ####
+
+
+  #sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+  #                padj=padjVal,lfc=lfcVal,direction="both")
+  #sigList<-lapply(listgr, as.data.frame)
+  #sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
+
+
+
+  # upregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="gt")
+
+  sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList$compartment),]
+  sigTbl<-sigList
+  sigTbl$updown<-"up"
+
+
+  # downregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=-lfcVal,direction="lt")
+
+  sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList$compartment),]
+  sigList$updown<-"down"
+  sigTbl<-rbind(sigTbl,sigList)
+  sigTbl$compartment<-as.factor(sigTbl$compartment)
+  sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+
+  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
+  p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
+    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),outlier.size=0.4,
+                 outlier.color="grey50") +
+    facet_grid(cols=vars(SMC)) +
+    ggtitle("Significantly changed genes by compartment") +
+    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+    scale_y_continuous(limits = yminmax) +
+    scale_color_grey(start=0.2,end=0.2,guide=F)
+
+  yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
+  p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
+    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+                 outlier.shape=NA) +
+    facet_grid(cols=vars(SMC)) +
+    ggtitle("Significantly changed genes by compartment") +
+    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+    scale_y_continuous(limits = yminmax) +
+    scale_color_grey(start=0.2,end=0.2,guide=F)
+
+
+  p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                  "ABcomp_LFC_padj",
+                                  padjVal,"_lfc", lfcVal,".pdf"),
+                  plot=p, device="pdf",width=29,height=16,units="cm")
+
+
+
+  # AB compartments - switching ---------------------------------------------
+
+  ####
+  ## sample specific compartments - changes between TEVonly and cs
+  ####
+
+  pcas<-data.frame(SMC=c("366","382","775","784"),
+                   file=list.files(paste0(outPath,"/otherData"),
+                                   pattern="_5000_laminDamID_pca2.bw"))
+  listgr<-NULL
+  for (grp in groupsOI){
+    #grp=groupsOI[1]
+    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,
+                                "_DESeq2_fullResults_p",padjVal,".rds"))
+    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
+    pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
+
+    salmon<-salmon[!is.na(salmon$chr),]
+    salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+    salmongr<-sort(salmongr)
+
+
+    salmongr<-assignGRtoAB(salmongr,pca2control,grName=controlGrp,pcaName=controlGrp)
+    idx<-which(colnames(mcols(salmongr)) %in% c("pcaScore","compartment"))
+    colnames(mcols(salmongr))[idx]<-paste(colnames(mcols(salmongr))[idx],"control",sep="_")
+    salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
+    salmongr$switch<-factor(paste0(salmongr$compartment_control,salmongr$compartment),levels=c("AA","BB","AB","BA"))
+    listgr[[prettyGeneName(grp)]]<-salmongr
+  }
+
+
+  pairedCols<-c(brewer.pal(4,"Paired"))
+
+  pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+                         "ABcompSwitch_geneCount_padj",
+                         padjVal,"_lfc", lfcVal,".pdf")),
+      width=19, height=29, paper="a4")
+
+
+  par(mfrow=c(3,1))
+  # genes that change significantly
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="both")
+
+  compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"switch"),table))
+
+  yminmax=c(0,max(compartmentTable))
+  xx<-barplot(t(compartmentTable),beside=T,col=pairedCols,
+              main="Significantly changed genes by compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=yminmax*1.1)
+  legend("topright",legend = colnames(compartmentTable),fill=pairedCols)
+  text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.1,col="black")
+
+  par(mfrow=c(4,2))
+  # upregulated genes
+  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                    padj=padjVal,lfc=lfcVal,direction="gt")
+
+  compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"switch"),table))
+  colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
+
+
+  # downregulated genes
+  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                      padj=padjVal,lfc=-lfcVal,direction="lt")
+
+  compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"switch"),table))
+  colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
+
+  compartmentTable<-cbind(compartmentTableUp,compartmentTableDown)
+
+  yminmax=c(0,max(compartmentTable[,grep("AA|BB",colnames(compartmentTable))]))
+  Acomp<-compartmentTable[,grep("AA",colnames(compartmentTable))]
+  xx<-barplot(t(Acomp),beside=T,col=c("grey80","grey20"),
+              main="Number of up/down regulated in AA compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=c(yminmax)*1.2)
+  legend("top", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(Acomp), label=t(Acomp), pos=3,cex=1.3,col="black")
+
+  xx<-barplot(t(Acomp/rowSums(Acomp)),beside=F,col=c("grey80","grey20"),
+              main="Fraction of up/down regulated in AA compartment",cex.axis=1.2,
+              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
+  legend("bottomright", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"),xpd=T)
+  text(x=xx, y=0.97, label=t(rowSums(Acomp)), pos=3,cex=1.3,col="black")
+
+
+  Bcomp<-compartmentTable[,grep("BB",colnames(compartmentTable))]
+  xx<-barplot(t(Bcomp),beside=T,col=c("grey80","grey20"),
+              main="Number of up/down regulated in BB compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=c(yminmax)*1.2)
+  legend("top", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
+
+  xx<-barplot(t(Bcomp/rowSums(Bcomp)),beside=F,col=c("grey80","grey20"),
+              main="Fraction of up/down regulated in BB compartment",cex.axis=1.2,
+              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
+  legend("bottomright", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"),xpd=T)
+  text(x=xx, y=0.97, label=t(rowSums(Bcomp)), pos=3,cex=1.3,col="black")
+
+
+  yminmax=c(0,max(compartmentTable[,grep("AB|BA",colnames(compartmentTable))]))
+  ABcomp<-compartmentTable[,grep("AB",colnames(compartmentTable))]
+  xx<-barplot(t(ABcomp),beside=T,col=c("grey80","grey20"),
+              main="Number of up/down regulated in AB compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=c(yminmax)*1.2)
+  legend("top", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(ABcomp), label=t(ABcomp), pos=3,cex=1.3,col="black")
+
+  xx<-barplot(t(ABcomp/rowSums(ABcomp)),beside=F,col=c("grey80","grey20"),
+              main="Fraction of up/down regulated in AB compartment",cex.axis=1.2,
+              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
+  legend("bottomright", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"),xpd=T)
+  text(x=xx, y=0.97, label=t(rowSums(ABcomp)), pos=3,cex=1.3,col="black")
+
+
+  BAcomp<-compartmentTable[,grep("BA",colnames(compartmentTable))]
+  xx<-barplot(t(BAcomp),beside=T,col=c("grey80","grey20"),
+              main="Number of up/down regulated in BA compartment",cex.axis=1.2,
+              cex.names=1.5, ylim=c(yminmax)*1.2)
+  legend("top", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"))
+  text(x=xx, y=t(BAcomp), label=t(BAcomp), pos=3,cex=1.3,col="black")
+
+  xx<-barplot(t(BAcomp/rowSums(BAcomp)),beside=F,col=c("grey80","grey20"),
+              main="Fraction of up/down regulated in BA compartment",cex.axis=1.2,
+              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
+  legend("bottomright", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"),xpd=T)
+  text(x=xx, y=0.97, label=t(rowSums(BAcomp)), pos=3,cex=1.3,col="black")
+
+
+  dev.off()
+
+
+
+
+
+
+  ################-
+  ## AB compartment by chromosome - switching between TEVonly and cs -----
+  #################-
+
+  # genes that change significantly
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="both")
+
+  # count genes by category (chr & A/B)
+  dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+
+  # add name of SMC protein
+  dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
+  dfl$seqnames<-gsub("chr","",dfl$seqnames)
+  ymax=max(dfl$n)
+  p1<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_manual(values=pairedCols) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle("Significantly changed genes per chromosome by compartment")
+
+
+  dfl<-dfl[! (dfl$switch %in% c("AA","BB")),]
+  dfl$switch<-droplevels(dfl$switch)
+  ymax1=max(dfl$n)
+  p1a<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_manual(values=pairedCols[3:4]) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle("Significantly changed genes per chromosome by compartment")
+
+  p<-ggpubr::ggarrange(p1,p1a,ncol=1,nrow=3)
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                  "ABcompSwitch_countsPerChr_ABBA_padj",
+                                  padjVal,"_lfc", lfcVal,".pdf"),
+                  plot=p, device="pdf",width=19,height=29,units="cm")
+
+
+  # upregulated genes
+  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                    padj=padjVal,lfc=lfcVal,direction="gt")
+  # count genes by category (chr & A/B)
+  dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+  # add name of SMC protein
+  dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
+  dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
+  dflUp$expression<-"up"
+
+  # downregulated genes
+  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                      padj=padjVal,lfc=-lfcVal,direction="lt")
+  dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+  # add name of SMC protein
+  dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
+  dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
+  dflDown$expression<-"down"
+
+  dfl<-rbind(dflUp,dflDown)
+  dfl$expression<-factor(dfl$expression,levels=c("up","down"))
+
+
+  yminmax=c(0,max(dfl$n))
+  p2<-ggplot(dfl[dfl$switch=="AA",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
+    ggtitle("Up/down regulated genes in AA compartment")
+
+  p3<-ggplot(dfl[dfl$switch=="BB",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
+    ggtitle("Up/down regulated genes in BB compartment")
+
+  yminmax=c(0,max(dfl$n[! (dfl$switch %in% c("AA","BB"))]))
+  p4<-ggplot(dfl[dfl$switch=="AB",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
+    ggtitle("Up/down regulated genes in AB compartment")
+
+  p5<-ggplot(dfl[dfl$switch=="BA",],aes(x=seqnames,y=n,group=expression)) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
+    ggtitle("Up/down regulated genes in BA compartment")
+
+
+
+
+  p<-ggpubr::ggarrange(p2,p3,p4,p5,ncol=2,nrow=2)
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                  "ABcompSwitch_updownByChr_padj",
+                                  padjVal,"_lfc", lfcVal,".pdf"),
+                  plot=p, device="pdf",width=29,height=19,units="cm")
+
+  ####
+  ## AB comp LFC - switching between TEVonly and cs -----
+  ####
+
+
+  # upregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="gt")
+
+  sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList$switch),]
+  sigTbl<-sigList
+  sigTbl$updown<-"up"
+
+
+  # downregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=-lfcVal,direction="lt")
+
+  sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList$switch),]
+  sigList$updown<-"down"
+  sigTbl<-rbind(sigTbl,sigList)
+  sigTbl$switch<-as.factor(sigTbl$switch)
+  sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+
+
+  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
+  p1<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
+    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+                 outlier.size=0.4) +
+    facet_grid(cols=vars(SMC)) +
+    ggtitle("Log2 fold change by compartment") +
+    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+    scale_y_continuous(limits = yminmax) +
+    scale_color_grey(start=0.7,end=0.3,guide=F)
+
+
+  sigTbl<-sigTbl[! (sigTbl$switch %in% c("AA","BB")),]
+  sigTbl$switch<-droplevels(sigTbl$switch)
+  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
+  p2<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
+    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
+                 outlier.shape=NA) +
+    facet_grid(cols=vars(SMC)) +
+    ggtitle("Log2 fold change by compartment") +
+    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+    scale_y_continuous(limits = yminmax) +
+    scale_color_grey(start=0.7,end=0.3,guide=F)
+
+
+
+  p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+                                  "ABcompSwitch_LFC_padj",
+                                  padjVal,"_lfc", lfcVal,".pdf"),
+                  plot=p, device="pdf",width=29,height=16,units="cm")
+
+
 }
-
-
-
-pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
-                       "ABcomp_geneCount_padj",
-                       padjVal,"_lfc", lfcVal,".pdf")),
-    width=19, height=4, paper="a4r")
-par(mfrow=c(1,3))
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
-
-compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"compartment"),table))
-
-yminmax=c(0,max(compartmentTable))
-xx<-barplot(t(compartmentTable),beside=T,col=c("grey80","grey20"),
-        main="Significantly changed genes by compartment",cex.axis=1.2,
-        cex.names=1.5, ylim=yminmax*1.1)
-legend("top",legend = colnames(compartmentTable),fill=c("grey80","grey20"))
-text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.3,col="black")
-
-
-# upregulated genes
-sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
-
-compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"compartment"),table))
-colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
-
-
-# downregulated genes
-sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=-lfcVal,direction="lt")
-
-compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"compartment"),table))
-colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
-
-compartmentTable<-cbind(compartmentTableUp,compartmentTableDown)
-
-
-
-Acomp<-compartmentTable[,grep("A",colnames(compartmentTable))]
-xx<-barplot(t(Acomp),beside=T,col=c("grey80","grey20"),
-            main="Number of up/down regulated in A compartment",cex.axis=1.2,
-            cex.names=1.5, ylim=c(yminmax)*1.1)
-legend("top", legend=gsub("A_","",colnames(Acomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(Acomp), label=t(Acomp), pos=3,cex=1.3,col="black")
-
-
-Bcomp<-compartmentTable[,grep("B",colnames(compartmentTable))]
-barplot(t(Bcomp),beside=T,col=c("grey80","grey20"),
-        main="Number of up/down regulated in B compartment",cex.axis=1.2,
-        cex.names=1.5, ylim=c(yminmax)*1.1)
-legend("top", legend=gsub("B_","",colnames(Bcomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
-
-dev.off()
-
-
-####
-## AB compartment by chromosome -----
-####
-
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
-
-# count genes by category (chr & A/B)
-dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
-# add name of SMC protein
-dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
-dfl$seqnames<-gsub("chr","",dfl$seqnames)
-ymax=max(dfl$n)
-p1<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=compartment)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle("Significantly changed genes per chromosome by N2 compartment")
-
-
-
-# upregulated genes
-sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
-# count genes by category (chr & A/B)
-dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
-# add name of SMC protein
-dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
-dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
-dflUp$expression<-"up"
-
-# downregulated genes
-sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=-lfcVal,direction="lt")
-dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
-# add name of SMC protein
-dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
-dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
-dflDown$expression<-"down"
-
-dfl<-rbind(dflUp,dflDown)
-dfl$expression<-factor(dfl$expression,levels=c("up","down"))
-
-yminmax=c(0,max(dfl$n))
-p2<-ggplot(dfl[dfl$compartment=="A",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle("Up/down regulated in A compartment")
-
-
-yminmax=c(0,max(dfl$n))
-p3<-ggplot(dfl[dfl$compartment=="B",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC),switch="x") +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle("Up/down regulated in B compartment")
-
-
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcomp_countsPerChr_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=19,height=29,units="cm")
-
-
-
-####
-## AB comp LFC -----
-####
-
-
-#sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-#                padj=padjVal,lfc=lfcVal,direction="both")
-#sigList<-lapply(listgr, as.data.frame)
-#sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
-
-
-
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="gt")
-
-sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$compartment),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
-
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=-lfcVal,direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$compartment),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$compartment<-as.factor(sigTbl$compartment)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),outlier.size=0.4,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-               outlier.shape=NA) +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
-
-
-p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcomp_LFC_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
-
-
-
-
-
-# AB compartments - switching ---------------------------------------------
-
-####
-## sample specific compartments - changes between TEVonly and cs
-####
-
-pcas<-data.frame(SMC=SMC,
-                 file=list.files(paste0(outPath,"/otherData"),
-                                 pattern="_5000_laminDamID_pca2.bw"))
-listgr<-NULL
-for (grp in groupsOI){
-  #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,
-                              "_DESeq2_fullResults_p",padjVal,".rds"))
-  pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
-  pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-
-  salmongr<-sort(salmongr)
-
-
-  salmongr<-assignGRtoAB(salmongr,pca2control,grName=controlGrp,pcaName=controlGrp)
-  idx<-which(colnames(mcols(salmongr)) %in% c("pcaScore","compartment"))
-  colnames(mcols(salmongr))[idx]<-paste(colnames(mcols(salmongr))[idx],"control",sep="_")
-  salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
-  salmongr$switch<-factor(paste0(salmongr$compartment_control,salmongr$compartment),levels=c("AA","BB","AB","BA"))
-  listgr[[prettyGeneName(grp)]]<-salmongr
-}
-
-
-pairedCols<-c(brewer.pal(4,"Paired"))
-
-pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
-                       "ABcompSwitch_geneCount_padj",
-                       padjVal,"_lfc", lfcVal,".pdf")),
-    width=19, height=29, paper="a4")
-
-
-par(mfrow=c(3,1))
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
-
-compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"switch"),table))
-
-yminmax=c(0,max(compartmentTable))
-xx<-barplot(t(compartmentTable),beside=T,col=pairedCols,
-            main="Significantly changed genes by compartment",cex.axis=1.2,
-            cex.names=1.5, ylim=yminmax*1.1)
-legend("topright",legend = colnames(compartmentTable),fill=pairedCols)
-text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.1,col="black")
-
-par(mfrow=c(4,2))
-# upregulated genes
-sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
-
-compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"switch"),table))
-colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
-
-
-# downregulated genes
-sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=-lfcVal,direction="lt")
-
-compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"switch"),table))
-colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
-
-compartmentTable<-cbind(compartmentTableUp,compartmentTableDown)
-
-yminmax=c(0,max(compartmentTable[,grep("AA|BB",colnames(compartmentTable))]))
-Acomp<-compartmentTable[,grep("AA",colnames(compartmentTable))]
-xx<-barplot(t(Acomp),beside=T,col=c("grey80","grey20"),
-            main="Number of up/down regulated in AA compartment",cex.axis=1.2,
-            cex.names=1.5, ylim=c(yminmax)*1.2)
-legend("top", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(Acomp), label=t(Acomp), pos=3,cex=1.3,col="black")
-
-xx<-barplot(t(Acomp/rowSums(Acomp)),beside=F,col=c("grey80","grey20"),
-            main="Fraction of up/down regulated in AA compartment",cex.axis=1.2,
-            cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-legend("bottomright", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"),xpd=T)
-text(x=xx, y=0.97, label=t(rowSums(Acomp)), pos=3,cex=1.3,col="black")
-
-
-Bcomp<-compartmentTable[,grep("BB",colnames(compartmentTable))]
-xx<-barplot(t(Bcomp),beside=T,col=c("grey80","grey20"),
-        main="Number of up/down regulated in BB compartment",cex.axis=1.2,
-        cex.names=1.5, ylim=c(yminmax)*1.2)
-legend("top", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
-
-xx<-barplot(t(Bcomp/rowSums(Bcomp)),beside=F,col=c("grey80","grey20"),
-            main="Fraction of up/down regulated in BB compartment",cex.axis=1.2,
-            cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-legend("bottomright", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"),xpd=T)
-text(x=xx, y=0.97, label=t(rowSums(Bcomp)), pos=3,cex=1.3,col="black")
-
-
-yminmax=c(0,max(compartmentTable[,grep("AB|BA",colnames(compartmentTable))]))
-ABcomp<-compartmentTable[,grep("AB",colnames(compartmentTable))]
-xx<-barplot(t(ABcomp),beside=T,col=c("grey80","grey20"),
-        main="Number of up/down regulated in AB compartment",cex.axis=1.2,
-        cex.names=1.5, ylim=c(yminmax)*1.2)
-legend("top", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(ABcomp), label=t(ABcomp), pos=3,cex=1.3,col="black")
-
-xx<-barplot(t(ABcomp/rowSums(ABcomp)),beside=F,col=c("grey80","grey20"),
-        main="Fraction of up/down regulated in AB compartment",cex.axis=1.2,
-        cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-legend("bottomright", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"),xpd=T)
-text(x=xx, y=0.97, label=t(rowSums(ABcomp)), pos=3,cex=1.3,col="black")
-
-
-BAcomp<-compartmentTable[,grep("BA",colnames(compartmentTable))]
-xx<-barplot(t(BAcomp),beside=T,col=c("grey80","grey20"),
-        main="Number of up/down regulated in BA compartment",cex.axis=1.2,
-        cex.names=1.5, ylim=c(yminmax)*1.2)
-legend("top", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"))
-text(x=xx, y=t(BAcomp), label=t(BAcomp), pos=3,cex=1.3,col="black")
-
-xx<-barplot(t(BAcomp/rowSums(BAcomp)),beside=F,col=c("grey80","grey20"),
-            main="Fraction of up/down regulated in BA compartment",cex.axis=1.2,
-            cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-legend("bottomright", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"),xpd=T)
-text(x=xx, y=0.97, label=t(rowSums(BAcomp)), pos=3,cex=1.3,col="black")
-
-
-dev.off()
-
-
-
-
-
-
-################-
-## AB compartment by chromosome - switching between TEVonly and cs -----
-#################-
-
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
-
-# count genes by category (chr & A/B)
-dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
-
-# add name of SMC protein
-dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
-dfl$seqnames<-gsub("chr","",dfl$seqnames)
-ymax=max(dfl$n)
-p1<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_manual(values=pairedCols) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle("Significantly changed genes per chromosome by compartment")
-
-
-dfl<-dfl[! (dfl$switch %in% c("AA","BB")),]
-dfl$switch<-droplevels(dfl$switch)
-ymax1=max(dfl$n)
-p1a<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_manual(values=pairedCols[3:4]) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle("Significantly changed genes per chromosome by compartment")
-
-p<-ggpubr::ggarrange(p1,p1a,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcompSwitch_countsPerChr_ABBA_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=19,height=29,units="cm")
-
-
-# upregulated genes
-sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
-# count genes by category (chr & A/B)
-dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
-# add name of SMC protein
-dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
-dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
-dflUp$expression<-"up"
-
-# downregulated genes
-sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=-lfcVal,direction="lt")
-dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
-# add name of SMC protein
-dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
-dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
-dflDown$expression<-"down"
-
-dfl<-rbind(dflUp,dflDown)
-dfl$expression<-factor(dfl$expression,levels=c("up","down"))
-
-
-yminmax=c(0,max(dfl$n))
-p2<-ggplot(dfl[dfl$switch=="AA",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-  ggtitle("Up/down regulated genes in AA compartment")
-
-p3<-ggplot(dfl[dfl$switch=="BB",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-  ggtitle("Up/down regulated genes in BB compartment")
-
-yminmax=c(0,max(dfl$n[! (dfl$switch %in% c("AA","BB"))]))
-p4<-ggplot(dfl[dfl$switch=="AB",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-  ggtitle("Up/down regulated genes in AB compartment")
-
-p5<-ggplot(dfl[dfl$switch=="BA",],aes(x=seqnames,y=n,group=expression)) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-  ggtitle("Up/down regulated genes in BA compartment")
-
-
-
-
-p<-ggpubr::ggarrange(p2,p3,p4,p5,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcompSwitch_updownByChr_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=19,units="cm")
-
-####
-## AB comp LFC - switching between TEVonly and cs -----
-####
-
-
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="gt")
-
-sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$switch),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
-
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=-lfcVal,direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$switch),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$switch<-as.factor(sigTbl$switch)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p1<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-               outlier.size=0.4) +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Log2 fold change by compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.7,end=0.3,guide=F)
-
-
-sigTbl<-sigTbl[! (sigTbl$switch %in% c("AA","BB")),]
-sigTbl$switch<-droplevels(sigTbl$switch)
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-               outlier.shape=NA) +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Log2 fold change by compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.7,end=0.3,guide=F)
-
-
-
-p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-                                "ABcompSwitch_LFC_padj",
-                                padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=29,height=16,units="cm")
-
-
-
 
 
 # anchors - genomation ----------------------------------------------------
