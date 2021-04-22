@@ -1,10 +1,10 @@
 library(GenomicRanges)
 
-plotPDFs=T
+plotPDFs=F
 padjVal=0.05
 lfcVal=0
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/salmon_")
-filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/prefiltCyc2xChrAX_")
+filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/_")
 
 outPath="."
 genomeVer="WS275"
@@ -17,8 +17,8 @@ genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
 remakeFiles=F # remake publicData files?
-combineChrAX=T # artificially combine chrA and X from different datasets?
-filterData=T
+combineChrAX=F # artificially combine chrA and X from different datasets?
+filterData=F
 if(filterData){
     oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T,
                             stringsAsFactors=F) #3739
@@ -38,8 +38,10 @@ if(filterData){
 }
 
 
-strainLevels<-c("366","382","775","784")
-varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
+#strainLevels<-c("366","382","775","784")
+#varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
+strainLevels<-c("366","821","823")
+varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
 varOI<-"SMC"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
