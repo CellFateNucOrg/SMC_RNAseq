@@ -14,16 +14,6 @@ if(filterData){
   fileNamePrefix<-filterPrefix
 }
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
-
-# extract the strain variable
-strain<-factor(as.character(unique(fileList$sampleName),levels=c("366","382","775","784")))
-SMC<-strain
-levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
-
-controlGrp<-levels(SMC)[1] # control group
-groupsOI<-levels(SMC)[-1]
-
 eulerLabelsType<-c("counts","percent")
 eulerLabelsType<-c("counts")
 
@@ -618,7 +608,7 @@ if(!combineChrAX){
   #########################
   ## compare LFC to wt mean
   #########################
-    dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
+  dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
   wtMean<-rowMeans(counts(dds)[,colData(dds)$SMC==controlGrp])
   idx<-wtMean!=0
   logwtcounts<-log2(wtMean[idx])
@@ -667,9 +657,10 @@ if(!combineChrAX){
     abline(bestFitLine,col="red")
     title(paste0(prettyGeneName(grp)," LFC vs ",controlGrp,
                  " log counts (R=", Rval,")"))
-    if(plotPDFs==F){
+    if(plotPDFs==T){
       dev.off()
     }
   }
   dev.off()
 }
+

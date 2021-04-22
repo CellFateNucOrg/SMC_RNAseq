@@ -1,18 +1,24 @@
 library(GenomicRanges)
 
-plotPDFs=T
+plotPDFs=F
 padjVal=0.05
 lfcVal=0
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/salmon_")
-filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/prefiltCyc2xChrAX_")
+filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/_")
 
 outPath="."
 genomeVer="WS275"
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 
+wbseqinfo<-seqinfo(Celegans)
+seqnames(wbseqinfo)<-c(gsub("chr","",seqnames(Celegans)))
+seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
+genome(wbseqinfo)<-genomeVer
+ce11seqinfo<-seqinfo(Celegans)
+
 remakeFiles=F # remake publicData files?
 combineChrAX=F # artificially combine chrA and X from different datasets?
-filterData=T
+filterData=F
 if(filterData){
     oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T,
                             stringsAsFactors=F) #3739
@@ -30,5 +36,31 @@ if(filterData){
   #9541 genes osc+latorre+chrX
   #6101 genes osc+latorre+hs
 }
+
+
+#strainLevels<-c("366","382","775","784")
+#varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
+strainLevels<-c("366","821","823")
+varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
+varOI<-"SMC"
+
+fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
+
+sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum, sep="_")
+
+fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
+sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
+
+# extract the technical replicate variable
+sampleTable$replicate=factor(fileList$repeatNum)
+sampleTable$lane=factor(fileList$laneNum)
+
+# extract the strain variable
+sampleTable$strain<-factor(as.character(fileList$sampleName),levels=strainLevels)
+sampleTable[,varOI]<-sampleTable$strain
+levels(sampleTable[,varOI])<-varOIlevels
+
+controlGrp<-levels(sampleTable[,varOI])[1] # control group
+groupsOI<-levels(sampleTable[,varOI])[-1] # groups of interest to contrast to control
 
 

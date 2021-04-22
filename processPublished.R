@@ -476,6 +476,10 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
 ###############################-
 ## get germline-soma genes from Reinke_DEV2004-----
 ###############################-
+# https://journals.biologists.com/dev/article/131/2/311/42475/Genome-wide-germline-enriched-and-sex-biased
+# Genome-wide germline-enriched and sex-biased expression profiles in Caenorhabditis elegans
+# Valerie Reinke ,  Inigo San Gil ,  Samuel Ward ,  Keith Kazmer
+# Development (2004) 131 (2): 311–323.
 
 glFile="germlineVsoma_Reinke_Dev2004"
 
@@ -485,7 +489,7 @@ if(remakeFiles){
 
 if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
   #link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
-  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1618920247&Signature=NfiCpZCFbYZGB5dJv7y1rZALgeZuxonneXeV3SRqPlisi2dDl1Dcq6CYYZ3P-utcJcIv8u6eBV96J6guU8Taj0RNGV-eB25BxOvWtl~QW~Ho-opNLAW4yJaIk4ySp~i9oPbVozElk3su1ollgMMQi1TMVlllzGB0tbr9k-5YZ9XjgPTV1FirG5UP95ZOn1WNqhlAb7D7qXi4U1iiVmLYl73KQqD1bET44b2RZDE0UMPkprEBF75BnwzcpeDKrWUHR36G0qVRQA1I3sE~euco9aPusRkFSMXcMcpv813APIByQJuy6OnGoiH4Uzz9OKsRaD3-fi1Ee3yrWOMmEUCRVA__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
+  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1621957576&Signature=5MsXCUgOHCvppBgB6sSCQHzX1r9bREb6jEF4hO8OzwXsiNbOaGc20tFHeqEMOdTUQIvhSUYucZnQUiNshVeQp4rd6KsEAMPNVdBH8MmORDgJN20Ng6imKBCBum0JNovPGXLJKgi6n5N4m8nFfF5bzcgSuU2bNB7Iq5YJr9FT0GwhxfjrXRaQnG4fDpAeQuXIXS2XCx2TgHhRFIsMTAOHnUrme7yNwwaNpRa5fF5jiAk7ImdCf-GCR4OI0-eE8QK-Z~EFqjhq1gSF7JgX0dAzfr51Yvq8Dgm5IYqmo~nKG6TfO356urCbgMX1xKD7~pb6LmZVN6NO54L4vNMBUAHHRg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
   download.file(link2,paste0("publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
   system(paste0("unzip ",outPath,"/publicData/",glFile,".zip -d ",outPath,"/publicData/",glFile))
@@ -669,7 +673,7 @@ if(!file.exists(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))) {
 
 if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2016_ce11.bed"))){
   chromStatesURL<-"https://www.pnas.org/highwire/filestream/623778/field_highwire_adjunct_files/0/pnas.1608162113.sd01.xlsx"
-  download.file(chromStatesURL,paste0(outPath,"/",basename(chromStatesURL)))
+  download.file(chromStatesURL,paste0(outPath,"/publicData/",basename(chromStatesURL)))
   ce10toCe11url<-"http://hgdownload.soe.ucsc.edu/goldenPath/ce10/liftOver/ce10ToCe11.over.chain.gz"
   ce10toCe11<-"ce10Toce11.over.chain"
   download.file(ce10toCe11url,paste0(outPath,"/publicData/",ce10toCe11,".gz"))
@@ -692,28 +696,28 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   export(chrStatesGR_ce11,
          con=paste0(outPath,"/publicData/chromStates_L3_Evans2016_ce11.bed"),
          format="bed")
-  file.remove(paste0(outPath,"/",chromStatesURL))
+  file.remove(paste0(outPath,"/publicData/",basename(chromStatesURL)))
 
   # Dataset S2. Coordinates of EE and L3 domains
   # Excel file of chromosome, start position, end position of EE and L3 active domains, border regions, and regulated domains (each in separate tab). Additionally, border regions have strand information in column six to indicate if active domain is on the left (−) or on the right (+). Coordinates are in WS220 and follow BED conventions.
   chromDomainsURL<-"https://www.pnas.org/highwire/filestream/623778/field_highwire_adjunct_files/1/pnas.1608162113.sd02.xlsx"
-  download.file(chromDomainsURL,paste0(outPath,"/",basename(chromDomainsURL)))
+  download.file(chromDomainsURL,paste0(outPath,"/publicData/",basename(chromDomainsURL)))
 
-  l3active<-readxl::read_excel(paste0(outPath,"/",
+  l3active<-readxl::read_excel(paste0(outPath,"/publicData/",
                                       basename(chromDomainsURL)),
               sheet="L3 active domains",
               col_names=c("chr","start","end"))
   l3active$name<-"active"
   l3active$score<-"."
   l3active$strand<-"*"
-  l3regulated<-readxl::read_excel(paste0(outPath,"/",
+  l3regulated<-readxl::read_excel(paste0(outPath,"/publicData/",
                                          basename(chromDomainsURL)),
                           sheet="L3 regulated domains",
                           col_names=c("chr","start","end"))
   l3regulated$name<-"regulated"
   l3regulated$score<-"."
   l3regulated$strand<-"*"
-  l3borders<-readxl::read_excel(paste0(outPath,"/",basename(chromDomainsURL)),sheet="L3 borders",col_names=c("chr","start","end","name","score","strand"))
+  l3borders<-readxl::read_excel(paste0(outPath,"/publicData/",basename(chromDomainsURL)),sheet="L3 borders",col_names=c("chr","start","end","name","score","strand"))
   l3borders$name<-"border"
 
 
@@ -729,7 +733,7 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   export(chrDomainsGR_ce11,
          con=paste0(outPath,"/publicData/chromDomains_L3_Evans2016_ce11.bed"),
          format="bed")
-  file.remove(paste0(outPath,"/",basename(chromDomainsURL)))
+  file.remove(paste0(outPath,"/publicData/",basename(chromDomainsURL)))
 }
 
 ###################-
@@ -749,3 +753,4 @@ tissueEnrichURL<-"https://doi.org/10.1371/journal.pgen.1007559.s017"
 
 ### Tissue specific - Table S9
 tissueSpecificURL<-"https://doi.org/10.1371/journal.pgen.1007559.s018"
+

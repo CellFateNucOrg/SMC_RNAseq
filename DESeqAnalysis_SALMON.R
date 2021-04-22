@@ -37,27 +37,6 @@ ce11seqinfo<-seqinfo(Celegans)
 makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),paste0("p",padjVal,"_lfc",lfcVal)))
 
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
-
-
-sampleNames<-paste(fileList$sampleName, fileList$repeatNum, fileList$laneNum, sep="_")
-
-fileNames<-paste0(outPath,"/salmon/mRNA/",sampleNames,"/quant.sf")
-
-sampleTable<-data.frame(fileName=fileNames,sampleName=sampleNames,stringsAsFactors=F)
-
-# extract the technical replicate variable
-sampleTable$replicate=factor(fileList$repeatNum)
-sampleTable$lane=factor(fileList$laneNum)
-
-# extract the strain variable
-sampleTable$strain<-factor(as.character(fileList$sampleName),levels=c("366","382","775","784"))
-sampleTable$SMC<-sampleTable$strain
-levels(sampleTable$SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
-
-controlGrp<-levels(sampleTable$SMC)[1] # control group
-groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to control
-
 
 # Create metadata object --------------------------------------------------
 ###############################################################-
@@ -90,7 +69,7 @@ txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
 # read samples into DESeq2
 dds <- DESeqDataSetFromTximport(txi=txi,
                                 colData=sampleTable,
-                          design=~replicate+lane+SMC)
+                          design=~lane+SMC)
 
 
 ###############################################################-
@@ -330,7 +309,7 @@ for(grp in groupsOI){
    # and average linkage clustering as agglomeration criteria
    heatmap.2(as.matrix(countTable.kept),
              scale="row",
-             hclust=function(x) hclust(x,method="average"),
+             hclust=function(x) stats::hclust(x,method="average"),
              distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
              margin=c(6,0),
              trace="none",
