@@ -50,6 +50,8 @@ if(length(finalFilesExist)==0){
                        c("_F.wig","_R.wig"))
       system(paste0("wiggletools sum ", paste0(wigFiles,collapse=" "),
                     " > ", wigFile ))
+      wigToBigWig(x=wigFile, seqinfo=wbseqinfo,
+                   dest=gsub("\\.wig$","\\.bw",wigFile))
       file.remove(wigFiles)
    }
 
