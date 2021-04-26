@@ -302,6 +302,8 @@ if(! file.exists(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"))){
   file.remove(paste0(outPath,"/publicData/",latorreFileName))
 }
 
+latorre<-read.delim(file=paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"),
+                     header=T,sep="\t")
 osc<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"))
 sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
 #2473

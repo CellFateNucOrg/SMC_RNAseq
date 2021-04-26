@@ -1,8 +1,9 @@
 library(GenomicRanges)
+library(BSgenome.Celegans.UCSC.ce11)
 
 plotPDFs=F
 padjVal=0.05
-lfcVal=0
+lfcVal=0.25
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/salmon_")
 filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/_")
 
@@ -40,8 +41,10 @@ if(filterData){
 
 #strainLevels<-c("366","382","775","784")
 #varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
-strainLevels<-c("366","821","823")
-varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
+#strainLevels<-c("366","821","823")
+#varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
+strainLevels<-c("366","828","844")
+varOIlevels<-c("wt","coh1cs","coh1cs_scc1cs")
 varOI<-"SMC"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
