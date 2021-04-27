@@ -43,141 +43,12 @@ fileNamePrefix<-filterPrefix
 
 
 
-# # Create metadata object --------------------------------------------------
-# ###############################################################-
-# ### create metadata
-# ###############################################################-
-#
-# if(!file.exists(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.",
-#                        genomeVer, ".annotations.sqlite"))){
-#   dir.create(paste0(genomeDir,"/annotations"),recursive=T)
-#   system(paste0("curl ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/gff/c_elegans.PRJNA13758.",
-#                 genomeVer,".annotations.gff3.gz -o ",genomeDir,
-#                 "/annotations/c_elegans.PRJNA13758.",genomeVer,
-#                 ".annotations.gff3.gz"))
-#
-#   system(paste0("gunzip ",genomeDir,"/annotations/c_elegans.PRJNA13758.",
-#                 genomeVer,".annotations.gff3.gz"))
-#   si<-seqinfo(Celegans)
-#   genome(si)<-genomeVer
-#   seqnames(si)<-gsub("M","MtDNA",gsub("chr","",seqnames(si)))
-#   wstxdb<-makeTxDbFromGFF(file=paste0(genomeDir,
-#                                       "/annotations/c_elegans.PRJNA13758.",
-#                                       genomeVer,".annotations.gff3"),
-#                           format="gff3",organism="Caenorhabditis elegans",
-#                           chrominfo=si)
-#
-#   saveDb(wstxdb,paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.", genomeVer,
-#                        ".annotations.sqlite"))
-#   file.remove(paste0(genomeDir,"/annotations/c_elegans.PRJNA13758.",
-#                      genomeVer, ".annotations.gff3"))
-# }
-#
-# # load a txdb of wormbase data and create a tx2gene object
-# txdb<-loadDb(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.", genomeVer,
-#                     ".annotations.sqlite"))
-# k <- keys(txdb, keytype = "TXNAME")
-# tx2gene <- AnnotationDbi::select(txdb, k, "GENEID", "TXNAME")
-#
-# columns(txdb)
-# keytypes(txdb)
-# TxptByGene<-transcriptsBy(txdb, by = "gene")
-# length(TxptByGene)
-#
-# geneGR<-unlist(range(TxptByGene))
-# mcols(geneGR)$wormbase<-names(geneGR)
-# genedf<-as.data.frame(geneGR)
-#
-#
-# # download gene id data from simplemine: https://wormbase.org/tools/mine/simplemine.cgi
-# # for entrez ids, load wormbaseID column into https://david.ncifcrf.gov/conversion.jsp
-# geneIDs<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/simplemine_WS278_geneID.txt")
-# david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
-#
-# metadata<-inner_join(geneIDs, genedf,by=c("WormBase.Gene.ID"="wormbase")) %>%
-#   dplyr::select(WormBase.Gene.ID,Public.Name,Sequence.Name,seqnames,start, end, strand) %>%
-#   collect %>% GenomicRanges::GRanges()
-#
-# names(mcols(metadata))<-c("wormbaseID","publicID","sequenceID")
-#
-# i<-which(metadata$wormbaseID %in% david$From)
-# j<-match(metadata$wormbaseID[i],david$From)
-# metadata$entrezID<-NA
-# metadata$entrezID[i]<-david$To[j]
-#
-# #seqinfo(metadata)<-wbseqinfo
-# seqlevelsStyle(metadata)<-"ucsc"
-# seqinfo(metadata)<-ce11seqinfo
-# metadata<-sort(metadata)
-#
-# saveRDS(metadata,paste0(outPath,"/wbGeneGR_WS275.rds"))
-#
-# ###############################################################-
-# # Import into DESeq2 ------------------------------------------------------
-# ###############################################################-
-#
-# # import the count matrices
-# txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
-#
-# # read samples into DESeq2
-# dds <- DESeqDataSetFromTximport(txi=txi,
-#                                 colData=sampleTable,
-#                                 design=~replicate+lane+SMC)
-#
-#
-#
-# ###############################################################-
-# ### DESeq2 differential expression analysis (using negative binomial distribution)
-# ###############################################################-
-#
-# #dds<-collapseReplicates(dds,groupby=samples$sampleID,renameCols=T)
-# #dds <- DESeq(dds)
-# # This function performs a default analysis through the steps:
-# #   1. estimation of size factors: estimateSizeFactors
-# #   2. estimation of dispersion: estimateDispersions
-# #   3. Negative Binomial GLM fitting and Wald statistics: nbinomWaldTest
-# #   returns a DESeqDataSet object
-#
-# idx<-match(rownames(dds),metadata$wormbaseID)
-# # add gene and chormosome names as metadata
-# featureData <- data.frame(gene=rownames(dds),
-#                           chr=as.vector(seqnames(metadata))[idx]) #,
-#
-# rowData(dds) <- DataFrame(mcols(dds), featureData)
-#
-# #remove unmapped or mitochondrial genes
-# idx<-is.na(rowData(dds)$chr) | rowData(dds)$chr %in% c("MtDNA","chrM")
-# dds<-dds[!idx,]
-#
-# #prefilter rows with less than 10 reads in total
-# dds<-dds[rowSums(counts(dds)) >= 10,]
-# print(paste0(dim(dds)[1], " genes with >=10 reads total"))
-#
-# ###################-
-# ####### filter genes-------------------------
-# #######-###########-
-# if(filterData){
-#   # remove filtered genes
-#   idx<-rowData(dds)$gene %in% toFilter
-#   dds<-dds[!idx,]
-#
-#   fileNamePrefix=filterPrefix
-# }
-#
-# # do not run statistical testing
-# dds<-DESeq(dds)
-#
-# saveRDS(dds,file=paste0(outPath,"/rds/dds_object.rds"))
-
-
-
-
 ######################-
 ## combine chrX and chrA #####
 ######################-
 
-chrXprefix<-paste0("/../SMC_RNAseq_prefiltCyc2x/rds/p",padjVal,"_lfc",lfcVal,"/preFiltOsc2x_")
-chrAprefix<-paste0("/../SMC_RNAseq_prefiltCyc2xChrA/rds/p",padjVal,"_lfc",lfcVal,"/preFiltOsc2xChrA_")
+# chrXprefix<-paste0("/../SMC_RNAseq_prefilt/rds/p",padjVal,"_lfc",lfcVal,"/preFiltOsc2x_")
+# chrAprefix<-paste0("/../SMC_RNAseq_prefiltChrA/rds/p",padjVal,"_lfc",lfcVal,"/preFiltOsc2xChrA_")
 
 for (grp in groupsOI){
   #grp=groupsOI[1]
@@ -382,11 +253,6 @@ for (grp in groupsOI){
   #############-
   #https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html
   #all black plot for manual changing of colours.
-  #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-  #                "_volcanoPlot_allGenes.pdf"), width=8,height=6,paper="a4")
-
-  #resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
-  #resLFC<-resLFC[!is.na(resLFC$padj)]
 
   keyvals<-rep('black', nrow(resLFC))
   names(keyvals)<-rep('NS',nrow(resLFC))
@@ -627,7 +493,6 @@ amplicons<-readRDS(paste0(outPath,"/otherData/ampliconMaxTSSgr.RDS"))
 
 
 #grp=groupsOI[3]
-
 for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
