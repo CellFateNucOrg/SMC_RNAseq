@@ -272,8 +272,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 ## sample specific compartments -----
 ####
 
-if(all(c("366","382","775","784") %in% varOIlevels)){
-  pcas<-data.frame(SMC=c("366","382","775","784"),
+if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
+  pcas<-data.frame(SMC=c("wt","dpy26cs","kle2cs","scc1cs"),
                    file=list.files(paste0(outPath,"/otherData"),
                                    pattern="_5000_laminDamID_pca2\\.bw"))
   listgr<-NULL
@@ -492,7 +492,7 @@ if(all(c("366","382","775","784") %in% varOIlevels)){
   ## sample specific compartments - changes between TEVonly and cs
   ####
 
-  pcas<-data.frame(SMC=c("366","382","775","784"),
+  pcas<-data.frame(SMC=varOIlevels,
                    file=list.files(paste0(outPath,"/otherData"),
                                    pattern="_5000_laminDamID_pca2.bw"))
   listgr<-NULL
@@ -1102,3 +1102,4 @@ if(plotPDFs==F){
 if(plotPDFs==T){
   dev.off()
 }
+

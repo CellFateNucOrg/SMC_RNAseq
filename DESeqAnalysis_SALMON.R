@@ -1,4 +1,5 @@
 library(DESeq2)
+library(AnnotationDbi)
 library(Organism.dplyr)
 library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
@@ -257,6 +258,17 @@ for(grp in groupsOI){
    # #############-
 
    res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=padjVal)
+
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,"_independentFilter_",
+                   padjVal,".pdf"), width=8, height=8, paper="a4")
+   plot(metadata(res)$filterNumRej,
+        type="b", ylab="number of rejections",
+        xlab="quantiles of filter",
+        main=paste0("Independant filtering, ",grp,", alpha=",padjVal))
+   lines(metadata(res)$lo.fit, col="red")
+   abline(v=metadata(res)$filterTheta)
+   legend("topright",legend=paste0("Mean norm count \nthreshold: ", round(metadata(res)$filterThreshold,2)))
+   dev.off()
    # shrink LFC estimates
    #resultsNames(dds) # to get names of coefficients
    resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
@@ -1014,38 +1026,38 @@ for(grp in groupsOI) {
                   direction="both", asCounts=F)[[1]]
    dd$group<-paste0(grp,"_chrA")
    lfcDensity<-rbind(lfcDensity,dd)
+}
+lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
+lfcDensity$breaks<-factor(lfcDensity$breaks)
 
-   lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
-   lfcDensity$breaks<-factor(lfcDensity$breaks)
-
-   p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
+p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
       geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +xlab("Absolute log2 fold change bins")+ylab("Density")
 
 
-   p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
+p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
       annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
                hjust=0.1,color="red")
 
-   p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
+p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
       annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
                hjust=-0.1,color="red")
 
-   if(plotPDFs==T){
+if(plotPDFs==T){
       ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                              "lfcValueDistribution_p",padjVal,"_0.5.pdf"), plot=p1,
              device="pdf",path=outPath, width=15,height=25,units="cm")
       ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                              "lfcValueDistribution_p",padjVal,"_0.25.pdf"), plot=p2,
              device="pdf",path=outPath, width=15,height=25,units="cm")
-   } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+} else {
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                              "lfcValueDistribution_p",padjVal,"_0.5.png"), plot=p1,
              device="png",path=outPath, width=15,height=25,units="cm")
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                              "lfcValueDistribution_p",padjVal,"_0.25.png"), plot=p2,
              device="png",path=outPath, width=15,height=25,units="cm")
-   }
 }
+
 
 
 
@@ -1136,7 +1148,7 @@ if(plotPDFs==T){
                           "lfcValueCDF_p",padjVal,".pdf"), plot=p1,
           device="pdf",path=outPath, width=10,height=10,units="cm")
 } else {
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                           "lfcValueCDF_p",padjVal,".png"), plot=p1,
           device="png",path=outPath, width=10,height=10,units="cm")
 }
@@ -1227,7 +1239,7 @@ if(plotPDFs==T){
                           "lfcValueCDF_p",padjVal,"gt10.pdf"), plot=p1,
           device="pdf",path=outPath, width=10,height=10,units="cm")
 } else {
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
                           "lfcValueCDF_p",padjVal,"gt10.png"), plot=p1,
           device="png",path=outPath, width=10,height=10,units="cm")
 }
