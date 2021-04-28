@@ -658,7 +658,7 @@ if(!combineChrAX){
     abline(bestFitLine,col="red")
     title(paste0(prettyGeneName(grp)," LFC vs ",controlGrp,
                  " log counts (R=", Rval,")"))
-    if(plotPDFs==T){
+    if(plotPDFs==F){
       dev.off()
     }
   }
