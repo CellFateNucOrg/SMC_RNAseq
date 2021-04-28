@@ -50,7 +50,7 @@ if(!file.exists(wormcatData)){
 
 
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   ### upregulated genes
@@ -103,6 +103,9 @@ for (grp in groupsOI){
 
 # read in tissue prediction data set to screen out entrez ids not included
 tissuePredScores<-paste0(outPath,"/publicData/all_tissue_prediction_scores.txt")
+if(remakeFiles & file.exists(tissuePredScores)){
+  file.remove(tissuePredScores)
+}
 if(!file.exists(tissuePredScores)){
   download.file(url="https://worm.princeton.edu/media/download/all_tissue_prediction_scores.txt", destfile=tissuePredScores)
 }
@@ -137,7 +140,7 @@ sigGenes<-lapply(sigTables, "[", ,"entrezID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
   write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_upGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
@@ -146,7 +149,7 @@ for (grp in groupsOI){
 
 ## downregulated genes
 sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
@@ -160,7 +163,7 @@ sigGenes<-lapply(sigTables, "[", ,"entrezID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
   write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
@@ -172,7 +175,7 @@ for (grp in groupsOI){
 
 ## upregulated genes
 sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
@@ -186,7 +189,7 @@ sigGenes<-lapply(sigTables, "[", ,"sequenceID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_upGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
@@ -194,7 +197,7 @@ for (grp in groupsOI){
 
 ## downregulated genes
 sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
@@ -208,7 +211,7 @@ sigGenes<-lapply(sigTables, "[", ,"sequenceID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
@@ -283,7 +286,7 @@ sink()
 
 ## upregulated genes
 sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
@@ -298,7 +301,7 @@ lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
 partialPrefix=gsub(paste0("p",padjVal,"_lfc",lfcVal,"/"),"",fileNamePrefix)
-for (grp in groupsOI){
+for(grp in groupsOI){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_upGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
   cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_tissue tissue\n"))
@@ -310,7 +313,7 @@ for (grp in groupsOI){
 
 ## downregulated genes
 sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
@@ -324,7 +327,7 @@ sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for (grp in groupsOI){
+for(grp in groupsOI){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_downGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
   cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp,"_down_tissue tissue\n"))
@@ -352,7 +355,7 @@ broad<-read.csv(file=paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"
         stringsAsFactors=T)
 
   sigTables<-list()
-for (grp in groupsOI){
+for(grp in groupsOI){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
