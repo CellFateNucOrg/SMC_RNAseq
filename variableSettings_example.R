@@ -44,10 +44,12 @@ if(filterData){
 }
 
 
-strainLevels<-c("366","382","775","784")
-varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
+#strainLevels<-c("366","382","775","784")
+#varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
 #strainLevels<-c("366","821","823")
 #varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
+strainLevels<-c("366","821","823")
+varOIlevels<-c("wt","dpy26cs_sdc3deg","TIR")
 varOI<-"SMC"
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
