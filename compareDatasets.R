@@ -662,6 +662,8 @@ if(!combineChrAX){
       dev.off()
     }
   }
-  dev.off()
+  if(plotPDFs==T){
+    dev.off()
+  }
 }
 

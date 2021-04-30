@@ -3,7 +3,7 @@ library(BSgenome.Celegans.UCSC.ce11)
 
 plotPDFs=F
 padjVal=0.05
-lfcVal=0.25
+lfcVal=0.5
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/preFiltChrAX_")
 filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/preFiltChrAX_")
 
