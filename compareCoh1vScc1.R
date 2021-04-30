@@ -26,7 +26,9 @@ eulerLabelsType<-c("counts")
 ## venn diagrams------
 #######-
 
-scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltCyc2xChrAX/rds/p0.05_lfc0.5/prefiltCyc2xChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
+#scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltCyc2xChrAX/rds/p0.05_lfc0.5/prefiltCyc2xChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
+
+scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltChrAX/rds/p0.05_lfc0.5/preFiltChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
 
 ## significantly changed genes
 sigTables<-list()
@@ -52,7 +54,7 @@ sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
 pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
-                paste(groupsOI, collapse="_"),"_padj",
+                paste(groupsOI, collapse="V"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
 
@@ -105,7 +107,7 @@ sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
 
 
 pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
-                paste(groupsOI,collapse="_"),"_padj",
+                paste(groupsOI,collapse="V"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
 
@@ -122,7 +124,7 @@ dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 # ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
-#                                 paste(groupsOI,collapse="_"),"_padj",
+#                                 paste(groupsOI,collapse="_V),"_padj",
 #                                 padjVal, "_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=16,units="cm")
 
@@ -152,7 +154,7 @@ sigTables[[prettyGeneName(grp)]]<-as.data.frame(getSignificantGenes(salmon,
 
 
 pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
-                paste(groupsOI,collapse="_"),"_padj",
+                paste(groupsOI,collapse="V"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
 
@@ -169,7 +171,7 @@ dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 # ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
-#                                 paste(groupsOI,collapse="_"),"_padj",
+#                                 paste(groupsOI,collapse="V"),"_padj",
 #                                 padjVal, "_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=16,units="cm")
 
@@ -303,7 +305,7 @@ p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) +
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "bar_countsPerChr_",paste(groupsOI,
-                                collapse="_"),"_padj",
+                                collapse="V"),"_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
@@ -412,7 +414,7 @@ p6<-p6+geom_text(data=aa,aes(x=updown,y=10,label=ratio), color="black",
 p<-ggpubr::ggarrange(p2,p4,ncol=1,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "count&LFCbyChr_",
-                                paste(groupsOI,collapse="_"), "_padj",
+                                paste(groupsOI,collapse="V"), "_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 
@@ -420,7 +422,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 p<-ggpubr::ggarrange(p3,p6,ncol=1,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "count&LFCautosomes_",
-                                paste(groupsOI,collapse="_"), "_padj",
+                                paste(groupsOI,collapse="V"), "_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=13,height=22,units="cm")
 
@@ -469,7 +471,7 @@ for (i in 1:ncol(combnTable)){
   grp2<-groupsOI1[combnTable[2,i]]
 
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_allGenes_",grp1,"_",
+    png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_allGenes_",grp1,"V",
                     grp2,".png"), width=5, height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
@@ -492,8 +494,6 @@ for (i in 1:ncol(combnTable)){
     dev.off()
   }
 }
-
-tmp<-geneTable # create backup copy
 
 if(plotPDFs==T){
   dev.off()
