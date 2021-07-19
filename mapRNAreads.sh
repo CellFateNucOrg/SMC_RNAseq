@@ -1,23 +1,23 @@
-#! /usr/bin/bash
+#! /bin/bash
 #SBATCH --mail-user=jennifer.semple@izb.unibe.ch
 #SBATCH --mail-type=end,fail
 #SBATCH --job-name="RNAseq"
-#SBATCH --time=0-8:00:00
-#SBATCH --cpus-per-task=2
 #SBATCH --partition=all
+#SBATCH --time=0-04:00:00
+#SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=2-8
+#SBATCH --array=5-8
 
-module add vital-it
-module add UHTS/Quality_control/fastqc/0.11.7;
-module add UHTS/Quality_control/cutadapt/2.5;
-module add UHTS/Aligner/STAR/2.7.3a;
-module add UHTS/Analysis/samtools/1.10;
-export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2.1-1.ubuntu18.sif"
-module add R/3.6.1;
-module add UHTS/Aligner/bwa/0.7.17;
+#module add vital-it
+#module add UHTS/Quality_control/fastqc/0.11.7;
+#module add UHTS/Quality_control/cutadapt/2.5;
+#module add UHTS/Aligner/STAR/2.7.3a;
+#module add UHTS/Analysis/samtools/1.10;
+#export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2.1-1.ubuntu18.sif"
+#module add R/3.6.1;
+#module add UHTS/Aligner/bwa/0.7.17;
 #module add UHTS/Analysis/HTSeq/0.9.1;
-source $CONDA_ACTIVATE htseq
+source $CONDA_ACTIVATE RNAseq
 
 echo "current date"
 date
