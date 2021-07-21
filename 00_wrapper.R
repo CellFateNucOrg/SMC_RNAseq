@@ -21,7 +21,7 @@ if(combineChrAX){
 
 #
 #make bigwigs from STAR data
-source("makeSTARbw.R")
+#source("makeSTARbw.R")
 
 
 # get read counts for each sample

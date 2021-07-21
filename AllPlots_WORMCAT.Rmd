@@ -9,24 +9,15 @@ knitr::opts_chunk$set(echo = TRUE)
 library(cowplot)
 library(magick)
 source("./variableSettings.R")
-#fileNamePrefix="preFiltOsc2x_"
+
 if(filterData){
   fileNamePrefix<-filterPrefix
 }
 
-fileList<-read.table(paste0(outPath,"/fastqList.txt"),stringsAsFactors=F,header=T)
-
-# extract the strain variable
-strain<-factor(as.character(unique(fileList$sampleName),levels=c("366","382","775","784")))
-SMC<-strain
-levels(SMC)<-c("wt","dpy26cs","kle2cs","scc1cs")
-
-controlGrp<-levels(SMC)[1] # control group
-groupsOI<-levels(SMC)[-1]
-
 ```
 
 # Wormcat category 1 - `r paste0("p",padjVal," lfc",lfcVal)`
+
 ```{r wormcat cat1, echo=F}
 for(grp in groupsOI){
   grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up/rgs_fisher_cat1_apv.svg")

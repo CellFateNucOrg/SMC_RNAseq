@@ -147,7 +147,7 @@ dev.off()
 #                                 padjVal,"_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=11,units="cm")
 
-if(all(c("kle-2","scc-1cs") %in% prettySampleNames)){
+if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
 
   kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
   scc1only<-base::setdiff(sigGenes[["scc-1cs"]],sigGenes[["kle-2cs"]])
@@ -217,7 +217,7 @@ dev.off()
 #                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
-if(all(c("kle-2","scc-1cs") %in% prettySampleNames)){
+if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
   kle2only<-base::setdiff(sigGenes[["kle-2cs"]],sigGenes[["scc-1cs"]])
   scc1only<-base::setdiff(sigGenes[["scc-1cs"]],sigGenes[["kle-2cs"]])
 

@@ -302,6 +302,8 @@ if(! file.exists(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"))){
   file.remove(paste0(outPath,"/publicData/",latorreFileName))
 }
 
+latorre<-read.delim(file=paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"),
+                     header=T,sep="\t")
 osc<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"))
 sum(latorre$Osc_Latorre2015 %in% osc$SequenceName)
 #2473
@@ -631,10 +633,10 @@ elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/a
 wormGeneURL<-"http://cmptxn.gersteinlab.org/worm_gene.xlsx"
 
 if(remakeFiles){
-  file.remove(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))
+  file.remove(paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"))
 }
 
-if(!file.exists(paste0(outPath,"/publicData/broadExpn_Gerstein2014.csv"))) {
+if(!file.exists(paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"))) {
   download.file(wormGeneURL,paste0(outPath,"/publicData/worm_gene.xlsx"))
   wormGene<-readxl::read_excel(paste0(outPath,"/publicData/worm_gene.xlsx"))
   broad<-wormGene[,c("Gene","expr","BroadlyExpr_Score","L3_N2_L3-1")]
