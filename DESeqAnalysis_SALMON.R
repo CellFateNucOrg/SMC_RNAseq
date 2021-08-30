@@ -70,7 +70,8 @@ txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
 # read samples into DESeq2
 dds <- DESeqDataSetFromTximport(txi=txi,
                                 colData=sampleTable,
-                          design=~lane+SMC)
+                          design = ~replicate + lane + date + SMC)
+
 
 
 ###############################################################-
@@ -111,7 +112,12 @@ if(filterData){
    fileNamePrefix=filterPrefix
 }
 
-dds<-DESeq(dds)
+#dds<-DESeq(dds)
+dds <- estimateSizeFactors(dds)
+dds <- estimateDispersions(dds)
+dds <- nbinomWaldTest(dds, maxit=1000)
+#colMeans(coef(dds))
+
 
 saveRDS(dds,file=paste0(outPath,"/rds/dds_object.rds"))
 
@@ -186,9 +192,9 @@ pheatmap(sampleDistMatrix,
 #########-
 select <- order(rowMeans(counts(dds,normalized=TRUE)),
                 decreasing=TRUE)[1:500]
-df <- as.data.frame(colData(dds)[,c("strain","replicate","lane")])
+df <- as.data.frame(colData(dds)[,c("strain","TIR1","auxin")])
 rownames(df)<-colData(dds)$sampleName
-pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 500 expressed genes - no clustering")
+#pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 500 expressed genes - no clustering")
 
 pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=TRUE, annotation_col=df, main="Top 500 expressed genes - clustered by columns")
 
@@ -201,10 +207,32 @@ p1<-plotPCA(vsd, intgroup=c("strain"))
 print(p1)
 p2<-plotPCA(vsd, intgroup=c("replicate"))
 print(p2)
+p2a<-plotPCA(vsd, intgroup=c("date"))
+print(p2a)
 p3<-plotPCA(vsd, intgroup=c("lane"))
 print(p3)
-p4<-plotPCA(vsd, intgroup=c("strain", "replicate"))
+p5<-plotPCA(vsd, intgroup=c("dpy26"))
+print(p5)
+p6<-plotPCA(vsd, intgroup=c("auxin"))
+print(p6)
+p7<-plotPCA(vsd, intgroup=c("TIR1"))
+print(p7)
+p8<-plotPCA(vsd, intgroup=c("sdc3"))
+print(p8)
+p4<-plotPCA(vsd, intgroup=c("strain", "date"))
 print(p4)
+p4a<-plotPCA(vsd, intgroup=c("strain", "auxin"))
+print(p4a)
+p7a<-plotPCA(vsd, intgroup=c("TIR1","auxin"))
+print(p7a)
+p9<-plotPCA(vsd, intgroup=c("sdc3","auxin"))
+print(p9)
+p9a<-plotPCA(vsd, intgroup=c("sdc3","TIR1"))
+print(p9a)
+p10a<-plotPCA(vsd, intgroup=c("sdc3deg"))
+print(p10a)
+p10<-plotPCA(vsd, intgroup=c("SMC"))
+print(p10)
 dev.off()
 
 
@@ -249,15 +277,61 @@ for (grp in c(controlGrp,groupsOI)){
 
 #res=list()
 #resLFC=list()
+# advanced contrast matrix usage. see:
+# https://github.com/tavareshugo/tutorial_DESeq2_contrasts/blob/main/DESeq2_contrasts.md
 
 
-for(grp in groupsOI){
+head(model.matrix(design(dds),colData(dds)))
+resultsNames(dds)
+colMeans(coef(dds))
+contrastsOI<-list("SMC_wt.wt.wt.1mM_vs_wt.wt.wt.0mM",
+                  "SMC_wt.TIR1.wt.1mM_vs_wt.wt.wt.0mM",
+                  "SMC_wt.TIR1.sdc3deg.0mM_vs_wt.wt.wt.0mM",
+                  "SMC_wt.TIR1.sdc3deg.1mM_vs_wt.wt.wt.0mM",
+                  "SMC_dpy26cs.wt.wt.0mM_vs_wt.wt.wt.0mM",
+                  "SMC_dpy26cs.TIR1.sdc3deg.1mM_vs_wt.wt.wt.0mM")
 
+names(contrastsOI)<-contrastsOI
+# get the model matrix
+mod_mat <- model.matrix(design(dds), colData(dds))
+
+# remove control variables from model matrix
+mod_mat[,c("(Intercept)","replicate2","replicate3","replicate4","laneL2",
+           "date20210421", "date20210628" )]<-0
+
+wt_wt_wt_0mM<-colMeans(mod_mat[dds$SMC == "wt.wt.wt.0mM", ])
+wt_wt_wt_1mM<-colMeans(mod_mat[dds$SMC == "wt.wt.wt.1mM", ])
+wt_TIR1_wt_1mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.wt.1mM", ])
+wt_TIR1_sdc3deg_0mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.sdc3deg.0mM", ])
+wt_TIR1_sdc3deg_1mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.sdc3deg.1mM", ])
+dpy26cs_wt_wt_0mM<-colMeans(mod_mat[dds$SMC == "dpy26cs.wt.wt.0mM", ])
+dpy26cs_TIR1_sdc3deg_1mM<-colMeans(mod_mat[dds$SMC == "dpy26cs.TIR1.sdc3deg.1mM", ])
+#sdc3sdc3deg.dpy26dpy26cs<-colMeans(mod_mat[dds$sdc3 == "sdc3deg" & dds$dpy26== "dpy26cs", ])
+
+contrastsOI[["wt.wt.wt.X_1mM_vs_0mM"]]<-wt_wt_wt_1mM
+contrastsOI[["wt.TIR1.sdc3deg.X_1mM_vs_0mM"]]<-wt_TIR1_sdc3deg_1mM - wt_TIR1_sdc3deg_0mM
+contrastsOI[["wt.X.wt.1mM_TIR1_vs_wt"]]<-wt_TIR1_wt_1mM - wt_wt_wt_1mM
+contrastsOI[["wt.X.wt.X_TIR11mM_vs_wt0mM"]]<-wt_TIR1_wt_1mM - wt_wt_wt_0mM
+contrastsOI[["wt.TIR1.X.1mM_sdc3deg_vs_wt"]]<-wt_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM
+contrastsOI[["X.wt.wt.0mM_dpy26cs_vs_wt"]]<-dpy26cs_wt_wt_0mM - wt_wt_wt_0mM
+contrastsOI[["X.TIR1.sdc3deg.1mM_dpy26cs_vs_wt"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_sdc3deg_1mM
+#contrastsOI[["dpy26cs.X.X.X_TIR1sdc3deg1mM_vs_wtwt0mM_a"]]<-dpy26cs_TIR1_sdc3deg_1mM - dpy26cs_wt_wt_0mM
+contrastsOI[["dpy26cs.X.X.X_TIR1sdc3deg1mM_vs_wtwt0mM"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM - dpy26cs_wt_wt_0mM
+contrastsOI[["X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM
+
+#res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=padjVal)
+#res<-results(dds,contrast=list("auxin_1mM_vs_0mM"))
+grp="X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt"
+#grp="wt.X.wt.X_TIR11mM_vs_wt0mM"
+for(grp in names(contrastsOI)){
    ###############-
    # filter at the predetermined lfcVal -------
    # #############-
-
-   res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=padjVal)
+   if(is.character(contrastsOI[[grp]])){
+      res<-results(dds,contrast=list(grp),alpha=padjVal)
+   } else {
+      res<-results(dds,contrast=contrastsOI[[grp]],alpha=padjVal)
+   }
 
    pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,"_independentFilter_",
                    padjVal,".pdf"), width=8, height=8, paper="a4")
@@ -271,7 +345,14 @@ for(grp in groupsOI){
    dev.off()
    # shrink LFC estimates
    #resultsNames(dds) # to get names of coefficients
-   resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
+
+   if(is.character(contrastsOI[[grp]])){
+      resLFC<-lfcShrink(dds,type="ashr",res=res)
+   } else {
+      resLFC<-lfcShrink(dds,type="ashr",res=res)
+   }
+
+   #resLFC<-lfcShrink(dds,coef=grp, type="apeglm", res=res)
    class(resLFC)
    ### add metadata
    resLFC$wormbaseID<-rownames(resLFC)
@@ -504,7 +585,7 @@ for(grp in groupsOI){
    geneCounts<-table(chrType)
 
    boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-           main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
+           main=paste0("Expression changes ", grp), col="grey", ylab="Log2 Fold Change",
            xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
    abline(h=0,lty=2,col="blue")
@@ -521,7 +602,7 @@ for(grp in groupsOI){
    geneCounts<-table(chrName)
 
    boxplot(log2FoldChange~chrName,data=resLFC,varwidth=TRUE,outline=FALSE,notch=TRUE,
-           main=paste0("Expression changes after cleavage of ", grp), ylab="log2 Fold Change",
+           main=paste0("Expression changes ", grp), ylab="log2 Fold Change",
            col=c(rep("grey",5),"purple"),xlab="chromosome (number of genes)",
            names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
@@ -553,14 +634,15 @@ for(grp in groupsOI){
                    selectLab=rownames(resLFC)[12366],
                    xlim=c(-5.5,5.5),
                    ylim=c(0,65),
-                   title= paste0(grp," vs ", controlGrp),
+                   title= grp,
+                   titleLabSize = 16,
                    subtitle=NULL,
                    caption = paste0(sum(!is.na(resLFC$padj)), ' total genes. ',sigUp,
                                     " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
                    FCcutoff=lfcVal,
-                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   xlab=bquote(~Log[2]~'FC'~.(grp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    #.legend=c('NS','P & Log2 FC'),
                    #legendLabels=c('NS', expression(p-value<padjVal~and~log[2]~FC>1)),
@@ -614,13 +696,14 @@ for(grp in groupsOI){
                    selectLab=rownames(resByChr)[12366],
                    xlim=c(-5.5,5.5),
                    ylim=c(0,65),
-                   title= paste0(grp," vs ",controlGrp),
+                   title= grp,
+                   titleLabSize = 16,
                    subtitle=NULL,
-                   caption = paste0(sum(!is.na(resLFC$padf)), ' tested genes. ',sigUp, " up, ",sigDown," down."),
+                   caption = paste0(sum(!is.na(resLFC$padj)), ' tested genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
                    FCcutoff=lfcVal,
-                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   xlab=bquote(~Log[2]~'FC'~.(grp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    legendPosition = 'top',
                    legendLabSize = 12,
@@ -652,13 +735,14 @@ for(grp in groupsOI){
                           selectLab=rownames(resByChr)[12366],
                           xlim=c(-5.5,5.5),
                           ylim=c(0,65),
-                          title= paste0(grp," vs ",controlGrp,": chrX genes"),
+                          title= paste0(grp,": chrX genes"),
+                          titleLabSize = 16,
                           subtitle=NULL,
                           caption = paste0(sum(idx), ' total genes. ',sigUp, " up, ",sigDown," down."),
                           captionLabSize = 12,
                           pCutoff=padjVal,
                           FCcutoff=lfcVal,
-                          xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                          xlab=bquote(~Log[2]~'FC'~.(grp)),
                           ylab=bquote(~-Log[10]~adjusted~italic(P)),
                           legendPosition = 'top',
                           legendLabSize = 12,
@@ -692,13 +776,14 @@ for(grp in groupsOI){
                    selectLab=rownames(resByChr)[12366],
                    xlim=c(-5.5,5.5),
                    ylim=c(0,65),
-                   title= paste0(grp," vs ",controlGrp,": autosomal genes"),
+                   title= paste0(grp,": autosomal genes"),
+                   titleLabSize = 16,
                    subtitle=NULL,
                    caption = paste0(sum(idx), ' total genes. ',sigUp, " up, ",sigDown," down."),
                    captionLabSize = 12,
                    pCutoff=padjVal,
                    FCcutoff=lfcVal,
-                   xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                   xlab=bquote(~Log[2]~'FC'~.(grp)),
                    ylab=bquote(~-Log[10]~adjusted~italic(P)),
                    legendPosition = 'top',
                    legendLabSize = 12,
@@ -809,13 +894,13 @@ for(grp in groupsOI){
                        selectLab=salmon$publicID[12366],
                        xlim=c(-5.5,5.5),
                        ylim=c(0,65),
-                       title= paste0(grp," vs ", controlGrp),
+                       title= grp,
                        subtitle=NULL,
                        caption = paste0(sum(keyvals!=bkgrnd), ' oscillating genes. ',sigUp, " up, ",sigDown," down."),
                        captionLabSize = 12,
                        pCutoff=padjVal,
                        FCcutoff=lfcVal,
-                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                       xlab=bquote(~Log[2]~'fold change'~.(grp)),
                        ylab=bquote(~-Log[10]~adjusted~italic(P)),
                        #.legend=c('NS','P & Log2 FC'),
                        #legendLabels=c('NS', expression(p-value<padjVal~and~log[2]~FC>1)),
@@ -865,13 +950,13 @@ for(grp in groupsOI){
                        selectLab=salmon$publicID[12366],
                        xlim=c(-5.5,5.5),
                        ylim=c(0,65),
-                       title= paste0(grp," vs ", controlGrp),
+                       title= grp,
                        subtitle=NULL,
                        caption = paste0(sum(keyvals==myCols[2]), ' heatshock genes (Garrigues 2019). ',sigUp, " up, ",sigDown," down."),
                        captionLabSize = 12,
                        pCutoff=padjVal,
                        FCcutoff=lfcVal,
-                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                       xlab=bquote(~Log[2]~'fold change'~.(grp)),
                        ylab=bquote(~-Log[10]~adjusted~italic(P)),
                        #.legend=c('NS','P & Log2 FC'),
                        #legendLabels=c('NS', expression(p-value<padjVal~and~log[2]~FC>1)),
@@ -923,13 +1008,13 @@ for(grp in groupsOI){
                        lengthConnectors = unit(0.01,'snpc'),
                        xlim=c(-5.5,5.5),
                        ylim=c(0,65),
-                       title= paste0(grp," vs ", controlGrp),
+                       title= grp,
                        subtitle=NULL,
                        caption = paste0(sum(keyvals!="black"), ' amplicon genes: ',sigUp, " up, ",sigDown," down."),
                        captionLabSize = 12,
                        pCutoff=padjVal,
                        FCcutoff=lfcVal,
-                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
+                       xlab=bquote(~Log[2]~'fold change'~.(grp)),
                        ylab=bquote(~-Log[10]~adjusted~italic(P)),
                        legendPosition = 'top',
                        legendLabSize = 12,
@@ -977,7 +1062,7 @@ for(grp in groupsOI) {
    ####### plot percentSignificant
    p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
       facet_grid(rows=vars(direction),cols=vars(chr))+
-      ggtitle(paste0(grp))+geom_bar(stat="identity")+
+      ggtitle(grp)+geom_bar(stat="identity")+
       xlab("log2 fold change threshold")+ylab("Percent significant genes") +
       geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
                 vjust=0,size=3,lineheight=0.9)+
@@ -989,7 +1074,7 @@ for(grp in groupsOI) {
 
    p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
       facet_grid(rows=vars(direction),cols=vars(chr))+
-      ggtitle(paste0(grp))+geom_bar(stat="identity")+
+      ggtitle(grp)+geom_bar(stat="identity")+
       xlab("log2 fold change threshold")+ylab("Percent significant genes") +
       geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSigGt10)),
                 vjust=0,size=3,lineheight=0.9)+
