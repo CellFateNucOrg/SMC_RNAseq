@@ -31,9 +31,9 @@ if(filterData){
 }
 
 
-for (grp in groupsOI){
+for (grp in useContrasts){
   #grp="dpy26cs"
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
     # remove filtered genes
@@ -49,7 +49,7 @@ for (grp in groupsOI){
 
 
   germsoma<-list(salmon=salmonSig$wormbaseID, germline=reinke$wormbaseID)
-  names(germsoma)<-c(prettyGeneName(grp),"germline")
+  names(germsoma)<-c(grp,"germline")
 
   pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
                   "VsGermline_padj", padjVal, "_lfc", lfcVal,".pdf"),
@@ -66,7 +66,7 @@ for (grp in groupsOI){
   germsoma<-list(salmon=salmonSig$wormbaseID,
           germlineL4=boeck$wormbaseID[boeck$germline=="germlineL4"],
           somaL4=boeck$wormbaseID[boeck$germline=="somaL4"])
-  names(germsoma)<-c(prettyGeneName(grp),"germlineL4","somaL4")
+  names(germsoma)<-c(grp,"germlineL4","somaL4")
   txtLabels<-list()
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[2])]<-round(100*length(intersect(germsoma[[1]],germsoma[[2]]))/length(germsoma[[1]]),1)
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[3])]<-round(100*length(intersect(germsoma[[1]],germsoma[[3]]))/length(germsoma[[1]]),1)
@@ -82,7 +82,7 @@ for (grp in groupsOI){
   germsoma<-list(salmon=salmonSig$wormbaseID,
           gonadYA=boeck$wormbaseID[boeck$germline=="gonadYA"],
           somaYA=boeck$wormbaseID[boeck$germline=="somaYA"])
-  names(germsoma)<-c(prettyGeneName(grp),"gonadYA","somaYA")
+  names(germsoma)<-c(grp,"gonadYA","somaYA")
   txtLabels<-list()
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[2])]<-round(100*length(intersect(germsoma[[1]],germsoma[[2]]))/length(germsoma[[1]]),1)
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[3])]<-round(100*length(intersect(germsoma[[1]],germsoma[[3]]))/length(germsoma[[1]]),1)
@@ -108,10 +108,10 @@ for (grp in groupsOI){
 
 ## upregulated genes -----
 sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+  sigTables[[grp]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
@@ -175,11 +175,11 @@ if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
 
 ## downregulated genes-----
 sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+  sigTables[[grp]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",

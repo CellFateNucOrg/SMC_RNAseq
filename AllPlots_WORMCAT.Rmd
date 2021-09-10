@@ -19,15 +19,15 @@ if(filterData){
 # Wormcat category 1 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat1, echo=F}
-for(grp in groupsOI){
-  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up/rgs_fisher_cat1_apv.svg")
+for(grp in names(contrastNames)){
+  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],"_up/rgs_fisher_cat1_apv.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp)
     plot(fig_svg)
     print("\n")
   }
   
-  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_down/rgs_fisher_cat1_apv.svg")
+  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],"_down/rgs_fisher_cat1_apv.svg")
   if(file.exists(grpPathDown)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathDown)
     plot(fig_svg)
@@ -40,8 +40,8 @@ for(grp in groupsOI){
 # Wormcat category 2 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat2, echo=F, eval=T}
-for(grp in groupsOI){
-  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+for(grp in names(contrastNames)){
+  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
                    "_up/rgs_fisher_cat2_apv.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp)
@@ -49,7 +49,7 @@ for(grp in groupsOI){
     print("\n")
   }
   
-  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
                      "_down/rgs_fisher_cat2_apv.svg")
   if(file.exists(grpPathDown)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathDown)
@@ -62,8 +62,8 @@ for(grp in groupsOI){
 # Wormcat category 3 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat3, echo=F, eval=T}
-for(grp in groupsOI){
-  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+for(grp in names(contrastNames)){
+  grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
                    "_up/rgs_fisher_cat3_apv.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp)
@@ -71,7 +71,7 @@ for(grp in groupsOI){
     print("\n")
   }
   
-  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
+  grpPathDown=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
                      "_down/rgs_fisher_cat3_apv.svg")
   if(file.exists(grpPathDown)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathDown)

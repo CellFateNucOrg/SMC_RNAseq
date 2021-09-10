@@ -18,8 +18,8 @@ if(filterData){
 # Make combined table ----------------------------------------------
 ######################-
 geneTable<-NULL
-for (grp in groupsOI){
-  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, grp,
+for (grp in names(contrastNames)){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                                        "_DESeq2_fullResults_p",padjVal,".rds")))
   colnames(salmon)[colnames(salmon)=="baseMean"]<-paste0(grp,"_baseMean")
   colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
@@ -90,7 +90,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",fileNamePrefix,"cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 
@@ -142,7 +142,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",fileNamePrefix,"checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
 
 
 
@@ -195,7 +195,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_smc.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",fileNamePrefix,"smc.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 

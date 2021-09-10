@@ -70,7 +70,7 @@ txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene)
 # read samples into DESeq2
 dds <- DESeqDataSetFromTximport(txi=txi,
                                 colData=sampleTable,
-                          design = ~replicate + lane + date + SMC)
+                          design = formula(modelTxt))
 
 
 
@@ -116,8 +116,10 @@ if(filterData){
 dds <- estimateSizeFactors(dds)
 dds <- estimateDispersions(dds)
 dds <- nbinomWaldTest(dds, maxit=1000)
-#colMeans(coef(dds))
 
+# head(model.matrix(design(dds),colData(dds)))
+# resultsNames(dds)
+colMeans(coef(dds))
 
 saveRDS(dds,file=paste0(outPath,"/rds/dds_object.rds"))
 
@@ -170,7 +172,8 @@ legend("topright", legend=colData(dds)$sampleName, col=as.factor(colData(dds)$sa
 # dispersion estimates ----------------------------------------------------
 #########-
 plotDispEsts(dds)
-
+#explanation of this graph.
+#https://github.com/hbctraining/DGE_workshop/blob/master/lessons/04_DGE_DESeq2_analysis.md
 
 #########-
 # sample to sample heatmap ------------------------------------------------
@@ -203,36 +206,17 @@ pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_co
 ###########-
 # pca ---------------------------------------------------------------------
 ###########-
-p1<-plotPCA(vsd, intgroup=c("strain"))
-print(p1)
-p2<-plotPCA(vsd, intgroup=c("replicate"))
-print(p2)
-p2a<-plotPCA(vsd, intgroup=c("date"))
-print(p2a)
-p3<-plotPCA(vsd, intgroup=c("lane"))
-print(p3)
-p5<-plotPCA(vsd, intgroup=c("dpy26"))
-print(p5)
-p6<-plotPCA(vsd, intgroup=c("auxin"))
-print(p6)
-p7<-plotPCA(vsd, intgroup=c("TIR1"))
-print(p7)
-p8<-plotPCA(vsd, intgroup=c("sdc3"))
-print(p8)
-p4<-plotPCA(vsd, intgroup=c("strain", "date"))
-print(p4)
-p4a<-plotPCA(vsd, intgroup=c("strain", "auxin"))
-print(p4a)
-p7a<-plotPCA(vsd, intgroup=c("TIR1","auxin"))
-print(p7a)
-p9<-plotPCA(vsd, intgroup=c("sdc3","auxin"))
-print(p9)
-p9a<-plotPCA(vsd, intgroup=c("sdc3","TIR1"))
-print(p9a)
-p10a<-plotPCA(vsd, intgroup=c("sdc3deg"))
-print(p10a)
-p10<-plotPCA(vsd, intgroup=c("SMC"))
-print(p10)
+# get variables about data (ignore file and sample names)
+colourByVar<-colnames(sampleTable)[grep("fileName|sampleName",colnames(sampleTable),invert=T)]
+numPages<-length(colourByVar)/2
+close
+plotlist<-list()
+for(varToUse in colourByVar){
+   p1<-plotPCA(vsd, intgroup=c(varToUse),ntop=1000)+ggtitle(varToUse)
+   plotlist[[varToUse]]<-p1
+}
+p<-ggarrange(plotlist=plotlist,ncol=1,nrow=3)
+print(p)
 dev.off()
 
 
@@ -263,7 +247,7 @@ for (grp in c(controlGrp,groupsOI)){
       png(file=paste0(outPath,"/plots/",fileNamePrefix, grp, "_correlations.png"),
        width=8,height=8,units="in",res=150)
    }
-   idx<-colData(dds)$SMC %in% c(grp)
+   idx<-colData(dds)[,varOI] %in% c(grp)
    pairs(df[,idx], panel=plotFun, lower.panel=corFun, labels=colnames(df)[idx], main=grp)
    dev.off()
 }
@@ -272,68 +256,19 @@ for (grp in c(controlGrp,groupsOI)){
 ##############################################################-
 # Significant genes -------------------------------------------------------
 ##############################################################-
-
-
-
 #res=list()
 #resLFC=list()
-# advanced contrast matrix usage. see:
-# https://github.com/tavareshugo/tutorial_DESeq2_contrasts/blob/main/DESeq2_contrasts.md
-
-
-head(model.matrix(design(dds),colData(dds)))
-resultsNames(dds)
-colMeans(coef(dds))
-contrastsOI<-list("SMC_wt.wt.wt.1mM_vs_wt.wt.wt.0mM",
-                  "SMC_wt.TIR1.wt.1mM_vs_wt.wt.wt.0mM",
-                  "SMC_wt.TIR1.sdc3deg.0mM_vs_wt.wt.wt.0mM",
-                  "SMC_wt.TIR1.sdc3deg.1mM_vs_wt.wt.wt.0mM",
-                  "SMC_dpy26cs.wt.wt.0mM_vs_wt.wt.wt.0mM",
-                  "SMC_dpy26cs.TIR1.sdc3deg.1mM_vs_wt.wt.wt.0mM")
-
-names(contrastsOI)<-contrastsOI
-# get the model matrix
-mod_mat <- model.matrix(design(dds), colData(dds))
-
-# remove control variables from model matrix
-mod_mat[,c("(Intercept)","replicate2","replicate3","replicate4","laneL2",
-           "date20210421", "date20210628" )]<-0
-
-wt_wt_wt_0mM<-colMeans(mod_mat[dds$SMC == "wt.wt.wt.0mM", ])
-wt_wt_wt_1mM<-colMeans(mod_mat[dds$SMC == "wt.wt.wt.1mM", ])
-wt_TIR1_wt_1mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.wt.1mM", ])
-wt_TIR1_sdc3deg_0mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.sdc3deg.0mM", ])
-wt_TIR1_sdc3deg_1mM<-colMeans(mod_mat[dds$SMC == "wt.TIR1.sdc3deg.1mM", ])
-dpy26cs_wt_wt_0mM<-colMeans(mod_mat[dds$SMC == "dpy26cs.wt.wt.0mM", ])
-dpy26cs_TIR1_sdc3deg_1mM<-colMeans(mod_mat[dds$SMC == "dpy26cs.TIR1.sdc3deg.1mM", ])
-#sdc3sdc3deg.dpy26dpy26cs<-colMeans(mod_mat[dds$sdc3 == "sdc3deg" & dds$dpy26== "dpy26cs", ])
-
-contrastsOI[["wt.wt.wt.X_1mM_vs_0mM"]]<-wt_wt_wt_1mM
-contrastsOI[["wt.TIR1.sdc3deg.X_1mM_vs_0mM"]]<-wt_TIR1_sdc3deg_1mM - wt_TIR1_sdc3deg_0mM
-contrastsOI[["wt.X.wt.1mM_TIR1_vs_wt"]]<-wt_TIR1_wt_1mM - wt_wt_wt_1mM
-contrastsOI[["wt.X.wt.X_TIR11mM_vs_wt0mM"]]<-wt_TIR1_wt_1mM - wt_wt_wt_0mM
-contrastsOI[["wt.TIR1.X.1mM_sdc3deg_vs_wt"]]<-wt_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM
-contrastsOI[["X.wt.wt.0mM_dpy26cs_vs_wt"]]<-dpy26cs_wt_wt_0mM - wt_wt_wt_0mM
-contrastsOI[["X.TIR1.sdc3deg.1mM_dpy26cs_vs_wt"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_sdc3deg_1mM
-#contrastsOI[["dpy26cs.X.X.X_TIR1sdc3deg1mM_vs_wtwt0mM_a"]]<-dpy26cs_TIR1_sdc3deg_1mM - dpy26cs_wt_wt_0mM
-contrastsOI[["dpy26cs.X.X.X_TIR1sdc3deg1mM_vs_wtwt0mM"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM - dpy26cs_wt_wt_0mM
-contrastsOI[["X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt"]]<-dpy26cs_TIR1_sdc3deg_1mM - wt_TIR1_wt_1mM
-
-#res<-results(dds,contrast=c("SMC",grp,controlGrp),alpha=padjVal)
-#res<-results(dds,contrast=list("auxin_1mM_vs_0mM"))
-grp="X.TIR1.X.1mM_dpy26cssdc3deg_vs_wtwt"
-#grp="wt.X.wt.X_TIR11mM_vs_wt0mM"
-for(grp in names(contrastsOI)){
+for(grp in names(contrastNames)){
    ###############-
    # filter at the predetermined lfcVal -------
    # #############-
-   if(is.character(contrastsOI[[grp]])){
-      res<-results(dds,contrast=list(grp),alpha=padjVal)
+   if(is.character(contrastsOI[[contrastNames[[grp]]]])){
+      res<-results(dds,contrast=list(contrastNames[[grp]]),alpha=padjVal)
    } else {
-      res<-results(dds,contrast=contrastsOI[[grp]],alpha=padjVal)
+      res<-results(dds,contrast=contrastsOI[[contrastNames[[grp]]]],alpha=padjVal)
    }
 
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,"_independentFilter_",
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,contrastNames[[grp]],"_independentFilter_",
                    padjVal,".pdf"), width=8, height=8, paper="a4")
    plot(metadata(res)$filterNumRej,
         type="b", ylab="number of rejections",
@@ -346,7 +281,7 @@ for(grp in names(contrastsOI)){
    # shrink LFC estimates
    #resultsNames(dds) # to get names of coefficients
 
-   if(is.character(contrastsOI[[grp]])){
+   if(is.character(contrastsOI[[contrastNames[[grp]]]])){
       resLFC<-lfcShrink(dds,type="ashr",res=res)
    } else {
       resLFC<-lfcShrink(dds,type="ashr",res=res)
@@ -366,12 +301,12 @@ for(grp in names(contrastsOI)){
    resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
 
 
-   saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, grp,
+   saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                               "_DESeq2_fullResults_p",padjVal,".rds"))
 
    #export csv with ordered results
    write.csv(resLFC[order(resLFC$padj),],
-             file=paste0(outPath,"/txt/", fileNamePrefix,grp,
+             file=paste0(outPath,"/txt/", fileNamePrefix,contrastNames[[grp]],
                          "_DESeq2_resultsTable_p",padjVal,".csv"),
              quote=F,row.names=F)
 
@@ -381,7 +316,7 @@ for(grp in names(contrastsOI)){
    resLFC<-resLFC[!idx,]
 
 
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,contrastNames[[grp]],
                    "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
 
 
@@ -419,15 +354,15 @@ for(grp in names(contrastsOI)){
    # plot individual genes ---------------------------------------------------
    ##########-
 
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,contrastNames[[grp]],
                    "_topGenes_normCounts.pdf"), width=8,height=11,paper="a4")
    par(mfrow=c(5,2))
    selectedGenes <- rownames(resLFC)[order(resLFC$padj)][1:20]
    for (g in selectedGenes) {
       barplot(counts(dds, normalized=TRUE)[g,],
-              col=colData(dds)$SMC,
+              col=colData(dds)[,varOI],
               main=g, las=2, cex.names=1,names.arg=colData(dds)$sampleName)
-      legend("topleft",legend=levels(colData(dds)$SMC),fill=c(1,2), cex=0.7)
+      legend("topleft",legend=levels(colData(dds)[,varOI]),fill=c(1,2), cex=0.7)
    }
    dev.off()
 
@@ -451,7 +386,7 @@ for(grp in names(contrastsOI)){
    mcols(forBG)<-mcols(forBG)[,c("wormbaseID","score")]
    colnames(mcols(forBG))<-c("name","score")
    seqinfo(forBG)<-ce11seqinfo
-   export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+   export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,contrastNames[[grp]],
                         "_wt_lfc.bedGraph"),
           format="bedGraph")
 
@@ -462,7 +397,7 @@ for(grp in names(contrastsOI)){
    oldf$scorePerQuery<-width(forBW)[oldf$queryHits]*oldf$scorePerSubBp
    score<-oldf %>% group_by(queryHits) %>% summarise(score=mean(scorePerQuery))
    forBW$score<-score$score
-   export(forBW,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+   export(forBW,paste0(outPath,"/tracks/",fileNamePrefix,contrastNames[[grp]],
                        "_wt_lfc.bw"),
           format="bigwig")
 
@@ -477,12 +412,12 @@ for(grp in names(contrastsOI)){
    seqinfo(forBed)<-ce11seqinfo
    #NaIdx<-is.na(forBed$score)
    #forBed$score[NaIdx]<-0
-   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,contrastNames[[grp]],
                         "_wt_lfc_p",gsub("^0.","",padjVal),".bedGraph"),
           format="bedGraph")
 
 
-   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
+   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,contrastNames[[grp]],
                         "_wt_lfc_p",gsub("^0.","",padjVal),".bed"),
           format="bed")
 
@@ -495,7 +430,7 @@ for(grp in names(contrastsOI)){
    # MAplot ALL genes
    ############-
 
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,contrastNames[[grp]],
                    "_MAplots_results.pdf"), width=5,height=5,paper="a4")
 
 
@@ -515,7 +450,7 @@ for(grp in names(contrastsOI)){
    if(length(chrXgenes)>0) {
       upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
       write.table(rownames(upOnX), file=paste0(outPath,"/txt/",
-                                               fileNamePrefix, grp,
+                                               fileNamePrefix, contrastNames[[grp]],
                                             "_upOnX_p",padjVal,".csv"),
                row.names=FALSE,col.names=FALSE)
 
@@ -544,7 +479,7 @@ for(grp in names(contrastsOI)){
    # Fisher test of number of up and down genes on X v autosomes
    #############-
 
-   sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+   sink(file=paste0(outPath,"/txt/",fileNamePrefix,contrastNames[[grp]],
                     "_logfile.txt"),append=TRUE, type="output")
    upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
                              sum(chrXres05$log2FoldChange<0),
@@ -576,7 +511,7 @@ for(grp in names(contrastsOI)){
    #############-
    # Box plot by X v autosomes
    #############-
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                    "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
 
    idx<-resLFC$log2FoldChange!=0
@@ -596,7 +531,7 @@ for(grp in names(contrastsOI)){
    #############-
    # Box plot by chromosome
    #############-
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                    "_boxPlots_expnByChr.pdf"), width=8,height=5,paper="a4")
    chrName<-factor(resLFC$chr)
    geneCounts<-table(chrName)
@@ -656,11 +591,11 @@ for(grp in names(contrastsOI)){
                    pointSize = 1.0)
    #dev.off()
    if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_allGenes.pdf"), plot=p1,
              device="pdf",path=outPath, width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                           "_volcanoPlot_allGenes.png"), plot=p1,
           device="png",path=outPath, width=12,height=12,units="cm")
    }
@@ -684,7 +619,7 @@ for(grp in names(contrastsOI)){
    #names(keyvals)[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'NS'
 
 
-   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
    #                "_volcanoPlot_expnByChr.pdf"), width=8,height=6,paper="a4")
    sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>lfcVal)
    sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -lfcVal)
@@ -714,18 +649,18 @@ for(grp in names(contrastsOI)){
                    pointSize = 1.0)
    #dev.off()
    if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_autVchrX.pdf"), plot=p2,
              device="pdf",path=outPath,width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                           "_volcanoPlot_autVchrX.png"), plot=p2,
           device="png",path=outPath,width=12,height=12,units="cm")
    }
 
    if(length(chrXgenes)>0) {
       idx<-resByChr$chr=="chrX"
-      #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
       #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
       sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
       sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
@@ -753,18 +688,18 @@ for(grp in names(contrastsOI)){
                           pointSize=1.0)
       #dev.off()
       if(plotPDFs==T){
-         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                                 "_volcanoPlot_chrX.pdf"), plot=p3,
                 device="pdf",path=outPath,width=12,height=12,units="cm")
       } else {
-         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+         ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                                 "_volcanoPlot_chrX.png"), plot=p3,
                 device="png",path=outPath,width=12,height=12,units="cm")
       }
    }
 
    idx<-resByChr$chr!="chrX"
-   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
    #                "_volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
    sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
    sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
@@ -794,11 +729,11 @@ for(grp in names(contrastsOI)){
                    pointSize=1.0)
    #dev.off()
    if (plotPDFs==T) {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_autosomes.pdf"), plot=p4,
              device="pdf",path=outPath,width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                       "_volcanoPlot_autosomes.png"), plot=p4,
           device="png",path=outPath,width=12,height=12,units="cm")
    }
@@ -815,7 +750,7 @@ for(grp in names(contrastsOI)){
    }
 
 
-   sink(file=paste0(outPath,"/txt/", fileNamePrefix, grp,
+   sink(file=paste0(outPath,"/txt/", fileNamePrefix, contrastNames[[grp]],
                     "_logfile.txt"),append=TRUE, type="output")
    cat("Summary by Chr: \n")
    cat("\np=0.05, LFC=0: \n")
@@ -835,14 +770,15 @@ for(grp in names(contrastsOI)){
    sink()
 
    if(length(chrXgenes)>0) {
-      salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+      salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                             "_DESeq2_fullResults_p",padjVal,".rds"))
       salmondc<-filterResults(salmon,padj=padjVal,lfc=lfcVal,"gt","chrX", writeTable=F)
       salmondcgr<-metadata[metadata$wormbaseID %in% salmondc$wormbaseID]
       mcols(salmondcgr)<-cbind(mcols(salmondcgr),
                                salmondc[match(salmondcgr$wormbaseID,
                                               salmondc$wormbaseID),c(1:3)])
       salmondcgr
-      saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
+      saveRDS(salmondcgr,file=paste0(outPath,"/rds/",fileNamePrefix, contrastNames[[grp]],
                                      "_chrXup_lfc", lfcVal,"_p",
                                      padjVal, "_gr.rds"))
    }
@@ -852,8 +788,8 @@ for(grp in names(contrastsOI)){
 
 # Volcano - colour by other datasets --------------------------------------
 
-oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"),header=T,
-                        stringsAsFactors=F)
+oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"),
+                        header=T, stringsAsFactors=F)
 latorre<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv")) #3235
 hsUp<-readRDS(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 hsDown<-readRDS(paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
@@ -863,8 +799,9 @@ amplicons<-readRDS(paste0(outPath,"/otherData/ampliconMaxTSSgr.RDS"))
 
 #grp=groupsOI[3]
 
-for(grp in groupsOI){
-   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in names(contrastNames)){
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                          "_DESeq2_fullResults_p",padjVal,".rds"))
 
    #### oscillating genes
    bkgrnd='#99999966'
@@ -914,17 +851,18 @@ for(grp in groupsOI){
                        pointSize = 1.0)
    #dev.off()
    if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_oscillatingGenes.pdf"), plot=p1,
              device="pdf",path=outPath, width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_oscillatingGenes.png"), plot=p1,
              device="png",path=outPath, width=12,height=12,units="cm")
    }
 
 
-   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                          "_DESeq2_fullResults_p",padjVal,".rds"))
 
 
 
@@ -970,11 +908,11 @@ for(grp in groupsOI){
                        pointSize = 1.0)
    #dev.off()
    if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_hsGenes.pdf"), plot=p1,
              device="pdf",path=outPath, width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_hsGenes.png"), plot=p1,
              device="png",path=outPath, width=12,height=12,units="cm")
    }
@@ -1025,11 +963,11 @@ for(grp in groupsOI){
                        pointSize = 1.0)
 
    if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_ampliconGenes.pdf"), plot=p1,
              device="pdf",path=outPath, width=12,height=12,units="cm")
    } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                              "_volcanoPlot_ampliconGenes.png"), plot=p1,
              device="png",path=outPath, width=12,height=12,units="cm")
    }
@@ -1043,11 +981,11 @@ for(grp in groupsOI){
 
 #padjVals=c(0.05,0.99)
 lfcDensity<-NULL
-for(grp in groupsOI) {
+for(grp in names(contrastNames)) {
    #######-
    # vary filtering threshold ----------------------------------------
    #######-
-   resLFC<-readRDS(paste0(outPath,"/rds/", fileNamePrefix, grp,
+   resLFC<-readRDS(paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                           "_DESeq2_fullResults_p",padjVal,".rds"))
    ## Count significant genes at different thresholds and plot
    thresholds<-varyThreshold1(resLFC,
@@ -1056,7 +994,7 @@ for(grp in groupsOI) {
                              chr=c("all","chrX","autosomes"))
 
    thresholds<-thresholds[order(thresholds$group,thresholds$padj,thresholds$direction,thresholds$lfc),]
-   write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+   write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, contrastNames[[grp]],
                                     "_numSignificant_p",padjVal,".csv"),quote=F,row.names=F)
 
    ####### plot percentSignificant
@@ -1068,7 +1006,7 @@ for(grp in groupsOI) {
                 vjust=0,size=3,lineheight=0.9)+
       ylim(0,1.2*max(thresholds$percentSignificant))
 
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                           "_thresholds_percentSig_p",padjVal,".png"), plot=p1,
           device="png",path=outPath,width=14,height=12,units="cm")
 
@@ -1080,7 +1018,7 @@ for(grp in groupsOI) {
                 vjust=0,size=3,lineheight=0.9)+
       ylim(0,1.2*max(thresholds$percentSigGt10))
 
-   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                           "_thresholds_percentSigGt10_p",padjVal,".png"), plot=p2,
           device="png",path=outPath,width=14,height=12,units="cm")
 
@@ -1112,37 +1050,45 @@ for(grp in groupsOI) {
    dd$group<-paste0(grp,"_chrA")
    lfcDensity<-rbind(lfcDensity,dd)
 }
+
 lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
 lfcDensity$breaks<-factor(lfcDensity$breaks)
 
-p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals))+
-      geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +xlab("Absolute log2 fold change bins")+ylab("Density")
+densityGroups<-length(unique(lfcDensity$group))
+if(densityGroups>9){
+   lfcDensity<-lfcDensity[grep("_chr[A|X]",lfcDensity$group),]
+   densityGroups<-length(unique(lfcDensity$group))
+}
+
+p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) + facet_grid(rows=vars(group),cols=vars(pvals),switch = "y")+
+   geom_bar(stat="identity") +theme_classic()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+                                                     strip.text.y.left = element_text(angle = 0,hjust=0)) +
+   xlab("Absolute log2 fold change bins")+ylab("Density")
 
 
 p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
-      annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
-               hjust=0.1,color="red")
+   annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
+            hjust=0.1,color="red")
 
 p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
-      annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
-               hjust=-0.1,color="red")
+   annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
+            hjust=-0.1,color="red")
 
 if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                             "lfcValueDistribution_p",padjVal,"_0.5.pdf"), plot=p1,
-             device="pdf",path=outPath, width=15,height=25,units="cm")
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                             "lfcValueDistribution_p",padjVal,"_0.25.pdf"), plot=p2,
-             device="pdf",path=outPath, width=15,height=25,units="cm")
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                          "lfcValueDistribution_p",padjVal,"_0.5.pdf"), plot=p1,
+          device="pdf",path=outPath, width=19,height=29*densityGroups/18,units="cm")
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                          "lfcValueDistribution_p",padjVal,"_0.25.pdf"), plot=p2,
+          device="pdf",path=outPath, width=19,height=29*densityGroups/18,units="cm")
 } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                             "lfcValueDistribution_p",padjVal,"_0.5.png"), plot=p1,
-             device="png",path=outPath, width=15,height=25,units="cm")
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
-                             "lfcValueDistribution_p",padjVal,"_0.25.png"), plot=p2,
-             device="png",path=outPath, width=15,height=25,units="cm")
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                          "lfcValueDistribution_p",padjVal,"_0.5.png"), plot=p1,
+          device="png",path=outPath, width=19,height=29*densityGroups/18,units="cm")
+   ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                          "lfcValueDistribution_p",padjVal,"_0.25.png"), plot=p2,
+          device="png",path=outPath, width=19,height=29*densityGroups/18,units="cm")
 }
-
 
 
 
@@ -1155,16 +1101,17 @@ if(plotPDFs==T){
 sigTables<-list()
 localPadj=padjVal
 localLFC=0
-for (grp in groupsOI){
+for (grp in names(contrastNames)){
    print(grp)
-   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                          "_DESeq2_fullResults_p",padjVal,".rds"))
    salmon<-salmon[!is.na(salmon$padj),]
    #nrow(filterResults(salmon,padj=0.05,lfc=0.5,direction="lt",chr="autosomes"))
    print(paste0(nrow(salmon)," genes before filtering"))
    print(paste0(sum(is.na(salmon$log2FoldChange))," have log2FoldChange that is NA"))
    #salmon$expressed<-sum(salmon$baseMean>10)
-   sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
-   print(paste0(nrow(sigTables[[prettyGeneName(grp)]])," genes after automatic threshold filter"))
+   sigTables[[grp]]<-as.data.frame(salmon) #[salmon$baseMean>10,]
+   print(paste0(nrow(sigTables[[grp]])," genes after automatic threshold filter"))
 }
 
 SMC<-rep(names(sigTables),lapply(sigTables,nrow))
@@ -1246,16 +1193,17 @@ if(plotPDFs==T){
 sigTables<-list()
 localPadj=padjVal
 localLFC=0
-for (grp in groupsOI){
+for (grp in names(contrastNames)){
    print(grp)
-   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                          "_DESeq2_fullResults_p",padjVal,".rds"))
    salmon<-salmon[!is.na(salmon$padj),]
    #nrow(filterResults(salmon,padj=0.05,lfc=0.5,direction="lt",chr="autosomes"))
    print(paste0(nrow(salmon)," genes before filtering"))
    print(paste0(sum(is.na(salmon$log2FoldChange))," have log2FoldChange that is NA"))
    #salmon$expressed<-sum(salmon$baseMean>10)
-   sigTables[[prettyGeneName(grp)]]<-as.data.frame(salmon[salmon$baseMean>10,])
-   print(paste0(nrow(sigTables[[prettyGeneName(grp)]])," genes after >10 baseMean filter"))
+   sigTables[[grp]]<-as.data.frame(salmon[salmon$baseMean>10,])
+   print(paste0(nrow(sigTables[[grp]])," genes after >10 baseMean filter"))
 }
 
 SMC<-rep(names(sigTables),lapply(sigTables,nrow))
@@ -1288,7 +1236,7 @@ ss1<-sig %>% dplyr::group_by(SMC,XvA) %>% dplyr::mutate(expOnChr=n()) %>%
    dplyr::filter(padj<localPadj) %>%
    dplyr::mutate(sigOnChr=n())%>% dplyr::group_by(SMC,XvA,upVdown) %>%
    dplyr::mutate(sigInGrp=n(), ecd=ecdf(abs(log2FoldChange))(abs(log2FoldChange))) %>%
-   dplyr::summarise(expOnChr=unique(expOnChr),
+   dplyr::summarize(expOnChr=unique(expOnChr),
              sigOnChr=unique(sigOnChr),
              sigInGrp=unique(sigInGrp),
              qnt0=1-ecdf(abs(log2FoldChange))(c(0)),

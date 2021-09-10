@@ -44,9 +44,10 @@ pca2<-import.bw(paste0(outPath,"/otherData/N2_5000b_laminDamID_pca2.bw"))
 # abline(h=0)
 
 listgr<-NULL
-for (grp in groupsOI){
-  #grp=groupsOI[1]
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds")))
+for (grp in useContrasts){
+  #grp=useContrasts[1]
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                  contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
 
   salmon<-salmon[!is.na(salmon$chr),]
   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
@@ -54,20 +55,21 @@ for (grp in groupsOI){
   salmongr<-sort(salmongr)
 
   salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName="N2")
-  listgr[[prettyGeneName(grp)]]<-salmongr
+  listgr[[grp]]<-salmongr
 }
 
 
 # plot of counts of significantly changing genes in each compartment
 pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,"ABcomp_N2_geneCount_padj",
                        padjVal,"_lfc", lfcVal,".pdf")),
-    width=19, height=4, paper="a4r")
-par(mfrow=c(1,3))
+    width=12, height=9, paper="a4r")
+par(mfrow=c(2,2))
 # genes that change significantly
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=lfcVal,direction="both")
 
 compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"compartment"),table))
+bgCount<-do.call(rbind,lapply(lapply(lapply(listgr,as.data.frame), "[", ,"compartment"),table))
 
 yminmax=c(0,max(compartmentTable))
 xx<-barplot(t(compartmentTable),beside=T,col=c("grey80","grey20"),
@@ -76,9 +78,16 @@ xx<-barplot(t(compartmentTable),beside=T,col=c("grey80","grey20"),
 legend("top",legend = colnames(compartmentTable),fill=c("grey80","grey20"))
 text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.3,col="black")
 
+
+xx<-barplot(t(compartmentTable/bgCount),beside=T,col=c("grey80","grey20"),
+            main="Fraction changed genes by N2 compartment",cex.axis=1.2,
+            cex.names=1.5,ylim=c(0,0.3))
+legend("top",legend = colnames(compartmentTable),fill=c("grey80","grey20"))
+text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.3,col="black")
+
 # upregulated genes
 sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="gt")
+                padj=padjVal, lfc=lfcVal, direction="gt")
 
 compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"compartment"),table))
 colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
@@ -86,7 +95,7 @@ colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
 
 # downregulated genes
 sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=-lfcVal,direction="lt")
+                padj=padjVal, lfc= -lfcVal, direction="lt")
 
 compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"compartment"),table))
 colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
@@ -121,9 +130,18 @@ sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
 
 # count genes by category (chr & A/B)
 dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% group_by(seqnames,compartment) %>% tally()})
 # add name of SMC protein
 dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
+bgCount<-do.call(rbind, mapply(cbind,bgCount,"SMC"=names(bgCount),SIMPLIFY=F))
+
 dfl$seqnames<-gsub("chr","",dfl$seqnames)
+bgCount$seqnames<-gsub("chr","",bgCount$seqnames)
+
+# do left join to make sure dfl has all the categories required
+dfl<-left_join(bgCount,dfl,by=c("seqnames","compartment","SMC"),suffix=c("_total",""))
+dfl$n[is.na(dfl$n)]<-0
+
 ymax=max(dfl$n)
 p1<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
   geom_bar(stat="identity", position=position_dodge(),aes(fill=compartment)) +
@@ -131,6 +149,15 @@ p1<-ggplot(dfl,aes(x=seqnames,y=n,group=compartment)) +
   theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
   xlab("chr")+ylab("Number of genes") +
   ggtitle("Significantly changed genes per chromosome by N2 compartment")
+
+
+dfl$Frac<-dfl$n/dfl$n_total
+p1a<-ggplot(dfl,aes(x=seqnames,y=Frac,group=compartment)) +
+  geom_bar(stat="identity", position=position_dodge(),aes(fill=compartment)) +
+  facet_grid(cols=vars(SMC)) +
+  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+  xlab("chr")+ylab("Number of genes") +
+  ggtitle("Fraction changed genes per chromosome by N2 compartment")
 
 
 # upregulated genes
@@ -141,15 +168,25 @@ dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,compartment) %>% tal
 # add name of SMC protein
 dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
 dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
+
+# do left join to make sure dfl has all the categories required
+dflUp<-left_join(bgCount,dflUp,by=c("seqnames","compartment","SMC"),suffix=c("_total",""))
+dflUp$n[is.na(dflUp$n)]<-0
 dflUp$expression<-"up"
+
+
 
 # downregulated genes
 sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=-lfcVal,direction="lt")
+                padj=padjVal,lfc= -lfcVal, direction="lt")
 dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
 # add name of SMC protein
 dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
 dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
+
+# do left join to make sure dfl has all the categories required
+dflDown<-left_join(bgCount,dflDown,by=c("seqnames","compartment","SMC"),suffix=c("_total",""))
+dflDown$n[is.na(dflDown$n)]<-0
 dflDown$expression<-"down"
 
 dfl<-rbind(dflUp,dflDown)
@@ -173,11 +210,11 @@ p3<-ggplot(dfl[dfl$compartment=="B",],aes(x=seqnames,y=n,group=expression)) +
   ggtitle("Up/down regulated in B compartment (N2 pca)")
 
 
-p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
+p<-ggpubr::ggarrange(p1,p1a,p2,p3,ncol=2,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
                                 "ABcomp_N2_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
-                plot=p, device="pdf",width=19,height=29, units="cm")
+                plot=p, device="pdf",width=29,height=19, units="cm")
 
 
 
@@ -223,7 +260,7 @@ sigTbl$updown<-"up"
 
 # downregulated
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=-lfcVal,direction="lt")
+                padj=padjVal, lfc= -lfcVal, direction="lt")
 
 sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
 for(g in names(sigList)){ sigList[[g]]$SMC<-g }
@@ -242,7 +279,7 @@ p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown
   ggtitle("Significantly changed genes by N2 compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
+  scale_color_grey(start=0.2,end=0.2,guide="none")
 
 yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
@@ -252,8 +289,10 @@ p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown
   ggtitle("Significantly changed genes by N2 compartment") +
   theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
   scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide=F)
+  scale_color_grey(start=0.2,end=0.2,guide="none")
 
+# test significance of LFC
+summary(aov(abs(log2FoldChange)~updown+compartment,data=sigTbl))
 
 p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
@@ -277,9 +316,10 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
                    file=list.files(paste0(outPath,"/otherData"),
                                    pattern="_5000_laminDamID_pca2\\.bw"))
   listgr<-NULL
-  for (grp in groupsOI){
-    #grp=groupsOI[1]
-    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+  for (grp in useContrasts){
+    #grp=useContrasts[1]
+    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,
+                contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
     pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
 
     salmon<-salmon[!is.na(salmon$chr),]
@@ -288,7 +328,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     salmongr<-sort(salmongr)
 
     salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
-    listgr[[prettyGeneName(grp)]]<-salmongr
+    listgr[[grp]]<-salmongr
   }
 
 
@@ -322,7 +362,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal,lfc=-lfcVal,direction="lt")
+                      padj=padjVal, lfc= -lfcVal, direction="lt")
 
   compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"compartment"),table))
   colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
@@ -384,7 +424,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal,lfc=-lfcVal,direction="lt")
+                      padj=padjVal, lfc= -lfcVal, direction="lt")
   dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
   # add name of SMC protein
   dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
@@ -446,7 +486,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated
   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=-lfcVal,direction="lt")
+                  padj=padjVal, lfc= -lfcVal, direction="lt")
 
   sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
   for(g in names(sigList)){ sigList[[g]]$SMC<-g }
@@ -465,7 +505,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     ggtitle("Significantly changed genes by compartment") +
     theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
     scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.2,end=0.2,guide=F)
+    scale_color_grey(start=0.2,end=0.2,guide="none")
 
   yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
   p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
@@ -475,7 +515,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     ggtitle("Significantly changed genes by compartment") +
     theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
     scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.2,end=0.2,guide=F)
+    scale_color_grey(start=0.2,end=0.2,guide="none")
 
 
   p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
@@ -496,9 +536,9 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
                    file=list.files(paste0(outPath,"/otherData"),
                                    pattern="_5000_laminDamID_pca2.bw"))
   listgr<-NULL
-  for (grp in groupsOI){
-    #grp=groupsOI[1]
-    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,grp,
+  for (grp in useContrasts){
+    #grp=useContrasts[1]
+    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
                                 "_DESeq2_fullResults_p",padjVal,".rds"))
     pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
     pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
@@ -551,7 +591,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal,lfc=-lfcVal,direction="lt")
+                      padj=padjVal, lfc= -lfcVal, direction="lt")
 
   compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"switch"),table))
   colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
@@ -675,7 +715,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal,lfc=-lfcVal,direction="lt")
+                      padj=padjVal, lfc= -lfcVal, direction="lt")
   dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
   # add name of SMC protein
   dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
@@ -732,7 +772,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # upregulated
   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
+                  padj=padjVal, lfc=lfcVal, direction="gt")
 
   sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
   for(g in names(sigList)){ sigList[[g]]$SMC<-g }
@@ -744,7 +784,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   # downregulated
   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=-lfcVal,direction="lt")
+                  padj=padjVal, lfc= -lfcVal, direction="lt")
 
   sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
   for(g in names(sigList)){ sigList[[g]]$SMC<-g }
@@ -764,7 +804,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     ggtitle("Log2 fold change by compartment") +
     theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
     scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.7,end=0.3,guide=F)
+    scale_color_grey(start=0.7,end=0.3,guide="none")
 
 
   sigTbl<-sigTbl[! (sigTbl$switch %in% c("AA","BB")),]
@@ -777,7 +817,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     ggtitle("Log2 fold change by compartment") +
     theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
     scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.7,end=0.3,guide=F)
+    scale_color_grey(start=0.7,end=0.3,guide="none")
 
 
 
@@ -810,7 +850,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 # keepAnchors<-anchors
 # flankSize<-10000
 # par(mfrow=c(3,1))
-# for (grp in groupsOI){
+# for (grp in useContrasts){
 #   anchors<-keepAnchors
 #   smcRNAseq<-import(paste0(outPath,"/tracks/",fileNamePrefix,grp,
 #                            "_wt_lfc.bw"),
@@ -995,17 +1035,17 @@ export(anchors[seqnames(anchors)!="chrX"], con=loopsA,format="bed")
 
 flankSize<-60000
 
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,groupsOI,
-                           "_wt_lfc.bw")
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
 if(plotPDFs==T){
   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
-                      flankSize/10000,"kb.pdf"), width=19,
+                      flankSize/1000,"kb.pdf"), width=19,
       height=16, paper="a4")
 }
 
 if(plotPDFs==F){
   png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
-                      flankSize/10000,"kb.png"),width=19,
+                      flankSize/1000,"kb.png"),width=19,
     height=16, units="cm", res=150)
 }
 
@@ -1066,7 +1106,7 @@ if(plotPDFs==F){
 
 if(plotPDFs==F){
   png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-chrX_flank",
-                      flankSize/10000,"kb.png"), width=19,
+                      flankSize/1000,"kb.png"), width=19,
     height=16, units="cm", res=150)
 }
 p<-getPlotSetArray(tracks=c(smcRNAseq),
@@ -1083,7 +1123,7 @@ if(plotPDFs==F){
 
 if(plotPDFs==F){
   png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-autosomal_flank",
-                      flankSize/10000,"kb.png"), width=19,
+                      flankSize/1000,"kb.png"), width=19,
     height=16, units="cm", res=150)
 }
 

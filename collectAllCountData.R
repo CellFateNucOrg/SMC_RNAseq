@@ -15,20 +15,23 @@ rawDataCount<-read.delim(paste0(outPath,"/qc/rawData/readCount.txt"),header=F)
 colnames(rawDataCount)<-c("step","library","fragCount")
 cutadaptCount<-read.delim(paste0(outPath,"/qc/cutadapt/readCount.txt"),header=F)
 colnames(cutadaptCount)<-c("step","library","fragCount")
-rawDataCount$fragCount==cutadaptCount$fragCount
+#rawDataCount$fragCount==cutadaptCount$fragCount
 
-countTable<-data.frame(library=gsub("_fastqc$","",cutadaptCount$library), rawData=rawDataCount$fragCount,
+countTable<-data.frame(library=gsub("_fastqc$","",cutadaptCount$library), #rawData=rawDataCount$fragCount,
                        cutadapt=cutadaptCount$fragCount,
                        salmonNumMap=NA, salmonPercentMap=NA,
                        starUniqMap=NA, starPercentUniqMap=NA,
                        MreadsPerLib=NA)
 
+if(length(rawDataCount$fragCount)==length(cutadaptCount$fragCount)){
+  countTable$rawData<-rawDataCount$fragCount
+}
 
 salmonDirs<-list.files(path=paste0(outPath,"/salmon/mRNA"))
 d=salmonDirs[1]
 for (d in salmonDirs){
   jsonData<-fromJSON(file=paste0(outPath,"/salmon/mRNA/",d,"/aux_info/meta_info.json"))
-  i<-which(countTable$library==d)
+  i<-grep(d, countTable$library)
   countTable$salmonNumMap[i]<-jsonData$num_mapped
   countTable$salmonPercentMap[i]<-round(jsonData$percent_mapped,2)
 }
@@ -53,7 +56,7 @@ for (f in starFiles) {
 
 write.table(countTable,file=paste0(outPath,"/qc/readCountsByStage.txt"), col.names=T, row.names=F, quote=F)
 
-countTable$seqlib<-as.factor(gsub("_L[1|2]$","",countTable$library))
-by_lib<-countTable %>% group_by(seqlib) %>% summarise(total=round(sum(rawData)/1e6,1))
+countTable$seqlib<-as.factor(gsub("_L[1|2|1a|2a]$","",countTable$library))
+by_lib<-countTable %>% group_by(seqlib) %>% summarise(total=round(sum(cutadapt)/1e6,1))
 min(by_lib$total)
 max(by_lib$total)

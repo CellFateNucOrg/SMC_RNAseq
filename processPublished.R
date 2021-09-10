@@ -491,7 +491,7 @@ if(remakeFiles){
 
 if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
   #link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
-  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1621957576&Signature=5MsXCUgOHCvppBgB6sSCQHzX1r9bREb6jEF4hO8OzwXsiNbOaGc20tFHeqEMOdTUQIvhSUYucZnQUiNshVeQp4rd6KsEAMPNVdBH8MmORDgJN20Ng6imKBCBum0JNovPGXLJKgi6n5N4m8nFfF5bzcgSuU2bNB7Iq5YJr9FT0GwhxfjrXRaQnG4fDpAeQuXIXS2XCx2TgHhRFIsMTAOHnUrme7yNwwaNpRa5fF5jiAk7ImdCf-GCR4OI0-eE8QK-Z~EFqjhq1gSF7JgX0dAzfr51Yvq8Dgm5IYqmo~nKG6TfO356urCbgMX1xKD7~pb6LmZVN6NO54L4vNMBUAHHRg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
+  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1632688021&Signature=XWm42IDBQhktZa-HFkbXCUf9tsRusTi~1T0MCyfi3smx69Yl7BcM078~4ObJOKugz6Ojxb5aNlwT94Mf09p-5A7FvUnT0vCAf8xJGZ3Byst1eIIBR4v4M6Smb487D0dh2DbZCsWmogyh6XZNTOss0bOrFcxJ~NUg9fmVR59yYLBUiHuMiEbfHyVd3ACy7bRlcwiXRSsyI4NaWDHaPluFgqgMlFEsibvFhT3aKG3BWs2IbUTearqfls5o2mwxP0GFY5ZAaR973-K7qtNY7U2vKH-cdoO2Aec~OJOKh42VlUaE1F5T8pJ5H2mkT6ZXOK3BPTO7Gmz33vmGzta4nduogg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
   download.file(link2,paste0("publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
   system(paste0("unzip ",outPath,"/publicData/",glFile,".zip -d ",outPath,"/publicData/",glFile))
@@ -574,10 +574,16 @@ dev.off()
 #                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
-
+# aging genes:
+# LOF of daf-2 (insulin receptor) increases lifespan
+# LOF of age-1 (PI3K) increases lifespan
+# LOF of daf-16 (TF repressed by age-1) decreases lifespan
+# LOF of elt-3 causes a decrease in lifespan
+# elt-1 activates elt-3. elt-5 and elt-6 repress elt-3
+# LOF of elt-5&elt-6 cause increase in lifespan
 
 #######################-
-## Aging microarrays (Stuart Kim lab)------
+## Aging microarrays Budovskaya (2008) (Stuart Kim lab)------
 #######################-
 # https://www.cell.com/fulltext/S0092-8674%2808%2900707-1
 
@@ -603,19 +609,57 @@ if(remakeFiles){
 if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
   download.file(ageRegulatedURL,paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
   ageReg<-readxl::read_excel(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
-  colnames(ageReg)<-c("sequenceID") #1244 but only 1003 overlap with ws275 gene names
+  colnames(ageReg)<-c("sequenceID") #1244 but only 1011 overlap with ws275 gene names
+  idx<-ageReg$sequenceID %in% metadata$sequenceID
+  ageReg<-ageReg[idx,]
+  ageReg<-left_join(ageReg,as.data.frame(metadata),by=c("sequenceID"))
+
+  download.file(agingMAurl,paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
+  ageMA<-readxl::read_excel(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"),skip=4)
+  ageReg<-left_join(ageReg,ageMA,by=c("sequenceID"="gene"))
   write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
             row.names=F,quote=F)
+  file.remove(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
+  file.remove(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
 }
+
 # Document S6. Table S5: age-1 Microarray Data
 age1MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/b1a6e947-10b7-438b-8a3a-690c71964854/mmc6.xls"
-
+if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
+  download.file(age1MAurl,paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+  # there is some in the file. need to open manually and save as xlsx
+  age1MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"),skip=9)
+  # keep only final summary columns
+  age1MA<-age1MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(age1MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  age1MA$sequenceID<-gsub("#.*$","",age1MA$sequenceID)
+  idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 15731
+  age1MA<-age1MA[idx,]
+  write.csv(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"),
+            row.names=F,quote=F)
+  file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+}
 # Document S7. Table S6: daf-16(m26) Microarray Data
 daf16MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/e172c477-a9c6-4c52-bb8f-fa5211ad4cee/mmc7.xls"
 
 #Document S8. Table S7: Potential elt-3 GATA Targets
 elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/acd1863d-1265-46da-b42b-f90d720ab245/mmc8.pdf"
 
+#Lund (2002) paper:
+#  https://pubmed.ncbi.nlm.nih.gov/12372248/
+# aging timecourse data hard to extract
+
+#Murphy (2003) paper
+#https://www.nature.com/articles/nature01789#MOESM1
+# daf-2,  daf-2/daf-16 MA
+# I want classI genes upregulated by daf-2 (RNAi) and downregulated by daf-16 RNAi (=pro longevity)
+murphyURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fnature01789/MediaObjects/41586_2003_BFnature01789_MOESM2_ESM.xls"
+
+
+#McElwee (2003) paper
+# McElwee, J., Bubb, K., and Thomas, J.H. (2003). Transcriptional outputs of the Caenorhabditis elegans forkhead protein DAF-16. Aging Cell 2, 111–121.
+# https://www.deepdyve.com/lp/wiley/transcriptional-outputs-of-the-caenorhabditis-elegans-forkhead-protein-T0bliMYws0
 
 
 ######################-
@@ -627,7 +671,7 @@ elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/a
 
 
 #####################-
-## Borad expression vs regulated Gerstein et al. (2014) (modEncode)------
+## Broad expression vs regulated Gerstein et al. (2014) (modEncode)------
 #####################-
 #https://www.encodeproject.org/comparative/transcriptome/
 wormGeneURL<-"http://cmptxn.gersteinlab.org/worm_gene.xlsx"

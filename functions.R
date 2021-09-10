@@ -73,12 +73,16 @@ filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
 getSignificantGenes<-function(resultsTable, padj=0.05, lfc=0, namePadjCol="padj",
                               nameLfcCol="log2FoldChange", direction="both",
                               chr="all", nameChrCol="chr", outPath="."){
+  #remove rows with padj NA value
+  idx<-is.na(resultsTable[,namePadjCol])
+  resultsTable<-resultsTable[!idx,]
+  # do filtering
   if(direction=="both") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & abs(resultsTable[,nameLfcCol])>lfc
   } else if(direction=="gt") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]>lfc
   } else if(direction=="lt") {
-    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol] < -lfc
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]<lfc
   } else {
     print("direction must be 'both' to get both tails, \n'gt' to get lfc larger than a specific value, \nor 'lt' to get lfc less than a certain value")
   }
