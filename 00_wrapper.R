@@ -64,3 +64,7 @@ source("compareToDCdatasets.R")
 print("look for soma/germline enrichment")
 source("compareGermline.R")
 
+# check enrichment for aging genes
+print("look for longevity/aging enrichment")
+source("compareAging.R")
+

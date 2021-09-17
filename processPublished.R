@@ -354,16 +354,16 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 
   localPadj=0.05
   localLFC=1
-  hsUP<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsUP<-getSignificantGenes(garrigues, padj=localPadj, lfc=localLFC,
                             namePadjCol="P-adj",
                             nameLfcCol="log2(FC)", direction="gt")
-  hsUP
+  dim(hsUP)
   saveRDS(hsUP,file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 
-  hsDOWN<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsDOWN<-getSignificantGenes(garrigues, padj=localPadj, lfc= -localLFC,
                               namePadjCol="P-adj",
                               nameLfcCol="log2(FC)", direction="lt")
-  hsDOWN
+  dim(hsDOWN)
   saveRDS(hsDOWN,file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
 
   file.remove(paste0(outPath,"/publicData/",garriguesFileName))
@@ -615,8 +615,15 @@ if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
   ageReg<-left_join(ageReg,as.data.frame(metadata),by=c("sequenceID"))
 
   download.file(agingMAurl,paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
-  ageMA<-readxl::read_excel(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"),skip=4)
-  ageReg<-left_join(ageReg,ageMA,by=c("sequenceID"="gene"))
+  tcMA<-readxl::read_excel(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"),skip=4)
+  colnames(tcMA)[1]<-"sequenceID"
+  idx<-tcMA$sequenceID %in% metadata$sequenceID
+  tcMA<-tcMA[idx,]
+  tcMA<-left_join(tcMA,as.data.frame(metadata),by=c("sequenceID"))
+  write.csv(tcMA,paste0(outPath,"/publicData/AgingTC_Budovskaya2008.csv"),
+            row.names=F,quote=F)
+
+  ageReg<-left_join(ageReg,tcMA,by=c("sequenceID"="gene"))
   write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
             row.names=F,quote=F)
   file.remove(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
@@ -633,28 +640,120 @@ if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
   age1MA<-age1MA[,c(1,2,19,20,21,22,23)]
   # rename columns
   colnames(age1MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
-  age1MA$sequenceID<-gsub("#.*$","",age1MA$sequenceID)
-  idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 15731
-  age1MA<-age1MA[idx,]
-  write.csv(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"),
-            row.names=F,quote=F)
+  #idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #age1MA<-age1MA[idx,]
+  age1MA<-inner_join(age1MA,as.data.frame(metadata),by="sequenceID")
+  write.table(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
   file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
 }
+
+
 # Document S7. Table S6: daf-16(m26) Microarray Data
 daf16MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/e172c477-a9c6-4c52-bb8f-fa5211ad4cee/mmc7.xls"
+if(!file.exists(paste0(outPath,"/publicData/daf16MA_Budovskaya2008.csv"))){
+  download.file(daf16MAurl,paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+  daf16MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"),skip=9)
+  # keep only final summary columns
+  daf16MA<-daf16MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(daf16MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  #idx<-daf16MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #daf16MA<-daf16MA[idx,]
+  daf16MA<-inner_join(daf16MA,as.data.frame(metadata),by="sequenceID")
+  write.table(daf16MA,paste0(outPath,"/publicData/daf16MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
+  file.remove(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+}
 
-#Document S8. Table S7: Potential elt-3 GATA Targets
-elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/acd1863d-1265-46da-b42b-f90d720ab245/mmc8.pdf"
+
 
 #Lund (2002) paper:
 #  https://pubmed.ncbi.nlm.nih.gov/12372248/
 # aging timecourse data hard to extract
+
+
+
+#######################-
+## Aging microarrays Murphy(2003)------
+#######################-
 
 #Murphy (2003) paper
 #https://www.nature.com/articles/nature01789#MOESM1
 # daf-2,  daf-2/daf-16 MA
 # I want classI genes upregulated by daf-2 (RNAi) and downregulated by daf-16 RNAi (=pro longevity)
 murphyURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fnature01789/MediaObjects/41586_2003_BFnature01789_MOESM2_ESM.xls"
+
+if(!file.exists(paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"))){
+  download.file(murphyURL,paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+  # there is some in the file. need to open manually and save as xlsx
+  ageClassI<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=1,skip=1,col_names=c("sequenceID","description"))
+  ageClassII<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=2,skip=1,col_names=c("sequenceID","description"))
+  ageClassI$sequenceID<-gsub("\\*+","",ageClassI$sequenceID)
+  ageClassII$sequenceID<-gsub("\\*+","",ageClassII$sequenceID)
+  ageClassI<-inner_join(ageClassI,as.data.frame(metadata),by="sequenceID")
+  ageClassII<-inner_join(ageClassII,as.data.frame(metadata),by="sequenceID")
+  ageClassI<-ageClassI[!duplicated(ageClassI$wormbaseID),]
+  ageClassII<-ageClassII[!duplicated(ageClassII$wormbaseID),]
+  write.table(ageClassI,paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageClassII,paste0(outPath,"/publicData/agingClassII_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  file.remove(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+}
+
+
+
+#######################-
+## Aging txptome Tarkhov(2019)------
+#######################-
+# A universal transcriptomic signature of age reveals the temporal scaling of Caenorhabditis elegans aging trajectories
+# Andrei E. Tarkhov, Ramani Alla, Srinivas Ayyadevara, Mikhail Pyatnitskiy, Leonid I. Menshikov, Robert J. Shmookler Reis & Peter O. Fedichev
+# Scientific Reports volume 9, Article number: 7368 (2019)
+# https://www.nature.com/articles/s41598-019-43075-z#Abs1
+downSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM6_ESM.csv"
+upSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM7_ESM.csv"
+ageBiomrkrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM8_ESM.csv"
+
+if(!file.exists(paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"))){
+  download.file(downSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  download.file(upSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  download.file(ageBiomrkrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+  # there is some in the file. need to open manually and save as xlsx
+  downSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"),
+                        sep=",",header=T,skip=1)
+  downSignatr$X<-NULL
+  colnames(downSignatr)<-c("wormbaseID","description","p.value")
+  upSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"),
+                      sep=",",header=T,skip=1)
+  upSignatr$X<-NULL
+  colnames(upSignatr)<-c("wormbaseID","description","p.value")
+  ageBiomrkr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"),
+                       sep=",",header=T,skip=1)
+  ageBiomrkr$X<-NULL
+  colnames(ageBiomrkr)<-c("wormbaseID","description","Coefficient")
+
+  downSignatr<-inner_join(downSignatr,as.data.frame(metadata),by="wormbaseID") #67
+  upSignatr<-inner_join(upSignatr,as.data.frame(metadata),by="wormbaseID") #260
+  ageBiomrkr<-inner_join(ageBiomrkr,as.data.frame(metadata),by="wormbaseID") #71
+
+  write.table(downSignatr,paste0(outPath,"/publicData/agingDownSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(upSignatr,paste0(outPath,"/publicData/agingUpSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageBiomrkr,paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+}
+
+
+
+
 
 
 #McElwee (2003) paper
