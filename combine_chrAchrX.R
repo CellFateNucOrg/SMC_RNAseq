@@ -182,10 +182,10 @@ for (grp in names(contrastNames)){
 
   sink(file=paste0(outPath,"/txt/",fileNamePrefix,contrastNames[[grp]],
                    "_logfile.txt"),append=TRUE, type="output")
-  upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                            sum(chrXres05$log2FoldChange<0),
-                            sum(autosomalRes05$log2FoldChange>0),
-                            sum(autosomalRes05$log2FoldChange<0)),nrow=2,
+  upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange> lfcVal),
+                            sum(chrXres05$log2FoldChange< -lfcVal),
+                            sum(autosomalRes05$log2FoldChange> lfcVal),
+                            sum(autosomalRes05$log2FoldChange< -lfcVal)),nrow=2,
                      dimnames=list(group=c("Up","Down"),
                                    chr=c("chrX","chrA")))
 
@@ -432,17 +432,6 @@ for (grp in names(contrastNames)){
     ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
                            "_volcanoPlot_autosomes.png"), plot=p4,
            device="png",path=outPath,width=12,height=12,units="cm")
-  }
-
-
-  summaryByChr<-function(resLFC,padj,lfc) {
-    up<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange > lfcVal,]
-    down<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange < -lfcVal, ]
-    allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
-    allChr$autosomes<-rowSums(allChr[,1:5])
-    allChr$total<-rowSums(allChr[,1:6])
-    rownames(allChr)<-paste0(rownames(allChr),"_p",padjVal,"_lfc",lfcVal)
-    return(allChr)
   }
 
 

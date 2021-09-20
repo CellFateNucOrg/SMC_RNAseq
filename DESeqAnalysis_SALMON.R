@@ -739,16 +739,6 @@ for(grp in names(contrastNames)){
    }
 
 
-   summaryByChr<-function(resLFC,padj,lfc) {
-      up<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange > lfcVal,]
-      down<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange < -lfcVal, ]
-      allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
-      allChr$autosomes<-rowSums(allChr[,1:5])
-      allChr$total<-rowSums(allChr[,1:6])
-      rownames(allChr)<-paste0(rownames(allChr),"_p",padjVal,"_lfc",lfcVal)
-      return(allChr)
-   }
-
 
    sink(file=paste0(outPath,"/txt/", fileNamePrefix, contrastNames[[grp]],
                     "_logfile.txt"),append=TRUE, type="output")
