@@ -4,9 +4,19 @@ library(ggplot2)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareToDCdatasets"
+print(scriptName)
+
 if(filterData){
-  fileNamePrefix=filterPrefix
+  fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 
 eulerLabelsType<-c("counts")
@@ -27,8 +37,6 @@ for (grp in useContrasts){
     # remove filtered genes
     idx<-salmon$wormbaseID %in% toFilter
     salmon<-salmon[!idx,]
-
-    fileNamePrefix=filterPrefix
   }
 
   #####################################################
@@ -87,7 +95,7 @@ for (grp in useContrasts){
   percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
                       txtLabels[[2]], names(txtLabels)[2])
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
                   grp,"VsKarmer_padj",
                   padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
   p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -137,7 +145,7 @@ for (grp in useContrasts){
     percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
                         txtLabels[[2]], names(txtLabels)[2])
 
-    pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+    pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                     "venn_chrXup_",grp, "VsKramer_padj",
                     padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
     p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -186,7 +194,7 @@ for (grp in useContrasts){
   percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
                       txtLabels[[2]], names(txtLabels)[2])
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                   "venn_chrAall_",grp, "VsKramer_padj",
                   padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,  paper="a4")
   p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -229,7 +237,7 @@ for(grp in useContrasts){
     percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
                         txtLabels[[2]], names(txtLabels)[2])
 
-    pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+    pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
                     grp, "VsPapers_padj",
                     padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,
         paper="a4")
@@ -275,7 +283,7 @@ for(grp in useContrasts){
     percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
                         txtLabels[[2]], names(txtLabels)[2])
 
-    pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,
+    pdf(paste0(outPath, "/plots/",outputNamePrefix,"venn_",grp,
                "VsJans2009_padj", padjVal,"_lfc", lfcVal,".pdf"),
         width=5, height=10, paper="a4")
     p1<-plot(fit, quantities=list(type=eulerLabelsType),
@@ -321,7 +329,7 @@ if(!filterData){
                         txtLabels[[2]], names(txtLabels)[2], " & ",
                         txtLabels[[3]], names(txtLabels)[3])
 
-    pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsOscillating_padj",
+    pdf(paste0(outPath, "/plots/",outputNamePrefix,"venn_",grp,"VsOscillating_padj",
                padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
     p1<-plot(fit, quantities=list(type=eulerLabelsType),
          main=list(label=paste0(grp," vs oscillating: |lfc|>", lfcVal,
@@ -360,7 +368,7 @@ if(!filterData){
                         txtLabels[[2]], names(txtLabels)[2], " &\n",
                         txtLabels[[3]], names(txtLabels)[3], " & ",
                         txtLabels[[4]], names(txtLabels)[4])
-    pdf(paste0(outPath, "/plots/",fileNamePrefix,"venn_",grp,"VsHeatshock_padj",
+    pdf(paste0(outPath, "/plots/",outputNamePrefix,"venn_",grp,"VsHeatshock_padj",
                padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10, paper="a4")
     p1<-plot(fit, quantities=list(type=eulerLabelsType),
           main=list(label=paste0(grp," vs heatshock: |lfc|>", lfcVal,

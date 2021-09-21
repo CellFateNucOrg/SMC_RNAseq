@@ -1,11 +1,13 @@
 install.packages(c("ggplot2", "RColorBrewer","PoiClaClu","pheatmap","tidyr",
-                 "gplots","ggpubr"))
-install.packages(c("reticulate","xlsx","magick","cowplot"))
+                 "gplots","ggpubr","Hmisc","dplyr","eurlerr","lattice","gridExtra",
+                 "magrittr"))
+install.packages(c("reticulate","readxl","magick","cowplot"))
 
 BiocManager::install(c("DESeq2","AnnotationDbi","Organism.dplyr","GenomicRanges",
                      "BSgenome.Celegans.UCSC.ce11", "tximport",
                      "GenomicFeatures","affy","EnhancedVolcano","apeglm",
                      "ashr","genomation"))
+
 
 
 # for tissue enrichment

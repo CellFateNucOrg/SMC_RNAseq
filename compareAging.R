@@ -9,14 +9,23 @@ library(clusterProfiler)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareAging"
+print(scriptName)
+
 if(filterData){
-  fileNamePrefix=filterPrefix
+  fileNamePrefix<-filterPrefix
   # #add hs gene filteration
   # hsUp<-readRDS(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
   # hsDown<-readRDS(paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
   # toFilter<-unique(sort(c(toFilter,hsUp$wormbaseID,hsDown$wormbaseID)))
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
+makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 eulerLabelsType<-c("counts")
 
@@ -89,7 +98,7 @@ for (grp in useContrasts){
                                      chr="all", nameChrCol="chr")
 
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_", grp,
                   "VsBudovskaya2008_padj", padjVal, "_lfc", lfcVal,".pdf"),
       width=5,height=10,paper="a4")
 
@@ -151,7 +160,7 @@ for (grp in useContrasts){
   shared<-left_join(shared,data.frame(tcMA[,c("wormbaseID","day11_avg")]),by="wormbaseID")
   shared<-left_join(shared,data.frame(wormbaseID=age1MA$wormbaseID,age1MA=age1MA$ratio),by="wormbaseID")
   shared<-left_join(shared,data.frame(wormbaseID=daf16MA$wormbaseID,daf16MA=daf16MA$ratio),by="wormbaseID")
-  write.table(shared,file=paste0(outPath,"/txt/",fileNamePrefix,"aging_Budovskaya2008_",grp,
+  write.table(shared,file=paste0(outPath,"/txt/",outputNamePrefix,"aging_Budovskaya2008_",grp,
                                  "-up_padj", padjVal, "_lfc", lfcVal,".tsv"),sep="\t")
   par(mfrow=c(4,1))
 
@@ -211,7 +220,7 @@ for (grp in useContrasts){
                                      chr="all", nameChrCol="chr")
 
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_", grp,
                   "VsMurphy2003_padj", padjVal, "_lfc", lfcVal,".pdf"),
       width=5,height=10,paper="a4")
 
@@ -247,7 +256,7 @@ for (grp in useContrasts){
   idx<-salmonSigUp$wormbaseID %in% ageClassII$wormbaseID
   salmonSigUp$class[idx]<-"classII"
   shared<-as.data.frame(salmonSigUp[!is.na(salmonSigUp$class),])
-  write.table(shared,file=paste0(outPath,"/txt/",fileNamePrefix,"aging_Murphy2003_",grp,
+  write.table(shared,file=paste0(outPath,"/txt/",outputNamePrefix,"aging_Murphy2003_",grp,
                                  "-up_padj", padjVal, "_lfc", lfcVal,".tsv"),sep="\t")
 
   dev.off()
@@ -306,7 +315,7 @@ for (grp in useContrasts){
                                      chr="all", nameChrCol="chr")
 
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_", grp,
                   "VsTarkhov2019_padj", padjVal, "_lfc", lfcVal,".pdf"),
       width=5,height=10,paper="a4")
 
@@ -343,7 +352,7 @@ for (grp in useContrasts){
   idx<-salmonSigUp$wormbaseID %in% downSignatr$wormbaseID
   salmonSigUp$class[idx]<-"downSignatr"
   shared<-as.data.frame(salmonSigUp[!is.na(salmonSigUp$class),])
-  write.table(shared,file=paste0(outPath,"/txt/",fileNamePrefix,"aging_Tarkhov2019_",grp,
+  write.table(shared,file=paste0(outPath,"/txt/",outputNamePrefix,"aging_Tarkhov2019_",grp,
                                  "-up_padj", padjVal, "_lfc", lfcVal,".tsv"),sep="\t")
 
   lowerFn <- function(data, mapping, method = "lm", ...) {
@@ -442,7 +451,7 @@ for (grp in useContrasts){
     #print(paste0(grp," in ",pathName,":  ",paste(sort(leadEdge$publicID),collapse=",")))
     #print(leadEdge)
   }
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"gsea_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gsea_", grp,
                   "VsAgingDatasets.pdf"),
       width=5,height=10,paper="a4")
   #p<-ggpubr::ggarrange(plotlist=gseaList,nrow=2,ncol=1)
@@ -451,14 +460,14 @@ for (grp in useContrasts){
   dev.off()
 }
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"gseaAll_AgingDatasets.pdf"),
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gseaAll_AgingDatasets.pdf"),
     width=16,height=11)
 p<-gridExtra::marrangeGrob(grobs=gseaTbl, ncol=3, nrow=1,padding=unit(0.01,"line"))
 print(p)
 dev.off()
 
 
-write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",fileNamePrefix,"gseaLeadEdgeGenes.tsv"),sep="\t")
+write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdgeGenes.tsv"),sep="\t")
 
 leadEdgeTbl %>% count(wormbaseID) #269 unique genes
 leadEdgeTbl %>% group_by(group) %>% count(wormbaseID) #341

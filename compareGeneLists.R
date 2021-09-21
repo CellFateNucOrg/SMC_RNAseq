@@ -7,11 +7,20 @@ library(dplyr)
 
 source("functions.R")
 source("./variableSettings.R")
+
+scriptName <- "compareGeneLists"
+print(scriptName)
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
-
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 
 ######################-
@@ -90,7 +99,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 
@@ -142,7 +151,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
 
 
 
@@ -195,7 +204,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"smc.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"smc.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 

@@ -12,10 +12,20 @@ library(RColorBrewer)
 
 source("functions.R")
 source("./variableSettings.R")
+
+scriptName <- "compareHICfeatures"
+print(scriptName)
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
+makeDirs(outPath,dirNameList=paste0(c("plots/","tracks/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 # AB compartments - N2 ----------------------------------------------------
 
@@ -60,7 +70,7 @@ for (grp in useContrasts){
 
 
 # plot of counts of significantly changing genes in each compartment
-pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,"ABcomp_N2_geneCount_padj",
+pdf(file=paste0(paste0(outPath,"/plots/",outputNamePrefix,"ABcomp_N2_geneCount_padj",
                        padjVal,"_lfc", lfcVal,".pdf")),
     width=12, height=9, paper="a4r")
 par(mfrow=c(2,2))
@@ -211,7 +221,7 @@ p3<-ggplot(dfl[dfl$compartment=="B",],aes(x=seqnames,y=n,group=expression)) +
 
 
 p<-ggpubr::ggarrange(p1,p1a,p2,p3,ncol=2,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "ABcomp_N2_countsPerChr_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=19, units="cm")
@@ -295,7 +305,7 @@ p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown
 summary(aov(abs(log2FoldChange)~updown+compartment,data=sigTbl))
 
 p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "ABcomp_N2_LFC_padj",
                           padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -333,7 +343,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
 
-  pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+  pdf(file=paste0(paste0(outPath,"/plots/",outputNamePrefix,
                          "ABcomp_geneCount_padj",
                          padjVal,"_lfc", lfcVal,".pdf")),
       width=19, height=4, paper="a4r")
@@ -453,7 +463,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
   p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                   "ABcomp_countsPerChr_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=19,height=29,units="cm")
@@ -519,7 +529,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
   p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                   "ABcomp_LFC_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=29,height=16,units="cm")
@@ -560,7 +570,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
   pairedCols<-c(brewer.pal(4,"Paired"))
 
-  pdf(file=paste0(paste0(outPath,"/plots/",fileNamePrefix,
+  pdf(file=paste0(paste0(outPath,"/plots/",outputNamePrefix,
                          "ABcompSwitch_geneCount_padj",
                          padjVal,"_lfc", lfcVal,".pdf")),
       width=19, height=29, paper="a4")
@@ -697,7 +707,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
     ggtitle("Significantly changed genes per chromosome by compartment")
 
   p<-ggpubr::ggarrange(p1,p1a,ncol=1,nrow=3)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                   "ABcompSwitch_countsPerChr_ABBA_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=19,height=29,units="cm")
@@ -760,7 +770,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
   p<-ggpubr::ggarrange(p2,p3,p4,p5,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                   "ABcompSwitch_updownByChr_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=29,height=19,units="cm")
@@ -822,7 +832,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
   p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                   "ABcompSwitch_LFC_padj",
                                   padjVal,"_lfc", lfcVal,".pdf"),
                   plot=p, device="pdf",width=29,height=16,units="cm")
@@ -852,7 +862,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 # par(mfrow=c(3,1))
 # for (grp in useContrasts){
 #   anchors<-keepAnchors
-#   smcRNAseq<-import(paste0(outPath,"/tracks/",fileNamePrefix,grp,
+#   smcRNAseq<-import(paste0(outPath,"/tracks/",outputNamePrefix,grp,
 #                            "_wt_lfc.bw"),
 #                            format="bigwig")
 #   pdf(file=paste0(outPath,"/plots/anchors_",grp,".pdf"),
@@ -1024,13 +1034,13 @@ anchors<-reduce(sort(anchors))
 #anchors$region<-1:length(anchors)
 anchors$chr<-seqnames(anchors)
 
-loopsAll<-paste0(outPath,"/tracks/",fileNamePrefix,"loops.bed")
+loopsAll<-paste0(outPath,"/tracks/",outputNamePrefix,"loops.bed")
 export(anchors,con=loopsAll,format="bed")
 
-loopsX<-paste0(outPath,"/tracks/",fileNamePrefix,"loopsX.bed")
+loopsX<-paste0(outPath,"/tracks/",outputNamePrefix,"loopsX.bed")
 export(anchors[seqnames(anchors)=="chrX"], con=loopsX,format="bed")
 
-loopsA<-paste0(outPath,"/tracks/",fileNamePrefix,"loopsA.bed")
+loopsA<-paste0(outPath,"/tracks/",outputNamePrefix,"loopsA.bed")
 export(anchors[seqnames(anchors)!="chrX"], con=loopsA,format="bed")
 
 flankSize<-60000
@@ -1038,13 +1048,13 @@ flankSize<-60000
 smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
                   useContrasts,"_lfc.bw")
 if(plotPDFs==T){
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"anchors-all_flank",
                       flankSize/1000,"kb.pdf"), width=19,
       height=16, paper="a4")
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-all_flank",
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-all_flank",
                       flankSize/1000,"kb.png"),width=19,
     height=16, units="cm", res=150)
 }
@@ -1105,7 +1115,7 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-chrX_flank",
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-chrX_flank",
                       flankSize/1000,"kb.png"), width=19,
     height=16, units="cm", res=150)
 }
@@ -1122,7 +1132,7 @@ if(plotPDFs==F){
 }
 
 if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",fileNamePrefix,"anchors-autosomal_flank",
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-autosomal_flank",
                       flankSize/1000,"kb.png"), width=19,
     height=16, units="cm", res=150)
 }

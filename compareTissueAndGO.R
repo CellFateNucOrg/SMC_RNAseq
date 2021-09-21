@@ -11,9 +11,20 @@ library(dplyr)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareTissueAndGO"
+print(scriptName)
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
+
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 
@@ -59,13 +70,13 @@ for(grp in useContrasts){
                         nameLfcCol="log2FoldChange",
                         direction="gt",
                         chr="all", nameChrCol="chr")$wormbaseID)
-  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
+  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                               "_up_wormcat.csv"),
             row.names=F,quote=F,col.names=T)
-  worm_cat_fun(file_to_process=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],
+  worm_cat_fun(file_to_process=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                                        "_up_wormcat.csv"),
                 title=paste(grp,"up"),
-                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],"_up"),
+                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up"),
                 annotation_file=wormcatData,
                 input_type="Wormbase.ID", rm_dir=FALSE,
                 zip_files=FALSE)
@@ -76,12 +87,12 @@ for(grp in useContrasts){
                         nameLfcCol="log2FoldChange",
                         direction="lt",
                         chr="all", nameChrCol="chr")$wormbaseID)
-  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],"_down_wormcat.csv"),
+  write.table(sigTable,paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_down_wormcat.csv"),
               row.names=F,quote=F,col.names=T)
-  worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/", fileNamePrefix, contrastNames[[grp]],
+  worm_cat_fun( file_to_process=paste0(outPath,"/wormcat/", fileNamePrefix, grp,
                                        "_down_wormcat.csv"),
                 title=paste(grp,"down"),
-                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,contrastNames[[grp]],"_down"),
+                output_dir=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_down"),
                 annotation_file=wormcatData,
                 input_type="Wormbase.ID", rm_dir=FALSE,
                 zip_files=FALSE)
@@ -143,7 +154,7 @@ sigGenes<-lapply(sigGenes,na.omit)
 for(grp in useContrasts){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
-  write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,contrastNames[[grp]],"_upGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
+  write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_upGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
 }
 
 
@@ -166,7 +177,7 @@ sigGenes<-lapply(sigGenes,na.omit)
 for(grp in useContrasts){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
-  write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,contrastNames[[grp]],"_downGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
+  write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
 }
 
 
@@ -192,7 +203,7 @@ sigGenes<-lapply(sigGenes,na.omit)
 for(grp in useContrasts){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",
-                        fileNamePrefix,contrastNames[[grp]],
+                        fileNamePrefix,grp,
                         "_upGenes_sequenceID.txt"),
               quote=F, row.names=F,col.names=F)
 }
@@ -216,7 +227,7 @@ sigGenes<-lapply(sigGenes,na.omit)
 
 for(grp in useContrasts){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
-  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,contrastNames[[grp]],"_downGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
+  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
 
 
@@ -279,11 +290,11 @@ cat(paste0("cd ./tissue/tea/p",padjVal,"_lfc",lfcVal,"\n"))
 sink()
 # #file.create(paste0(outPath,"/runTea.sh"),overwrite=T)
 # for (grp in useContrasts){
-#   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",contrastNames[[grp]],"_allGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
+#   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",grp,"_allGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
 #   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
-#   cat(paste0("tea -q 0.05 -s ",contrastNames[[grp]],"_allGenes_WBID.txt ", contrastNames[[grp]],"_all_tissue tissue\n"))
-#   cat(paste0("tea -q 0.05 -s ",contrastNames[[grp]],"_allGenes_WBID.txt ", contrastNames[[grp]],"_all_phe phenotype\n"))
-#   cat(paste0("tea -q 0.05 -s ",contrastNames[[grp]],"_allGenes_WBID.txt ", contrastNames[[grp]],"_all_go go\n"))
+#   cat(paste0("tea -q 0.05 -s ",grp,"_allGenes_WBID.txt ", grp,"_all_tissue tissue\n"))
+#   cat(paste0("tea -q 0.05 -s ",grp,"_allGenes_WBID.txt ", grp,"_all_phe phenotype\n"))
+#   cat(paste0("tea -q 0.05 -s ",grp,"_allGenes_WBID.txt ", grp,"_all_go go\n"))
 #   sink()
 # }
 
@@ -305,11 +316,11 @@ sigGenes<-lapply(sigGenes,na.omit)
 
 partialPrefix=gsub(paste0("p",padjVal,"_lfc",lfcVal,"/"),"",fileNamePrefix)
 for(grp in useContrasts){
-  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,contrastNames[[grp]],"_upGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
+  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_upGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
-  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_upGenes_WBID.txt ", partialPrefix,contrastNames[[grp]],"_up_tissue tissue\n"))
-  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_upGenes_WBID.txt ", partialPrefix,contrastNames[[grp]],"_up_phe phenotype\n"))
-  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_upGenes_WBID.txt ", partialPrefix,contrastNames[[grp]],"_up_go go\n"))
+  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_tissue tissue\n"))
+  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_phe phenotype\n"))
+  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_go go\n"))
   sink()
 }
 
@@ -331,11 +342,11 @@ lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
 for(grp in useContrasts){
-  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,contrastNames[[grp]],"_downGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
+  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_downGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
-  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_downGenes_WBID.txt ", partialPrefix, contrastNames[[grp]],"_down_tissue tissue\n"))
-  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_downGenes_WBID.txt ", partialPrefix ,contrastNames[[grp]],"_down_phe phenotype\n"))
-  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,contrastNames[[grp]],"_downGenes_WBID.txt ", partialPrefix, contrastNames[[grp]], "_down_go go\n"))
+  cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp,"_down_tissue tissue\n"))
+  cat(paste0("tea -d ../../../",pheDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix ,grp,"_down_phe phenotype\n"))
+  cat(paste0("tea -d ../../../",goDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp, "_down_go go\n"))
   sink()
 }
 
@@ -423,7 +434,7 @@ p3<-ggplot2::ggplot(df1, aes(x=category, y=fraction, fill=upVdown))+
   ggtitle("Fraction of genes up/down regulated by domain type")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"broadExpn_",
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"broadExpn_",
                                 paste(useContrasts, collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")

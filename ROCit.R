@@ -7,9 +7,18 @@ library(tidyr)
 source("functions.R")
 source("./variableSettings.R")
 
+scriptName <- "ROCit"
+print(scriptName)
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 
 ###########################
@@ -33,7 +42,7 @@ for (grp in useContrasts){
                                                       direction="both",
                                                       chr="all", nameChrCol="chr"))
 }
-pdf(file=paste0(outPath,"/plots/",fileNamePrefix,"ROCit.pdf"), paper="a4r",
+pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"ROCit.pdf"), paper="a4r",
     height=8,width=11)
 par(mfrow=c(2,3))
 names(sigTables)

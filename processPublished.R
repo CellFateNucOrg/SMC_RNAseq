@@ -20,6 +20,7 @@ library(ggplot2)
 library(DESeq2)
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
+library(readxl)
 
 source("./variableSettings.R")
 source("./functions.R")

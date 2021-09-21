@@ -5,9 +5,19 @@ library(dplyr)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareGeneLengths"
+print(scriptName)
+
 if(filterData){
-  fileNamePrefix=filterPrefix
+  fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 
 ###########################
@@ -39,7 +49,7 @@ geneLengthHist<-function(simTbl,metricName,numSims,grp,chrSubset){
   legend("topright",legend=c("true value","sims median"),lty=c(1,2),col=c("red","black"))
 }
 
-doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,fileNamePrefix,outPath="."){
+doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,outputNamePrefix,outPath="."){
   #get a randomly sampled distribution of same size
   simTbl<-as.data.frame(matrix(NA,nrow=numSims+1,ncol=5))
   #names(simTbl)<-c("min","mean","median","max","meanT10")
@@ -60,7 +70,7 @@ doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,fileNamePrefix,outP
   simTbl[numSims+1,"median"]<-median(geneLengths)
   #simTbl[numSims+1,"max"]<-max(geneLengths)
   #simTbl[numSims+1,"meanT10"]<-mean(geneLengths[1:10])
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"geneLengthHist_",
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"geneLengthHist_",
                   grp,"_",chrSubset,"_padj",padj,"_lfc", lfc,".pdf"),
       width=11, height=3.5, paper="a4r")
   par(mfrow=c(1,3))
@@ -122,7 +132,9 @@ for (grp in names(contrastNames)){
       recordSig[[paste(grp,"chrX",sep="_")]]<-doSims(numSims=numSims,sig.gr=chrXgr,
                                                      bg.gr=chrXgrBg,grp=grp,
                                                      chrSubset="chrX",
-                                                     padj=padjVal,lfc=lfcVal,fileNamePrefix=fileNamePrefix,outPath=".")
+                                                     padj=padjVal,lfc=lfcVal,
+                                                     outputNamePrefix=outputNamePrefix,
+                                                     outPath=".")
     }
   }
 
@@ -132,7 +144,9 @@ for (grp in names(contrastNames)){
     recordSig[[paste(grp,"chrA",sep="_")]]<-doSims(numSims=numSims,sig.gr=chrAgr,
                                                    bg.gr=chrAgrBg,grp=grp,
                                                    chrSubset="chrA",
-                                                   padj=padjVal,lfc=lfcVal,fileNamePrefix=fileNamePrefix,outPath=".")
+                                                   padj=padjVal,lfc=lfcVal,
+                                                   outputNamePrefix=outputNamePrefix,
+                                                   outPath=".")
   }
 
 }

@@ -4,6 +4,13 @@ library(clusterProfiler)
 library(pathview)
 library(enrichplot)
 
+source("functions.R")
+source("./variableSettings.R")
+
+if(filterData){
+  fileNamePrefix<-filterPrefix
+}
+
 #########################-
 # KEGG pathway enrichment -----
 #########################-
@@ -223,11 +230,12 @@ for (grp in useContrasts){
 
   }
 
-  if(dim(y)[1]>0){
-    y <- gsePathway(ranks, organism="celegans",
+
+  y <- gsePathway(ranks, organism="celegans",
                 pvalueCutoff = 0.05,
                 pAdjustMethod = "BH",
                 verbose = FALSE)
+  if(dim(y)[1]>0){
     head(y)
     plotList[["dotplot"]]<-dotplot(y, showCategory=20) + ggtitle(grp)
     plotList[["cnetstar"]] <- cnetplot(y, foldChange=ranks, colorEdge = TRUE,
@@ -236,7 +244,7 @@ for (grp in useContrasts){
                                          colorEdge = TRUE,showCategory=10)
     plotList[["heatplot"]] <- heatplot(y, foldChange=ranks, showCategory=30)
 
-    y2 <- pairwise_termsim(x)
+    y2 <- pairwise_termsim(y)
     if(dim(y2)[1]>6){
       plotList[["treeplot"]] <- treeplot(y2, hclust_method = "average",fontsize=5)
     }

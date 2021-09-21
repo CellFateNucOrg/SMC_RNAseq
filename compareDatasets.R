@@ -9,10 +9,19 @@ library(gridExtra)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareDatasets"
+print(scriptName)
 
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+
+makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 eulerLabelsType<-c("counts","percent")
 eulerLabelsType<-c("counts")
@@ -42,7 +51,7 @@ for (grp in useContrasts){
 # check if datasets have chrX genes included
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_allGenes_",
                 paste(useContrasts, collapse="_"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -102,7 +111,7 @@ print(p3)
 dev.off()
 #p<-arrangeGrob(grobs=list(p1,p2,p3), ncol=3,padding=2)
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_allGenes_",
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_allGenes_",
 #                                 paste(useContrasts, collapse="_"),"_padj",
 #                                 padjVal, "_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -122,7 +131,7 @@ for (grp in useContrasts){
                         chr="all", nameChrCol="chr"))
 }
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_upGenes_",
                 paste(useContrasts,collapse="_"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -164,7 +173,7 @@ print(p3)
 dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_upGenes_",
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_upGenes_",
 #                                 paste(useContrasts,collapse="_"),"_padj",
 #                                 padjVal, "_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -186,7 +195,7 @@ for (grp in useContrasts){
 }
 
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_downGenes_",
                 paste(useContrasts,collapse="_"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -228,7 +237,7 @@ print(p3)
 dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_downGenes_",
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_downGenes_",
 #                                 paste(useContrasts,collapse="_"),"_padj",
 #                                 padjVal, "_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=16,units="cm")
@@ -335,7 +344,7 @@ p3<-ggplot(sigPerChr, aes(x=chr,y=genes,group=SMC)) +
   scale_y_reverse(limits=c(ymax,0)) + scale_x_discrete(position = "top")
 
 p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "bar_countsPerChr_",paste(useContrasts,
                                 collapse="_"),"_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
@@ -389,7 +398,7 @@ sigTbl<-sigList
 
 # downregulated
 sigList<-lapply(sigTables, getSignificantGenes,
-                padj= -padjVal,lfc=lfcVal,direction="lt")
+                padj= padjVal,lfc= -lfcVal,direction="lt")
 
 sigList<-lapply(sigList, "[", ,c("wormbaseID","chr","log2FoldChange"))
 for(g in names(sigList)){ sigList[[g]]$SMC<-g }
@@ -459,7 +468,7 @@ p6<-p6+geom_text(data=aa,aes(x=updown,y=10,label=ratio), color="black",
   geom_text(data=rbind(bb,bb1),aes(x=updown,y=max(bb$up),label=ratioupdown), color="black",
                     position = position_dodge(1),vjust=-0.5)
 p<-ggpubr::ggarrange(p2,p4,p5,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "count&LFCbyChr_",
                                 paste(useContrasts,collapse="_"), "_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
@@ -467,7 +476,7 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
 
 
 p<-ggpubr::ggarrange(p3,p6,ncol=1,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "count&LFCautosomes_",
                                 paste(useContrasts,collapse="_"), "_padj",
                                 padjVal,"_lfc", lfcVal,".pdf"),
@@ -506,7 +515,7 @@ maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999)*1.1
 corMethod="spearman"
 
 if(plotPDFs==T){
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,corMethod,"Cor_allGenes.pdf"),
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_allGenes.pdf"),
       width=5, height=5, paper="a4")
 }
 for (i in 1:ncol(combnTable)){
@@ -514,7 +523,7 @@ for (i in 1:ncol(combnTable)){
   grp2<-useContrasts[combnTable[2,i]]
 
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/",fileNamePrefix,corMethod,"Cor_allGenes_",grp1,"_",
+    png(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_allGenes_",grp1,"_",
                     grp2,".png"), width=5, height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
@@ -550,7 +559,7 @@ if(includeChrX){
     grp1<-useContrasts[combnTable[1,i]]
     grp2<-useContrasts[combnTable[2,i]]
     if(plotPDFs==F){
-      png(file=paste0(outPath, "/plots/",fileNamePrefix,corMethod,"Cor_chrX_",grp1,"_",
+      png(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_chrX_",grp1,"_",
                       grp2,".png"), width=5,
           height=5, units="in", res=150)
     }
@@ -586,7 +595,7 @@ for (i in 1:ncol(combnTable)){
   grp1<-useContrasts[combnTable[1,i]]
   grp2<-useContrasts[combnTable[2,i]]
   if(plotPDFs==F){
-    png(file=paste0(outPath, "/plots/",fileNamePrefix,corMethod,"Cor_autosomal_",grp1,"_",
+    png(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_autosomal_",grp1,"_",
                     grp2,".png"), width=5,height=5, units="in", res=150)
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
@@ -646,12 +655,12 @@ if(!combineChrAX){
   maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999)*1.1
 
   if(plotPDFs==T){
-    pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_wtExpr.pdf"), width=5,
+    pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr.pdf"), width=5,
         height=5, paper="a4")
   }
   for (grp in useContrasts){
     if(plotPDFs==F){
-      png(file=paste0(outPath, "/plots/",fileNamePrefix,"cor_wtExpr_",grp1,"_",
+      png(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr_",grp1,"_",
                       grp2,".png"), width=5, height=5, units="in", res=150)
     }
     idx<-match(geneTable$wormbaseID,names(wtMean))
@@ -719,7 +728,7 @@ for (i in 1:ncol(combnTable)){
        geneTable[,paste0(grp2,"_lfc")] > lfcVal)
   if(length(idx)>0){
     write.table(geneTable[idx,],
-              file=paste0(outPath,"/txt/",fileNamePrefix,"sigIntersectUP_",
+              file=paste0(outPath,"/txt/",outputNamePrefix,"sigIntersectUP_",
                           grp1,"v",grp2,".tsv"),sep="\t",row.names=F)
   }
 }
@@ -731,7 +740,7 @@ for (i in 1:ncol(combnTable)){
                geneTable[,paste0(grp2,"_lfc")] < -lfcVal)
   if(length(idx)>0){
     write.table(geneTable[idx,],
-                file=paste0(outPath,"/txt/",fileNamePrefix,"sigIntersectDOWN_",
+                file=paste0(outPath,"/txt/",outputNamePrefix,"sigIntersectDOWN_",
                             grp1,"v",grp2,".tsv"),sep="\t",row.names=F)
   }
 }
@@ -739,14 +748,14 @@ for (i in 1:ncol(combnTable)){
 idx<-which(rowSums(geneTable[,lfcCols] > lfcVal) == length(lfcCols))
 if(length(idx)>0){
   write.table(geneTable[idx,],
-              file=paste0(outPath,"/txt/",fileNamePrefix,"sigIntersectUP_all.tsv"),
+              file=paste0(outPath,"/txt/",outputNamePrefix,"sigIntersectUP_all.tsv"),
               sep="\t",row.names=F)
 }
 
 idx<-which(rowSums(geneTable[,lfcCols] < -lfcVal) == length(lfcCols))
 if(length(idx)>0){
   write.table(geneTable[idx,],
-              file=paste0(outPath,"/txt/",fileNamePrefix,"sigIntersectDOWN_all.tsv"),
+              file=paste0(outPath,"/txt/",outputNamePrefix,"sigIntersectDOWN_all.tsv"),
               sep="\t",row.names=F)
 }
 

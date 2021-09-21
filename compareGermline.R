@@ -7,10 +7,19 @@ library(clusterProfiler)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareGermline"
+print(scriptName)
+
 if(filterData){
-  fileNamePrefix=filterPrefix
+  fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
+makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
+                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                           scriptName)))
 
 eulerLabelsType<-c("counts")
 
@@ -53,7 +62,7 @@ for (grp in useContrasts){
   germsoma<-list(salmon=salmonSig$wormbaseID, germline=reinke$wormbaseID)
   names(germsoma)<-c(grp,"germline")
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_", grp,
                   "VsGermline_padj", padjVal, "_lfc", lfcVal,".pdf"),
                   width=5,height=10,paper="a4")
   fit<-euler(germsoma)
@@ -98,7 +107,7 @@ for (grp in useContrasts){
   dev.off()
 
   #p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-  # ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+  # ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
   #                                 grp,"VsGermline_padj",
   #                                 padjVal,"_lfc", lfcVal,".pdf"),
   #                 plot=p, device="pdf",width=29,height=11,units="cm")
@@ -125,7 +134,7 @@ sigGenes<-lapply(sigTables, "[[" ,"wormbaseID")
 prettySampleNames<-names(sigGenes)
 sigGenes[["germline"]]<-reinke$wormbaseID
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                 "venn_UpVsGermline_padj",
                 padjVal,"_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -144,7 +153,7 @@ lapply(eulerPlotList,print)
 dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
 #                                 "venn_UpVsGermline_padj",
 #                                 padjVal,"_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=11,units="cm")
@@ -192,7 +201,7 @@ sigGenes<-lapply(sigTables, "[[","wormbaseID")
 prettySampleNames<-names(sigGenes)
 sigGenes[["germline"]]<-reinke$wormbaseID
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                 "venn_DownVsGermline_padj",
                 padjVal,"_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -213,7 +222,7 @@ lapply(eulerPlotList,print)
 dev.off()
 
 #p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-#ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+#ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
 #                                "venn_DownVsGermline_padj",
 #                                padjVal,"_lfc", lfcVal,".pdf"),
 #                plot=p, device="pdf",width=29,height=11,units="cm")
@@ -243,7 +252,7 @@ if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
             main=list(label=paste0("kle-2 and scc-1 genes down: lfc>", lfcVal,
                                    ", padj<",padjVal,"\n",totalSums), fontsize=8))
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                   "venn_kle2scc1setsVsGermline_padj",
                   padjVal,"_lfc", lfcVal,".pdf"),
       width=5,height=10,paper="a4")
@@ -328,7 +337,7 @@ for (grp in useContrasts){
     #print(paste0(grp," in ",pathName,":  ",paste(sort(leadEdge$publicID),collapse=",")))
     #print(leadEdge)
   }
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"gsea_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gsea_", grp,
                   "VsGermlineDatasets.pdf"),
       width=5,height=10,paper="a4")
   #p<-ggpubr::ggarrange(plotlist=gseaList,nrow=2,ncol=1)
@@ -337,12 +346,12 @@ for (grp in useContrasts){
   dev.off()
 }
 
-if(length(gseqList)>0){
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"gseaAll_GermlineDatasets.pdf"),
+if(length(gseaList)>0){
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gseaAll_GermlineDatasets.pdf"),
       width=16,height=11)
   p<-gridExtra::marrangeGrob(grobs=gseaTbl, ncol=3, nrow=1,padding=unit(0.01,"line"))
   print(p)
   dev.off()
 
-  write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",fileNamePrefix,"gseaLeadEdgeGenes.tsv"),sep="\t")
+  write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdgeGenes.tsv"),sep="\t")
 }
