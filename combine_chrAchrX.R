@@ -51,6 +51,11 @@ fileNamePrefix<-filterPrefix
 # chrAprefix<-paste0("/../SMC_RNAseq_prefiltChrA/rds/p",padjVal,"_lfc",lfcVal,"/preFiltOsc2xChrA_")
 
 for (grp in names(contrastNames)){
+  if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,grp,
+                        "_logfile.txt"))){
+    file.remove(paste0(outPath,"/txt/",fileNamePrefix,grp,
+         "_logfile.txt"))
+  }
   #grp=names(contrastNames)[1]
   Xdata<-readRDS(paste0(outPath, chrXprefix, contrastNames[[grp]], "_DESeq2_fullResults_p",padjVal,".rds"))
   table(Xdata$chr)
@@ -133,7 +138,7 @@ for (grp in names(contrastNames)){
   # MAplot ALL genes
   ############-
 
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,contrastNames[[grp]],
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
                   "_MAplots_results.pdf"), width=5,height=5,paper="a4")
   #plotMA(res, main=paste0(grp,"unshrunken LFC, threshold=", padjVal), ylim=c(-3,3), alpha=padjVal)
   plotMA(resLFC, main=paste0(grp," apeglm shrunk LFC, threshold=", padjVal), ylim=c(-3,3), alpha=padjVal)
@@ -151,11 +156,11 @@ for (grp in names(contrastNames)){
   if(length(chrXgenes)>0) {
     upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
     write.table(rownames(upOnX), file=paste0(outPath,"/txt/",
-                                             fileNamePrefix, contrastNames[[grp]],
+                                             fileNamePrefix, grp,
                                              "_upOnX_p",padjVal,".csv"),
                 row.names=FALSE,col.names=FALSE)
 
-    plotMA(chrXres,main=paste0(contrastNames[[grp]], " chrX genes, threshold= ", padjVal),
+    plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),
            ylim=c(-4,4),alpha=padjVal)
   }
 
@@ -169,7 +174,7 @@ for (grp in names(contrastNames)){
 
   autosomalRes05<- autosomalRes[autosomalRes$padj<padjVal,]
 
-  plotMA(autosomalRes, main=paste0(contrastNames[[grp]], " autosomal genes, threshold=",
+  plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",
                                    padjVal),ylim=c(-4,4),alpha=padjVal)
 
   dev.off()
@@ -180,7 +185,7 @@ for (grp in names(contrastNames)){
   # Fisher test of number of up and down genes on X v autosomes
   #############-
 
-  sink(file=paste0(outPath,"/txt/",fileNamePrefix,contrastNames[[grp]],
+  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
                    "_logfile.txt"),append=TRUE, type="output")
   upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange> lfcVal),
                             sum(chrXres05$log2FoldChange< -lfcVal),
@@ -202,7 +207,7 @@ for (grp in names(contrastNames)){
                        dim(autosomalRes)[1],
                        dim(autosomalRes05)[1]),
                      nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-  cat("\nFisher Test, enrichment of differentially expressed genes:\n")
+  cat(paste0("\nFisher Test, enrichment of ",grp,"differentially expressed genes:\n"))
   print(testEnrich)
   print(fisher.test(testEnrich))
   sink()
@@ -212,39 +217,52 @@ for (grp in names(contrastNames)){
   #############-
   # Box plot by X v autosomes
   #############-
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
                   "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
 
-  idx<-resLFC$log2FoldChange!=0
+  #idx<-resLFC$log2FoldChange!=0
   chrType<-factor(rownames(resLFC) %in% chrXgenes)
   levels(chrType)<-c("Autosomal","X chr")
   geneCounts<-table(chrType)
 
-  boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-          main=paste0("Expression changes ", grp), col="grey", ylab="Log2 Fold Change",
-          xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-  #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-  abline(h=0,lty=2,col="blue")
+  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                   "_logfile.txt"),append=TRUE, type="output")
+  cat(paste0("\n T test, of ",grp," LFC X v autosomes:\n"))
+  ttst<-t.test(resLFC$log2FoldChange~chrType)
+  print(ttst)
+  sink()
 
+  boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
+          main=paste0("Expression changes ", grp), col="grey", ylab="Log2 fold change",
+          xlab="Chromosome type (number of genes)",
+          names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""),
+          sub=paste0("p.value ",Hmisc::format.pval(ttst$p.value)))
+  abline(h=0,lty=2,col="blue")
   dev.off()
 
 
   #############-
   # Box plot by chromosome
   #############-
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
                   "_boxPlots_expnByChr.pdf"), width=8,height=5,paper="a4")
   chrName<-factor(resLFC$chr)
   geneCounts<-table(chrName)
+
+  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                   "_logfile.txt"),append=TRUE, type="output")
+  cat(paste0("\n AOV and tukeyHSD, of ",grp," by chromosome:\n"))
+  anovaRes<-aov(resLFC$log2FoldChange~chrName)
+  print(summary(anovaRes))
+  tukey<-TukeyHSD(anovaRes)
+  print(tukey)
+  sink()
 
   boxplot(log2FoldChange~chrName,data=resLFC,varwidth=TRUE,outline=FALSE,notch=TRUE,
           main=paste0("Expression changes ", grp), ylab="log2 Fold Change",
           col=c(rep("grey",5),"purple"),xlab="chromosome (number of genes)",
           names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-  #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
   abline(h=0,lty=2,col="blue")
-
-
   dev.off()
 
 
@@ -290,11 +308,11 @@ for (grp in names(contrastNames)){
                       pointSize = 1.0)
   #dev.off()
   if(plotPDFs==T){
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_allGenes.pdf"), plot=p1,
            device="pdf",path=outPath, width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_allGenes.png"), plot=p1,
            device="png",path=outPath, width=12,height=12,units="cm")
   }
@@ -318,7 +336,7 @@ for (grp in names(contrastNames)){
   #names(keyvals)[which(abs(resByChr$log2FoldChange)<1 | resByChr$padj>5*10e-3)] <- 'NS'
 
 
-  #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
   #                "_volcanoPlot_expnByChr.pdf"), width=8,height=6,paper="a4")
   sigUp<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange>lfcVal)
   sigDown<-sum(resByChr$padj<padjVal & resByChr$log2FoldChange< -lfcVal)
@@ -347,18 +365,18 @@ for (grp in names(contrastNames)){
                       pointSize = 1.0)
   #dev.off()
   if(plotPDFs==T){
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_autVchrX.pdf"), plot=p2,
            device="pdf",path=outPath,width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_autVchrX.png"), plot=p2,
            device="png",path=outPath,width=12,height=12,units="cm")
   }
 
   if(length(chrXgenes)>0) {
     idx<-resByChr$chr=="chrX" & !is.na(resByChr$padj)
-    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
     #                "_volcanoPlot_chrX.pdf"), width=8,height=6,paper="a4")
     sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
     sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
@@ -385,18 +403,18 @@ for (grp in names(contrastNames)){
                         pointSize=1.0)
     #dev.off()
     if(plotPDFs==T){
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                              "_volcanoPlot_chrX.pdf"), plot=p3,
              device="pdf",path=outPath,width=12,height=12,units="cm")
     } else {
-      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+      ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                              "_volcanoPlot_chrX.png"), plot=p3,
              device="png",path=outPath,width=12,height=12,units="cm")
     }
   }
 
   idx<-resByChr$chr!="chrX" & !is.na(resByChr$padj)
-  #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  #pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
   #                "_volcanoPlot_autosomes.pdf"), width=8,height=6,paper="a4")
   sigUp<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]>lfcVal)
   sigDown<-sum(resByChr$padj[idx]<padjVal & resByChr$log2FoldChange[idx]< -lfcVal)
@@ -425,17 +443,17 @@ for (grp in names(contrastNames)){
                       pointSize=1.0)
   #dev.off()
   if (plotPDFs==T) {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_autosomes.pdf"), plot=p4,
            device="pdf",path=outPath,width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_autosomes.png"), plot=p4,
            device="png",path=outPath,width=12,height=12,units="cm")
   }
 
 
-  sink(file=paste0(outPath,"/txt/", fileNamePrefix, contrastNames[[grp]],
+  sink(file=paste0(outPath,"/txt/", fileNamePrefix, grp,
                    "_logfile.txt"),append=TRUE, type="output")
   cat("Summary by Chr: \n")
   cat("\np=0.05, LFC=0: \n")
@@ -534,11 +552,11 @@ for(grp in names(contrastNames)){
                       pointSize = 1.0)
   #dev.off()
   if(plotPDFs==T){
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_oscillatingGenes.pdf"), plot=p1,
            device="pdf",path=outPath, width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_oscillatingGenes.png"), plot=p1,
            device="png",path=outPath, width=12,height=12,units="cm")
   }
@@ -590,11 +608,11 @@ for(grp in names(contrastNames)){
                       pointSize = 1.0)
   #dev.off()
   if(plotPDFs==T){
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_hsGenes.pdf"), plot=p1,
            device="pdf",path=outPath, width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_hsGenes.png"), plot=p1,
            device="png",path=outPath, width=12,height=12,units="cm")
   }
@@ -645,11 +663,11 @@ for(grp in names(contrastNames)){
                       pointSize = 1.0)
 
   if(plotPDFs==T){
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_ampliconGenes.pdf"), plot=p1,
            device="pdf",path=outPath, width=12,height=12,units="cm")
   } else {
-    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                            "_volcanoPlot_ampliconGenes.png"), plot=p1,
            device="png",path=outPath, width=12,height=12,units="cm")
   }
@@ -676,7 +694,7 @@ for(grp in names(contrastNames)) {
                              chr=c("all","chrX","autosomes"))
 
   thresholds<-thresholds[order(thresholds$group,thresholds$padj,thresholds$direction,thresholds$lfc),]
-  write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, contrastNames[[grp]],
+  write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
                                    "_numSignificant_p",padjVal,".csv"),quote=F,row.names=F)
 
   ####### plot percentSignificant
@@ -688,7 +706,7 @@ for(grp in names(contrastNames)) {
               vjust=0,size=3,lineheight=0.9)+
     ylim(0,1.2*max(thresholds$percentSignificant))
 
-  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                          "_thresholds_percentSig_p",padjVal,".png"), plot=p1,
          device="png",path=outPath,width=14,height=12,units="cm")
 
@@ -700,7 +718,7 @@ for(grp in names(contrastNames)) {
               vjust=0,size=3,lineheight=0.9)+
     ylim(0,1.2*max(thresholds$percentSigGt10))
 
-  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, contrastNames[[grp]],
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                          "_thresholds_percentSigGt10_p",padjVal,".png"), plot=p2,
          device="png",path=outPath,width=14,height=12,units="cm")
 
