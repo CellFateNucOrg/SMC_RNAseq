@@ -478,31 +478,3 @@ df3<-left_join(df2,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
 
 
 
-# # look at kegg
-# library(clusterProfiler)
-# library(pathview)
-#
-# seqids<-leadEdgeTbl %>% distinct(sequenceID)
-# seqids<-paste0("CELE_",seqids$sequenceID,sep="")
-#
-# kk <- enrichKEGG(gene         = seqids,
-#                  organism     = 'cel',
-#                  pvalueCutoff = 0.05)
-# head(kk)[c(1:7,9)]
-#
-# browseKEGG(kk, 'cel04142')
-# browseKEGG(kk, 'cel00062')
-# browseKEGG(kk, 'cel01212')
-# browseKEGG(kk, 'cel04146')
-# browseKEGG(kk, 'cel01200')
-#
-# mkk <- enrichMKEGG(gene = seqids,
-#                    organism = 'cel',
-#                    pvalueCutoff = 1,
-#                    qvalueCutoff = 1)
-# head(mkk)
-#
-# pathview(gene.data  = seqids,
-#          pathway.id = "cel04142",
-#          gene.idtype= "kegg",
-#          species    = "cel")

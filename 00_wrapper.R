@@ -59,7 +59,6 @@ source("compareGeneLengths.R")
 # compare to dosage compensation data sets
 print("compare to public DC data sets")
 source("compareToDCdatasets.R")
-
 # check percentage germline vs soma genes among positives
 print("look for soma/germline enrichment")
 source("compareGermline.R")
