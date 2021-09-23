@@ -71,7 +71,6 @@ source("compareToDCdatasets.R")
 # check percentage germline vs soma genes among positives
 print("look for soma/germline enrichment")
 source("compareGermline.R")
-TODO
 
 # check enrichment for aging genes
 print("look for longevity/aging enrichment")

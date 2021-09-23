@@ -1071,7 +1071,6 @@ if(plotPDFs==F){
 #' @export
 #'
 getREF <- function(genome) {
-
   if( file.exists(file.path(Sys.getenv('root'), 'genomes', genome)) ) {
     REF <- Biostrings::readDNAStringSet( file.path(Sys.getenv('root'), 'genomes', genome) )
     names(REF) <- gsub(' .+', '', names(REF))
@@ -1153,3 +1152,218 @@ if(plotPDFs==T){
   dev.off()
 }
 
+######################-
+# TADs ----
+######################-
+loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"), format="bedpe")
+head(loops)
+#extract the separate anchors
+grl<-zipup(loops)
+anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+
+#make TADs
+tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+
+tads_in<-tads_in[width(tads_in)>100000]
+
+#tads<-reduce(tads)
+xtads<-tads_in[seqnames(tads_in)=="chrX"]
+atads<-tads_in[seqnames(tads_in)!="chrX"]
+
+flankSize<-200000
+
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+
+pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"tads-chrX_flank",
+                  flankSize/1000,"kb.pdf"), width=11,
+      height=9, paper="a4r")
+
+
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(xtads),
+                   refgenome="ce11", bin=10000L, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=median(width(tads)))
+
+
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+#layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs",error.estimates=T)
+plotHeatmap(p,main="ChrX TADs", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F),
+            clspace=c("#00008B", "#FFFFE0","#8B0000"))
+
+
+# reduced tads
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(reduce(xtads)),
+                   refgenome="ce11", bin=10000L, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=median(width(tads)))
+
+
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+#layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs (reduced)",error.estimates=F)
+plotHeatmap(p,main="ChrX TADs (reduced)", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F),
+            clspace=c("#00008B", "#FFFFE0","#8B0000"))
+
+
+dev.off()
+
+
+
+
+####
+## loops-----
+####
+
+# smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+#                   useContrasts,"_lfc.bw")
+#
+# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
+#                            format="bedpe")
+# head(loops)
+# #extract the separate anchors
+# grl<-zipup(loops)
+# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+#
+#
+#
+# anchors<-reduce(sort(c(anchor1,anchor2)))
+# olap_gr<-anchors
+# target_size<-max(width(anchors))
+# window_size<-target_size/2
+# target_size=round(target_size/window_size)*window_size
+# olap_gr<-resize(olap_gr,width=target_size,fix="center")
+# bw_gr <- ssvFetchBigwig(smcRNAseq[3], olap_gr, win_size = 100,
+#                        unique_names=useContrasts[3],win_method="summary")
+# bw_gr$chr<-factor(gsub("chr","",as.vector(seqnames(bw_gr))))
+# ssvSignalHeatmap(bw_gr,fill_limits=c(-1,1),
+#                 perform_clustering="no",cluster_="chr",
+#                 within_order_strategy="sort")
+#
+# library(ComplexHeatmap)
+# library(seqsetvis)
+#
+# grpbw<-import.bw(smcRNAseq[3])
+# bwsig<-viewGRangesWinSummary_dt(grpbw,olap_gr,n_tiles=100)
+# mat<-matrix(bwsig$y,ncol=100,byrow=T)
+# col_fun = circlize::colorRamp2(c(-1, 0, 1), c("green", "white", "red"))
+#
+# p1<-Heatmap(mat,cluster_columns=F,cluster_rows=F,
+#             row_split=bwsig$seqnames[seq(1,dim(bwsig)[1],100)],
+#             show_row_dend = F)#, col=col_fun(c(seq(-1,1,1))),na_col="grey")
+# p1
+#
+# p1+p2
+
+
+
+loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
+                           format="bedpe")
+head(loops)
+#extract the separate anchors
+grl<-zipup(loops)
+anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+
+
+#make TADs
+tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
+head(tads)
+sort(width(tads))
+tads<-reduce(tads)
+sort(width(tads))
+
+# find regions not in tads
+notads<-gaps(tads)
+
+
+plotList<-list()
+for (grp in useContrasts){
+  #grp=useContrasts[3]
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tads,type="within")
+  genesInTads<-salmongr[queryHits(ol)]
+
+  ol<-findOverlaps(salmongr,notads)
+  genesNotTads<-salmongr[queryHits(ol)]
+
+  genesInTads$TADs<-"inside"
+  genesNotTads$TADs<-"outside"
+  df<-data.frame(c(genesInTads,genesNotTads))
+  df<-df%>%group_by(seqnames,TADs)%>%mutate(count=n())
+
+  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+    facet_grid(.~seqnames) +ylim(c(-1,1))+
+    ggtitle(grp)
+}
+p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSinout_",
+                     padjVal,".pdf")),
+       width=9, height=11, paper="a4",plot=p,device="pdf")
+
+
+
+#separate anchors from inside tads
+tads_in<-reduce(GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1)))
+tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+anchors<-reduce(sort(c(anchor1,anchor2)))
+#anchors<-resize(anchors,width=width(anchors)+20000,fix="center")
+ol<-findOverlaps(anchors,tads_in)
+anchors<-anchors[-queryHits(ol)]
+
+plotList<-list()
+for (grp in useContrasts){
+  #grp=useContrasts[3]
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tads_in,type="within")
+  insideTads<-salmongr[queryHits(ol)]
+
+  ol<-findOverlaps(salmongr,anchors)
+  atAnchors<-salmongr[queryHits(ol)]
+
+  insideTads$TADs<-"TAD"
+  atAnchors$TADs<-"Anchor"
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%group_by(seqnames,TADs)%>%mutate(count=n())
+
+  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+    facet_grid(.~seqnames) +ylim(c(-1,1))+
+    ggtitle(grp)
+}
+p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
+                     padjVal,".pdf")),
+       width=9, height=11, paper="a4",plot=p,device="pdf")
