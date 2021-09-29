@@ -753,7 +753,89 @@ if(!file.exists(paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"))){
 }
 
 
+######################3-
+## Aging Riedel (2013) (Murphy lab) -----
+######################-
+#https://www.nature.com/articles/ncb2720
+#DAF-16 employs the chromatin remodeller SWI/SNF to promote stress resistance and longevity
+# Christian G. Riedel, Robert H. Dowen, Guinevere F. Lourenco, Natalia V. Kirienko, Thomas Heimbucher, Jason A. West, Sarah K. Bowman, Robert E. Kingston, Andrew Dillin, John M. Asara & Gary Ruvkun
+# Nature Cell Biology volume 15, pages 491–501 (2013)
+# data not available in supplementary material... need to do alignment and deseq2
 
+# daf-2
+# daf-2/daf-16
+# got table of metadata from SRA run selector:
+df<-read.delim(paste0(outPath,"/publicData/SraRunTable_Riedel2013_SRP017908.txt"))
+#df<-df[,c("Run","SRA_Study","Sample_Name")]
+df$replicate<-stringr::str_sub(df$Sample_Name,stringr::str_locate(df$Sample_Name,"r.?$"))
+df$Sample_Name<-gsub("_d1a_mRNA_r.?$","",df$Sample_Name)
+df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
+colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F)
+
+######################3-
+## Aging Zarse (2012) (Ristow lab) ------
+######################-
+# Cell Metabolism
+# Volume 15, Issue 4, 4 April 2012, Pages 451-465
+# Impaired Insulin/IGF1 Signaling Extends Life Span by Promoting Mitochondrial L-Proline Catabolism to Induce a Transient ROS Signal
+# KimZarse12SebastianSchmeisser13MarcoGroth4SteffenPriebe5GregorBeuster1DoreenKuhlow16ReinhardGuthke5MatthiasPlatzer4C. RonaldKahn2MichaelRistow16
+# https://www.sciencedirect.com/science/article/pii/S1550413112000940?via%3Dihub#app2
+
+#daf-2
+df<-read.csv(paste0(outPath,"/publicData/SraRunTable_Zarse2012_GSE36041.txt"))
+df<-df[df$Organism=="Caenorhabditis elegans",]
+df$replicate<-stringr::str_sub(df$Library.Name,stringr::str_locate(df$Library.Name,".$"))
+df$Genotype<-gsub("wild type","wt",df$Genotype)
+df$Genotype<-gsub("daf-2\\(e1370\\)","daf-2",df$Genotype)
+df1<-df %>% dplyr::group_by(SRA.Study,Genotype,replicate) %>% dplyr::summarise(SRRnum=paste(Run,collapse=";"))
+colnames(df1)<-c("dataset","bioType","replicate","SRRnumber")
+df1<-df1[c(4,1,2,3)]
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F)
+
+
+######################-
+## Aging Heestand (2013) (Antebi lab) ------
+######################-
+# Dietary Restriction Induced Longevity Is Mediated by Nuclear Receptor NHR-62 in Caenorhabditis elegans
+# Bree N. Heestand, Yidong Shen, Wei Liu, Daniel B. Magner, Nadia Storm, Caroline Meharg, Bianca Habermann, Adam Antebi
+# Published: July 25, 2013
+# https://doi.org/10.1371/journal.pgen.1003651
+
+eat2URL<-"https://doi.org/10.1371/journal.pgen.1003651.s012"
+eat2File<-paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx")
+if(remakeFiles){
+  file.remove(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))
+}
+
+if(!file.exists(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))){
+  download.file(eat2URL,destfile= eat2File)
+  eat2<-read_excel(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+  eat2<-eat2[,c("Gene ID","eat-2 vs N2 fold-change (log2)","eat-2 vs N2 (padj)")]
+  colnames(eat2)<-c("sequenceID","eat2_lfc","eat2_padj")
+  eat2up<-getSignificantGenes(eat2,padj=0.05,lfc=2,namePadjCol="eat2_padj",
+                              nameLfcCol="eat2_lfc",direction="gt",
+                              chr="all") #361
+  write.csv(eat2up,paste0(outPath,"/publicData/eat2up_Heestand2012.csv"),
+            quote=F,row.names=F)
+
+  eat2down<-getSignificantGenes(eat2,padj=0.05,lfc= -2,
+                                namePadjCol="eat2_padj",
+                                nameLfcCol="eat2_lfc",direction="lt",
+                                chr="all") #537
+  write.csv(eat2down,paste0(outPath,"/publicData/eat2down_Heestand2012.csv"),
+            quote=F,row.names=F)
+  file.remove(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+}
+
+
+######################-
+## Aging Ayyadevara (2009) (Shmookler Reis lab) ------
+######################-
+# Caenorhabditis elegans PI3K mutants reveal novel genes underlying exceptional stress resistance and lifespan
+# Srinivas Ayyadevara, Çagdaþ Tazearslan, Puneet Bharill, Ramani Alla, Eric Siegel, Robert J. Shmookler Reis,
+# First published: 17 November 2009
+#https://onlinelibrary.wiley.com/doi/10.1111/j.1474-9726.2009.00524.x
 
 
 
