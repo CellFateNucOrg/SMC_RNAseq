@@ -836,6 +836,53 @@ if(!file.exists(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))){
 # Srinivas Ayyadevara, Çagdaþ Tazearslan, Puneet Bharill, Ramani Alla, Eric Siegel, Robert J. Shmookler Reis,
 # First published: 17 November 2009
 #https://onlinelibrary.wiley.com/doi/10.1111/j.1474-9726.2009.00524.x
+#age-1
+#### needed to convert pdf to text and process manually supplementary table 1&2. Note that the pdf files seem to be misannotated if go according to numbers of genes in each group.
+# Table S2 has the contrast of two strong age-1 alleles (mg44 and m333) vs an
+# isogenic backcroseed N2 (N2DRM)
+
+df<-read.delim(paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.txt"),
+               header=F) # 133 genes
+names(df)<-c("sequenceID")
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+df<-df[!is.na(df$wormbaseID),] # lose 22
+write.csv(df,paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.csv"),
+          quote=F,row.names=F) #111 genes
+
+
+df<-read.delim(paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.txt"),
+               header=F) # 206 genes
+names(df)<-c("sequenceID")
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+df<-df[!is.na(df$wormbaseID),] # lose 33
+write.csv(df,paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.csv"),
+          quote=F,row.names=F) #173 genes
+
+# Table S1 has the contrast of two strong age-1 alleles (mg44 and m333) vs a
+# weaker age-1 allele (hx546)
+
+df<-read.delim(paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.txt"),
+               header=F) # 23 genes
+names(df)<-c("sequenceID")
+dim(df)
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+sum(is.na(df$wormbaseID))
+df<-df[!is.na(df$wormbaseID),] # lose 4
+dim(df)
+write.csv(df,paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.csv"),
+          quote=F,row.names=F) #19 genes
+
+
+df<-read.delim(paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.txt"),
+               header=F) # 253 genes
+names(df)<-c("sequenceID")
+dim(df)
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+sum(is.na(df$wormbaseID))
+df<-df[!is.na(df$wormbaseID),] # lose 52
+dim(df)
+write.csv(df,paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.csv"),
+          quote=F,row.names=F) #201 genes
 
 
 
