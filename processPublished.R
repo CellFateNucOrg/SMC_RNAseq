@@ -771,7 +771,7 @@ df$replicate<-stringr::str_sub(df$Sample_Name,stringr::str_locate(df$Sample_Name
 df$Sample_Name<-gsub("_d1a_mRNA_r.?$","",df$Sample_Name)
 df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
 colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
-write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F)
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F,sep="\t")
 
 ######################3-
 ## Aging Zarse (2012) (Ristow lab) ------
@@ -791,7 +791,7 @@ df$Genotype<-gsub("daf-2\\(e1370\\)","daf-2",df$Genotype)
 df1<-df %>% dplyr::group_by(SRA.Study,Genotype,replicate) %>% dplyr::summarise(SRRnum=paste(Run,collapse=";"))
 colnames(df1)<-c("dataset","bioType","replicate","SRRnumber")
 df1<-df1[c(4,1,2,3)]
-write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F)
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F,sep="\t")
 
 
 ######################-
