@@ -73,12 +73,16 @@ filterResults<-function(resultsTable, padj=0.05, lfc=0, direction="both",
 getSignificantGenes<-function(resultsTable, padj=0.05, lfc=0, namePadjCol="padj",
                               nameLfcCol="log2FoldChange", direction="both",
                               chr="all", nameChrCol="chr", outPath="."){
+  #remove rows with padj NA value
+  idx<-is.na(resultsTable[,namePadjCol])
+  resultsTable<-resultsTable[!idx,]
+  # do filtering
   if(direction=="both") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & abs(resultsTable[,nameLfcCol])>lfc
   } else if(direction=="gt") {
     idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]>lfc
   } else if(direction=="lt") {
-    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol] < -lfc
+    idx<-!is.na(resultsTable[,namePadjCol]) & resultsTable[,namePadjCol]<padj & resultsTable[,nameLfcCol]<lfc
   } else {
     print("direction must be 'both' to get both tails, \n'gt' to get lfc larger than a specific value, \nor 'lt' to get lfc less than a certain value")
   }
@@ -382,3 +386,22 @@ getDensity1<-function(res, pval=0.05,
   return(list(groupCounts,sig))
 }
 
+
+
+
+#' Calculate number of significant genes by chormosome
+#'
+#' @param res DESeq2 results table
+#' @param pval Adjusted p value threshold to use
+#' @param lfc Log2 fold change threshold to use
+#' @return A table of the number of significant genes by chromosome
+#' @export
+summaryByChr<-function(resLFC,padj,lfc) {
+  up<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange > lfc,]
+  down<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange < -lfc, ]
+  allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
+  allChr$autosomes<-rowSums(allChr[,1:5])
+  allChr$total<-rowSums(allChr[,1:6])
+  rownames(allChr)<-paste0(rownames(allChr),"_p",padj,"_lfc",lfc)
+  return(allChr)
+}
