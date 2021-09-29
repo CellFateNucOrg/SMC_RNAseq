@@ -23,6 +23,9 @@ if(combineChrAX){
 #make bigwigs from STAR data
 #source("makeSTARbw.R")
 
+# find best LFC threshold
+print("ROCit plots for optimal LFC threshold")
+source("ROCit.R")
 
 # get read counts for each sample
 print("collecting read counts from qc files")
@@ -53,6 +56,14 @@ rmarkdown::render(input="AllPlots_TEA.Rmd",output_format="pdf_document",
 rmarkdown::render(input="AllPlots_WORMCAT.Rmd", output_format="pdf_document",
                   output_file=paste0(outPath,"/wormcat/",fileNamePrefix,"allPlots_WORMCAT.pdf"))
 
+# compare KEGG pathway enrichment
+print("check KEGG pathways")
+source("compareKEGG.R")
+
+# compare to dosage compensation data sets
+print("compare lengths of regulated genes")
+source("compareGeneLengths.R")
+
 # compare to dosage compensation data sets
 print("compare to public DC data sets")
 source("compareToDCdatasets.R")
@@ -60,4 +71,8 @@ source("compareToDCdatasets.R")
 # check percentage germline vs soma genes among positives
 print("look for soma/germline enrichment")
 source("compareGermline.R")
+
+# check enrichment for aging genes
+print("look for longevity/aging enrichment")
+source("compareAging.R")
 

@@ -20,6 +20,7 @@ library(ggplot2)
 library(DESeq2)
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
+library(readxl)
 
 source("./variableSettings.R")
 source("./functions.R")
@@ -354,16 +355,16 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 
   localPadj=0.05
   localLFC=1
-  hsUP<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsUP<-getSignificantGenes(garrigues, padj=localPadj, lfc=localLFC,
                             namePadjCol="P-adj",
                             nameLfcCol="log2(FC)", direction="gt")
-  hsUP
+  dim(hsUP)
   saveRDS(hsUP,file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 
-  hsDOWN<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsDOWN<-getSignificantGenes(garrigues, padj=localPadj, lfc= -localLFC,
                               namePadjCol="P-adj",
                               nameLfcCol="log2(FC)", direction="lt")
-  hsDOWN
+  dim(hsDOWN)
   saveRDS(hsDOWN,file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
 
   file.remove(paste0(outPath,"/publicData/",garriguesFileName))
@@ -491,7 +492,7 @@ if(remakeFiles){
 
 if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
   #link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
-  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1621957576&Signature=5MsXCUgOHCvppBgB6sSCQHzX1r9bREb6jEF4hO8OzwXsiNbOaGc20tFHeqEMOdTUQIvhSUYucZnQUiNshVeQp4rd6KsEAMPNVdBH8MmORDgJN20Ng6imKBCBum0JNovPGXLJKgi6n5N4m8nFfF5bzcgSuU2bNB7Iq5YJr9FT0GwhxfjrXRaQnG4fDpAeQuXIXS2XCx2TgHhRFIsMTAOHnUrme7yNwwaNpRa5fF5jiAk7ImdCf-GCR4OI0-eE8QK-Z~EFqjhq1gSF7JgX0dAzfr51Yvq8Dgm5IYqmo~nKG6TfO356urCbgMX1xKD7~pb6LmZVN6NO54L4vNMBUAHHRg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
+  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1632688021&Signature=XWm42IDBQhktZa-HFkbXCUf9tsRusTi~1T0MCyfi3smx69Yl7BcM078~4ObJOKugz6Ojxb5aNlwT94Mf09p-5A7FvUnT0vCAf8xJGZ3Byst1eIIBR4v4M6Smb487D0dh2DbZCsWmogyh6XZNTOss0bOrFcxJ~NUg9fmVR59yYLBUiHuMiEbfHyVd3ACy7bRlcwiXRSsyI4NaWDHaPluFgqgMlFEsibvFhT3aKG3BWs2IbUTearqfls5o2mwxP0GFY5ZAaR973-K7qtNY7U2vKH-cdoO2Aec~OJOKh42VlUaE1F5T8pJ5H2mkT6ZXOK3BPTO7Gmz33vmGzta4nduogg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
   download.file(link2,paste0("publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
   system(paste0("unzip ",outPath,"/publicData/",glFile,".zip -d ",outPath,"/publicData/",glFile))
@@ -574,10 +575,16 @@ dev.off()
 #                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
-
+# aging genes:
+# LOF of daf-2 (insulin receptor) increases lifespan
+# LOF of age-1 (PI3K) increases lifespan
+# LOF of daf-16 (TF repressed by age-1) decreases lifespan
+# LOF of elt-3 causes a decrease in lifespan
+# elt-1 activates elt-3. elt-5 and elt-6 repress elt-3
+# LOF of elt-5&elt-6 cause increase in lifespan
 
 #######################-
-## Aging microarrays (Stuart Kim lab)------
+## Aging microarrays Budovskaya (2008) (Stuart Kim lab)------
 #######################-
 # https://www.cell.com/fulltext/S0092-8674%2808%2900707-1
 
@@ -603,19 +610,238 @@ if(remakeFiles){
 if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
   download.file(ageRegulatedURL,paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
   ageReg<-readxl::read_excel(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
-  colnames(ageReg)<-c("sequenceID") #1244 but only 1003 overlap with ws275 gene names
+  colnames(ageReg)<-c("sequenceID") #1244 but only 1011 overlap with ws275 gene names
+  idx<-ageReg$sequenceID %in% metadata$sequenceID
+  ageReg<-ageReg[idx,]
+  ageReg<-left_join(ageReg,as.data.frame(metadata),by=c("sequenceID"))
+
+  download.file(agingMAurl,paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
+  tcMA<-readxl::read_excel(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"),skip=4)
+  colnames(tcMA)[1]<-"sequenceID"
+  idx<-tcMA$sequenceID %in% metadata$sequenceID
+  tcMA<-tcMA[idx,]
+  tcMA<-left_join(tcMA,as.data.frame(metadata),by=c("sequenceID"))
+  write.csv(tcMA,paste0(outPath,"/publicData/AgingTC_Budovskaya2008.csv"),
+            row.names=F,quote=F)
+
+  ageReg<-left_join(ageReg,tcMA,by=c("sequenceID"="gene"))
   write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
             row.names=F,quote=F)
+  file.remove(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
+  file.remove(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
 }
+
 # Document S6. Table S5: age-1 Microarray Data
 age1MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/b1a6e947-10b7-438b-8a3a-690c71964854/mmc6.xls"
+if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
+  download.file(age1MAurl,paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+  # there is some in the file. need to open manually and save as xlsx
+  age1MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"),skip=9)
+  # keep only final summary columns
+  age1MA<-age1MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(age1MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  #idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #age1MA<-age1MA[idx,]
+  age1MA<-inner_join(age1MA,as.data.frame(metadata),by="sequenceID")
+  write.table(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
+  file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+}
+
 
 # Document S7. Table S6: daf-16(m26) Microarray Data
 daf16MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/e172c477-a9c6-4c52-bb8f-fa5211ad4cee/mmc7.xls"
+if(!file.exists(paste0(outPath,"/publicData/daf16MA_Budovskaya2008.csv"))){
+  download.file(daf16MAurl,paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+  daf16MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"),skip=9)
+  # keep only final summary columns
+  daf16MA<-daf16MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(daf16MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  #idx<-daf16MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #daf16MA<-daf16MA[idx,]
+  daf16MA<-inner_join(daf16MA,as.data.frame(metadata),by="sequenceID")
+  write.table(daf16MA,paste0(outPath,"/publicData/daf16MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
+  file.remove(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+}
 
-#Document S8. Table S7: Potential elt-3 GATA Targets
-elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/acd1863d-1265-46da-b42b-f90d720ab245/mmc8.pdf"
 
+
+#Lund (2002) paper:
+#  https://pubmed.ncbi.nlm.nih.gov/12372248/
+# aging timecourse data hard to extract
+
+
+
+#######################-
+## Aging microarrays Murphy(2003)------
+#######################-
+
+#Murphy (2003) paper
+#https://www.nature.com/articles/nature01789#MOESM1
+# daf-2,  daf-2/daf-16 MA
+# I want classI genes upregulated by daf-2 (RNAi) and downregulated by daf-16 RNAi (=pro longevity)
+murphyURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fnature01789/MediaObjects/41586_2003_BFnature01789_MOESM2_ESM.xls"
+
+if(!file.exists(paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"))){
+  download.file(murphyURL,paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+  # there is some in the file. need to open manually and save as xlsx
+  ageClassI<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=1,skip=1,col_names=c("sequenceID","description"))
+  ageClassII<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=2,skip=1,col_names=c("sequenceID","description"))
+  ageClassI$sequenceID<-gsub("\\*+","",ageClassI$sequenceID)
+  ageClassII$sequenceID<-gsub("\\*+","",ageClassII$sequenceID)
+  ageClassI<-inner_join(ageClassI,as.data.frame(metadata),by="sequenceID")
+  ageClassII<-inner_join(ageClassII,as.data.frame(metadata),by="sequenceID")
+  ageClassI<-ageClassI[!duplicated(ageClassI$wormbaseID),]
+  ageClassII<-ageClassII[!duplicated(ageClassII$wormbaseID),]
+  write.table(ageClassI,paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageClassII,paste0(outPath,"/publicData/agingClassII_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  file.remove(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+}
+
+
+
+#######################-
+## Aging txptome Tarkhov(2019)------
+#######################-
+# A universal transcriptomic signature of age reveals the temporal scaling of Caenorhabditis elegans aging trajectories
+# Andrei E. Tarkhov, Ramani Alla, Srinivas Ayyadevara, Mikhail Pyatnitskiy, Leonid I. Menshikov, Robert J. Shmookler Reis & Peter O. Fedichev
+# Scientific Reports volume 9, Article number: 7368 (2019)
+# https://www.nature.com/articles/s41598-019-43075-z#Abs1
+downSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM6_ESM.csv"
+upSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM7_ESM.csv"
+ageBiomrkrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM8_ESM.csv"
+
+if(!file.exists(paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"))){
+  download.file(downSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  download.file(upSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  download.file(ageBiomrkrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+  # there is some in the file. need to open manually and save as xlsx
+  downSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"),
+                        sep=",",header=T,skip=1)
+  downSignatr$X<-NULL
+  colnames(downSignatr)<-c("wormbaseID","description","p.value")
+  upSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"),
+                      sep=",",header=T,skip=1)
+  upSignatr$X<-NULL
+  colnames(upSignatr)<-c("wormbaseID","description","p.value")
+  ageBiomrkr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"),
+                       sep=",",header=T,skip=1)
+  ageBiomrkr$X<-NULL
+  colnames(ageBiomrkr)<-c("wormbaseID","description","Coefficient")
+
+  downSignatr<-inner_join(downSignatr,as.data.frame(metadata),by="wormbaseID") #67
+  upSignatr<-inner_join(upSignatr,as.data.frame(metadata),by="wormbaseID") #260
+  ageBiomrkr<-inner_join(ageBiomrkr,as.data.frame(metadata),by="wormbaseID") #71
+
+  write.table(downSignatr,paste0(outPath,"/publicData/agingDownSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(upSignatr,paste0(outPath,"/publicData/agingUpSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageBiomrkr,paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+}
+
+
+######################3-
+## Aging Riedel (2013) (Murphy lab) -----
+######################-
+#https://www.nature.com/articles/ncb2720
+#DAF-16 employs the chromatin remodeller SWI/SNF to promote stress resistance and longevity
+# Christian G. Riedel, Robert H. Dowen, Guinevere F. Lourenco, Natalia V. Kirienko, Thomas Heimbucher, Jason A. West, Sarah K. Bowman, Robert E. Kingston, Andrew Dillin, John M. Asara & Gary Ruvkun
+# Nature Cell Biology volume 15, pages 491–501 (2013)
+# data not available in supplementary material... need to do alignment and deseq2
+
+# daf-2
+# daf-2/daf-16
+# got table of metadata from SRA run selector:
+df<-read.delim(paste0(outPath,"/publicData/SraRunTable_Riedel2013_SRP017908.txt"))
+#df<-df[,c("Run","SRA_Study","Sample_Name")]
+df$replicate<-stringr::str_sub(df$Sample_Name,stringr::str_locate(df$Sample_Name,"r.?$"))
+df$Sample_Name<-gsub("_d1a_mRNA_r.?$","",df$Sample_Name)
+df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
+colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F)
+
+######################3-
+## Aging Zarse (2012) (Ristow lab) ------
+######################-
+# Cell Metabolism
+# Volume 15, Issue 4, 4 April 2012, Pages 451-465
+# Impaired Insulin/IGF1 Signaling Extends Life Span by Promoting Mitochondrial L-Proline Catabolism to Induce a Transient ROS Signal
+# KimZarse12SebastianSchmeisser13MarcoGroth4SteffenPriebe5GregorBeuster1DoreenKuhlow16ReinhardGuthke5MatthiasPlatzer4C. RonaldKahn2MichaelRistow16
+# https://www.sciencedirect.com/science/article/pii/S1550413112000940?via%3Dihub#app2
+
+#daf-2
+df<-read.csv(paste0(outPath,"/publicData/SraRunTable_Zarse2012_GSE36041.txt"))
+df<-df[df$Organism=="Caenorhabditis elegans",]
+df$replicate<-stringr::str_sub(df$Library.Name,stringr::str_locate(df$Library.Name,".$"))
+df$Genotype<-gsub("wild type","wt",df$Genotype)
+df$Genotype<-gsub("daf-2\\(e1370\\)","daf-2",df$Genotype)
+df1<-df %>% dplyr::group_by(SRA.Study,Genotype,replicate) %>% dplyr::summarise(SRRnum=paste(Run,collapse=";"))
+colnames(df1)<-c("dataset","bioType","replicate","SRRnumber")
+df1<-df1[c(4,1,2,3)]
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F)
+
+
+######################-
+## Aging Heestand (2013) (Antebi lab) ------
+######################-
+# Dietary Restriction Induced Longevity Is Mediated by Nuclear Receptor NHR-62 in Caenorhabditis elegans
+# Bree N. Heestand, Yidong Shen, Wei Liu, Daniel B. Magner, Nadia Storm, Caroline Meharg, Bianca Habermann, Adam Antebi
+# Published: July 25, 2013
+# https://doi.org/10.1371/journal.pgen.1003651
+
+eat2URL<-"https://doi.org/10.1371/journal.pgen.1003651.s012"
+eat2File<-paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx")
+if(remakeFiles){
+  file.remove(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))
+}
+
+if(!file.exists(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))){
+  download.file(eat2URL,destfile= eat2File)
+  eat2<-read_excel(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+  eat2<-eat2[,c("Gene ID","eat-2 vs N2 fold-change (log2)","eat-2 vs N2 (padj)")]
+  colnames(eat2)<-c("sequenceID","eat2_lfc","eat2_padj")
+  eat2up<-getSignificantGenes(eat2,padj=0.05,lfc=2,namePadjCol="eat2_padj",
+                              nameLfcCol="eat2_lfc",direction="gt",
+                              chr="all") #361
+  write.csv(eat2up,paste0(outPath,"/publicData/eat2up_Heestand2012.csv"),
+            quote=F,row.names=F)
+
+  eat2down<-getSignificantGenes(eat2,padj=0.05,lfc= -2,
+                                namePadjCol="eat2_padj",
+                                nameLfcCol="eat2_lfc",direction="lt",
+                                chr="all") #537
+  write.csv(eat2down,paste0(outPath,"/publicData/eat2down_Heestand2012.csv"),
+            quote=F,row.names=F)
+  file.remove(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+}
+
+
+######################-
+## Aging Ayyadevara (2009) (Shmookler Reis lab) ------
+######################-
+# Caenorhabditis elegans PI3K mutants reveal novel genes underlying exceptional stress resistance and lifespan
+# Srinivas Ayyadevara, Çagdaþ Tazearslan, Puneet Bharill, Ramani Alla, Eric Siegel, Robert J. Shmookler Reis,
+# First published: 17 November 2009
+#https://onlinelibrary.wiley.com/doi/10.1111/j.1474-9726.2009.00524.x
+
+
+
+#McElwee (2003) paper
+# McElwee, J., Bubb, K., and Thomas, J.H. (2003). Transcriptional outputs of the Caenorhabditis elegans forkhead protein DAF-16. Aging Cell 2, 111–121.
+# https://www.deepdyve.com/lp/wiley/transcriptional-outputs-of-the-caenorhabditis-elegans-forkhead-protein-T0bliMYws0
 
 
 ######################-
@@ -627,7 +853,7 @@ elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/a
 
 
 #####################-
-## Borad expression vs regulated Gerstein et al. (2014) (modEncode)------
+## Broad expression vs regulated Gerstein et al. (2014) (modEncode)------
 #####################-
 #https://www.encodeproject.org/comparative/transcriptome/
 wormGeneURL<-"http://cmptxn.gersteinlab.org/worm_gene.xlsx"

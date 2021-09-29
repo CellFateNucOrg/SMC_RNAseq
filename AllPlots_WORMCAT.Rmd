@@ -19,7 +19,7 @@ if(filterData){
 # Wormcat category 1 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat1, echo=F}
-for(grp in groupsOI){
+for(grp in names(contrastNames)){
   grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,"_up/rgs_fisher_cat1_apv.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp)
@@ -40,7 +40,7 @@ for(grp in groupsOI){
 # Wormcat category 2 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat2, echo=F, eval=T}
-for(grp in groupsOI){
+for(grp in names(contrastNames)){
   grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                    "_up/rgs_fisher_cat2_apv.svg")
   if(file.exists(grpPathUp)){
@@ -62,7 +62,7 @@ for(grp in groupsOI){
 # Wormcat category 3 - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r wormcat cat3, echo=F, eval=T}
-for(grp in groupsOI){
+for(grp in names(contrastNames)){
   grpPathUp=paste0(outPath,"/wormcat/",fileNamePrefix,grp,
                    "_up/rgs_fisher_cat3_apv.svg")
   if(file.exists(grpPathUp)){
