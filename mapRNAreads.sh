@@ -1,12 +1,13 @@
-#! /usr/bin/bash
+#! /bin/bash
 #SBATCH --mail-user=jennifer.semple@izb.unibe.ch
 #SBATCH --mail-type=end,fail
 #SBATCH --job-name="RNAseq"
-#SBATCH --time=0-8:00:00
+#SBATCH --partition=epyc2
+#SBATCH --qos=job_epyc2
+#SBATCH --time=0-08:00:00
 #SBATCH --cpus-per-task=2
-#SBATCH --partition=all
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=2-8
+#SBATCH --array=1
 
 module add vital-it
 module add UHTS/Quality_control/fastqc/0.11.7;
@@ -17,7 +18,7 @@ export SALMON_SING="singularity exec /software/singularity/containers/salmon-1.2
 module add R/3.6.1;
 module add UHTS/Aligner/bwa/0.7.17;
 #module add UHTS/Analysis/HTSeq/0.9.1;
-source $CONDA_ACTIVATE htseq
+source $CONDA_ACTIVATE RNAseq
 
 echo "current date"
 date

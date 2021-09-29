@@ -26,9 +26,9 @@ eulerLabelsType<-c("counts")
 ## venn diagrams------
 #######-
 
-#scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltCyc2xChrAX/rds/p0.05_lfc0.5/prefiltCyc2xChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
+scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltCyc2xChrAX/rds/p0.05_lfc0.5/prefiltCyc2xChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
 
-scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltChrAX/rds/p0.05_lfc0.5/preFiltChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
+#scc1onlyPath<-"/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_prefiltChrAX/rds/p0.05_lfc0.5/preFiltChrAX_scc1cs_DESeq2_fullResults_p0.05.rds"
 
 ## significantly changed genes
 sigTables<-list()
