@@ -21,6 +21,7 @@ library(DESeq2)
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
 library(readxl)
+library(dplyr)
 
 source("./variableSettings.R")
 source("./functions.R")
@@ -371,8 +372,11 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 }
 
 
-
-
+################################ germline soma genes ########################
+if(!file.exists(paste0(outPath,"/publicData/germlineData.RDS"))){
+  germlineData<-list()
+  saveRDS(germlineData,paste0(outPath,"/publicData/germlineData.RDS"))
+}
 ###############################-
 ## get germline-soma genes from Boeck-Waterston_GR2016-----
 ###############################-
@@ -471,7 +475,12 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
                                  rep("germlineL4",nrow(nonsoma))))
   write.csv(glvSoma,paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
             row.names=F)
-
+  germlineData<-readRDS(paste0(outPath,"/publicData/germlineData.RDS"))
+  germlineData[["gonadYA_Boeck2016"]]<-germline$wormbaseID
+  germlineData[["somaYA_Boeck2016"]]<-nongl$wormbaseID
+  germlineData[["somaL4_Boeck2016"]]<-soma$wormbaseID
+  germlineData[["germlineL4_Boeck2016"]]<-nonsoma$wormbaseID
+  saveRDS(germlineData,paste0(outPath,"/publicData/germlineData.RDS"))
   file.remove(paste0("publicData/",tcFile))
 }
 
@@ -512,7 +521,17 @@ if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
 
   write.csv(glData,paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
             row.names=F)
-
+  glData<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
+                   header=T)
+  #unique(glData$exclusive.category)
+  germlineData<-readRDS(file=paste0(outPath,"/publicData/germlineData.RDS"))
+  germlineData[["hermIntrinsic_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm intrinsic"]
+  germlineData[["sharedIntrinsic_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared intrinsic"]
+  germlineData[["sharedOocyte_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared oocyte"]
+  germlineData[["hermOocyte_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm oocyte"]
+  germlineData[["sharedSperm_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared sperm"]
+  germlineData[["hermSperm_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm sperm"]
+  saveRDS(germlineData,file=paste0(outPath,"/publicData/germlineData.RDS"))
   file.remove(paste0(outPath,"/publicData/",glFile,"/Fig1\ I\ wt\ vs\ glp4\ enriched\ genes.txt"))
   file.remove(paste0(outPath,"/publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
@@ -575,6 +594,17 @@ dev.off()
 #                plot=p, device="pdf",width=29,height=11,units="cm")
 
 
+
+
+######################### aging #############################################
+if(!file.exists(paste0(outPath,"/publicData/agingTCdata.RDS"))){
+  agingTCdata<-list()
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
+}
+if(!file.exists(paste0(outPath,"/publicData/agingRegData.RDS"))){
+  agingRegData<-list()
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+}
 # aging genes:
 # LOF of daf-2 (insulin receptor) increases lifespan
 # LOF of age-1 (PI3K) increases lifespan
@@ -620,13 +650,16 @@ if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
   colnames(tcMA)[1]<-"sequenceID"
   idx<-tcMA$sequenceID %in% metadata$sequenceID
   tcMA<-tcMA[idx,]
+  ageReg<-left_join(ageReg,tcMA,by=c("sequenceID"))
+  write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
+            row.names=F,quote=F)
   tcMA<-left_join(tcMA,as.data.frame(metadata),by=c("sequenceID"))
   write.csv(tcMA,paste0(outPath,"/publicData/AgingTC_Budovskaya2008.csv"),
             row.names=F,quote=F)
-
-  ageReg<-left_join(ageReg,tcMA,by=c("sequenceID"="gene"))
-  write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
-            row.names=F,quote=F)
+  agingTCdata<-readRDS(paste0(outPath,"/publicData/agingTCdata.RDS"))
+  agingTCdata[["day11up_Budovskaya2008"]]<-ageReg$wormbaseID[ageReg$day11_avg>0]
+  agingTCdata[["day11down_Budovskaya2008"]]<-ageReg$wormbaseID[ageReg$day11_avg<0]
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
   file.remove(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
   file.remove(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
 }
@@ -644,6 +677,12 @@ if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
   #idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
   #age1MA<-age1MA[idx,]
   age1MA<-inner_join(age1MA,as.data.frame(metadata),by="sequenceID")
+  # should be 758 age-1 genes, i have 782: ("ratio" seems to be log ratio!? as there are -ve numbers)
+  # this is the age-1(hx542) allele
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["age1up_Budovskaya2008"]]<-age1MA$wormbaseID[age1MA$pval<0.0001 & age1MA$ratio>0.5]
+  agingRegData[["age1down_Budovskaya2008"]]<-age1MA$wormbaseID[age1MA$pval<0.0001 & age1MA$ratio< -0.5]
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
   write.table(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"),
             row.names=F,quote=F,sep="\t")
   file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
@@ -659,9 +698,15 @@ if(!file.exists(paste0(outPath,"/publicData/daf16MA_Budovskaya2008.csv"))){
   daf16MA<-daf16MA[,c(1,2,19,20,21,22,23)]
   # rename columns
   colnames(daf16MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  daf16MA<-inner_join(daf16MA,as.data.frame(metadata),by="sequenceID")
   #idx<-daf16MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
   #daf16MA<-daf16MA[idx,]
-  daf16MA<-inner_join(daf16MA,as.data.frame(metadata),by="sequenceID")
+  ## should have 886 genes, i have 929:
+  # this is the daf-16(m26 allele)
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["daf16up_Budovskaya2008"]]<-daf16MA$wormbaseID[daf16MA$pval<0.0001 & daf16MA$ratio>0.5]
+  agingRegData[["daf16down_Budovskaya2008"]]<-daf16MA$wormbaseID[daf16MA$pval<0.0001 & daf16MA$ratio< -0.5]
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
   write.table(daf16MA,paste0(outPath,"/publicData/daf16MA_Budovskaya2008.tsv"),
             row.names=F,quote=F,sep="\t")
   file.remove(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
@@ -687,7 +732,6 @@ murphyURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fnature01789/
 
 if(!file.exists(paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"))){
   download.file(murphyURL,paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
-  # there is some in the file. need to open manually and save as xlsx
   ageClassI<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
                                 sheet=1,skip=1,col_names=c("sequenceID","description"))
   ageClassII<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
@@ -698,6 +742,10 @@ if(!file.exists(paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"))){
   ageClassII<-inner_join(ageClassII,as.data.frame(metadata),by="sequenceID")
   ageClassI<-ageClassI[!duplicated(ageClassI$wormbaseID),]
   ageClassII<-ageClassII[!duplicated(ageClassII$wormbaseID),]
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["classIdaf2updaf16down_Murphy2003"]]<-ageClassI$wormbaseID
+  agingRegData[["classIIdaf16updaf2down_Murphy2003"]]<-ageClassII$wormbaseID
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
   write.table(ageClassI,paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"),
               row.names=F,quote=T,sep=";")
   write.table(ageClassII,paste0(outPath,"/publicData/agingClassII_Murphy2003.csv"),
@@ -746,7 +794,11 @@ if(!file.exists(paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"))){
               row.names=F,quote=T,sep=";")
   write.table(ageBiomrkr,paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"),
               row.names=F,quote=T,sep=";")
-
+  agingTCdata<-readRDS(paste0(outPath,"/publicData/agingTCdata.RDS"))
+  agingTCdata[["agingDownSignature_Tarkhov2019"]]<-downSignatr$wormbaseID
+  agingTCdata[["agingUpSignature_Tarkhov2019"]]<-upSignatr$wormbaseID
+  agingTCdata[["agingBiomarkers_Tarkhov2019"]]<-ageBiomrkr$wormbaseID
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
   file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
   file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
   file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
@@ -772,6 +824,35 @@ df$Sample_Name<-gsub("_d1a_mRNA_r.?$","",df$Sample_Name)
 df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
 colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
 write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F,sep="\t")
+
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+
+# daf2:
+daf2<-readRDS(paste0(outPath,"/publicData/Riedel2013_strain_daf2_vs_N2_DESeq2_fullResults_p0.05.rds"))
+daf2<-daf2[!is.na(daf2$padj),]
+daf2<-daf2[daf2$padj<0.05,] #6453
+saveRDS(daf2,paste0(outPath,"/publicData/Riedel2013_strain_daf2_vs_N2_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf2up_Riedel2013"]]<-daf2$wormbaseID[daf2$log2FoldChange>1] #1957
+agingRegData[["daf2down_Riedel2013"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1] #330
+
+#daf16:
+daf16_daf2BG<-readRDS(paste0(outPath,"/publicData/Riedel2013_daf16_daf2BG_DESeq2_fullResults_p0.05.rds"))
+daf16_daf2BG<-daf16_daf2BG[!is.na(daf16_daf2BG$padj),]
+daf16_daf2BG<-daf16_daf2BG[daf16_daf2BG$padj<0.05,] #2759
+saveRDS(daf16_daf2BG,paste0(outPath,"/publicData/Riedel2013_daf16_daf2BG_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf16up-daf2BG_Riedel2013"]]<-daf16_daf2BG$wormbaseID[daf16_daf2BG$log2FoldChange>1] #354
+agingRegData[["daf16down-daf2BG_Riedel2013"]]<-daf16_daf2BG$wormbaseID[daf16_daf2BG$log2FoldChange< -1] #826
+
+#swsn1:
+swsn1_daf2BG<-readRDS(paste0(outPath,"/publicData/Riedel2013_swsn1_daf2BG_DESeq2_fullResults_p0.05.rds"))
+swsn1_daf2BG<-swsn1_daf2BG[!is.na(swsn1_daf2BG$padj),]
+swsn1_daf2BG<-swsn1_daf2BG[swsn1_daf2BG$padj<0.05,] #3141
+saveRDS(swsn1_daf2BG,paste0(outPath,"/publicData/Riedel2013_swsn1_daf2BG_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["swsn1up-daf2BG_Riedel2013"]]<-swsn1_daf2BG$wormbaseID[swsn1_daf2BG$log2FoldChange>1] #437
+agingRegData[["swsn1down-daf2BG_Riedel2013"]]<-swsn1_daf2BG$wormbaseID[swsn1_daf2BG$log2FoldChange< -1] #966
+
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+
 
 ######################3-
 ## Aging Zarse (2012) (Ristow lab) ------
@@ -808,23 +889,25 @@ if(remakeFiles){
   file.remove(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))
 }
 
-if(!file.exists(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))){
+if(!file.exists(paste0(outPath,"/publicData/eat2_Heestand2012.csv"))){
   download.file(eat2URL,destfile= eat2File)
   eat2<-read_excel(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
   eat2<-eat2[,c("Gene ID","eat-2 vs N2 fold-change (log2)","eat-2 vs N2 (padj)")]
   colnames(eat2)<-c("sequenceID","eat2_lfc","eat2_padj")
+  eat2<-left_join(eat2,data.frame(metadata),by=c("sequenceID"))
+  write.csv(eat2,paste0(outPath,"/publicData/eat2_Heestand2012.csv"),
+            quote=F,row.names=F)
   eat2up<-getSignificantGenes(eat2,padj=0.05,lfc=2,namePadjCol="eat2_padj",
                               nameLfcCol="eat2_lfc",direction="gt",
                               chr="all") #361
-  write.csv(eat2up,paste0(outPath,"/publicData/eat2up_Heestand2012.csv"),
-            quote=F,row.names=F)
-
   eat2down<-getSignificantGenes(eat2,padj=0.05,lfc= -2,
                                 namePadjCol="eat2_padj",
                                 nameLfcCol="eat2_lfc",direction="lt",
                                 chr="all") #537
-  write.csv(eat2down,paste0(outPath,"/publicData/eat2down_Heestand2012.csv"),
-            quote=F,row.names=F)
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["eat2up_Heestand2013"]]<-eat2up$wormbaseID
+  agingRegData[["eat2down_Heestand2013"]]<-eat2down$wormbaseID
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
   file.remove(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
 }
 
@@ -846,17 +929,19 @@ df<-read.delim(paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.txt
 names(df)<-c("sequenceID")
 df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
 df<-df[!is.na(df$wormbaseID),] # lose 22
-write.csv(df,paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.csv"),
-          quote=F,row.names=F) #111 genes
-
+#write.csv(df,paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.csv"),
+#          quote=F,row.names=F) #111 genes
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+agingRegData[["age1up_Ayyadevara2009"]]<-df$wormbaseID
 
 df<-read.delim(paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.txt"),
                header=F) # 206 genes
 names(df)<-c("sequenceID")
 df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
 df<-df[!is.na(df$wormbaseID),] # lose 33
-write.csv(df,paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.csv"),
-          quote=F,row.names=F) #173 genes
+#write.csv(df,paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.csv"),
+#          quote=F,row.names=F) #173 genes
+agingRegData[["age1down_Ayyadevara2009"]]<-df$wormbaseID
 
 # Table S1 has the contrast of two strong age-1 alleles (mg44 and m333) vs a
 # weaker age-1 allele (hx546)
@@ -869,9 +954,9 @@ df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
 sum(is.na(df$wormbaseID))
 df<-df[!is.na(df$wormbaseID),] # lose 4
 dim(df)
-write.csv(df,paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.csv"),
-          quote=F,row.names=F) #19 genes
-
+#write.csv(df,paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.csv"),
+#          quote=F,row.names=F) #19 genes
+agingRegData[["age1strongVweakUp_Ayyadevara2009"]]<-df$wormbaseID
 
 df<-read.delim(paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.txt"),
                header=F) # 253 genes
@@ -881,9 +966,10 @@ df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
 sum(is.na(df$wormbaseID))
 df<-df[!is.na(df$wormbaseID),] # lose 52
 dim(df)
-write.csv(df,paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.csv"),
-          quote=F,row.names=F) #201 genes
-
+#write.csv(df,paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.csv"),
+#          quote=F,row.names=F) #201 genes
+agingRegData[["age1strongVweakDown_Ayyadevara2009"]]<-df$wormbaseID
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
 
 
 #McElwee (2003) paper
