@@ -127,10 +127,8 @@ saveRDS(dds,file=paste0(outPath,"/rds/dds_object.rds"))
 # Basic sample stats ------------------------------------------------------
 ######################################################-
 
-if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,grp,
-                      "_logfile.txt"))){
-   file.remove(paste0(outPath,"/txt/",fileNamePrefix,grp,
-                      "_logfile.txt"))
+if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,"all_logfile.txt"))){
+   file.remove(paste0(outPath,"/txt/",fileNamePrefix,"all_logfile.txt"))
 }
 
 ## basic sample stats
@@ -199,7 +197,7 @@ pheatmap(sampleDistMatrix,
 #########-
 select <- order(rowMeans(counts(dds,normalized=TRUE)),
                 decreasing=TRUE)[1:500]
-df <- as.data.frame(colData(dds)[,c("strain","TIR1","auxin")])
+df <- as.data.frame(colData(dds)[,c(varOI)])
 rownames(df)<-colData(dds)$sampleName
 #pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 500 expressed genes - no clustering")
 
@@ -482,6 +480,9 @@ for(grp in names(contrastNames)){
    #############-
    # Fisher test of number of up and down genes on X v autosomes
    #############-
+   if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))){
+      file.remove(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))
+   }
 
    sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
                     "_logfile.txt"),append=TRUE, type="output")
