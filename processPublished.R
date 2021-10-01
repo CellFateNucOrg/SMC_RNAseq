@@ -825,6 +825,7 @@ df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
 colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
 write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F,sep="\t")
 
+#after DESeq2 run:
 agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
 
 # daf2:
@@ -863,7 +864,7 @@ saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
 # KimZarse12SebastianSchmeisser13MarcoGroth4SteffenPriebe5GregorBeuster1DoreenKuhlow16ReinhardGuthke5MatthiasPlatzer4C. RonaldKahn2MichaelRistow16
 # https://www.sciencedirect.com/science/article/pii/S1550413112000940?via%3Dihub#app2
 
-#daf-2
+#daf-2 (e1370)
 df<-read.csv(paste0(outPath,"/publicData/SraRunTable_Zarse2012_GSE36041.txt"))
 df<-df[df$Organism=="Caenorhabditis elegans",]
 df$replicate<-stringr::str_sub(df$Library.Name,stringr::str_locate(df$Library.Name,".$"))
@@ -873,6 +874,17 @@ df1<-df %>% dplyr::group_by(SRA.Study,Genotype,replicate) %>% dplyr::summarise(S
 colnames(df1)<-c("dataset","bioType","replicate","SRRnumber")
 df1<-df1[c(4,1,2,3)]
 write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F,sep="\t")
+
+#after DESeq2 run:
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+daf2<-readRDS(paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_fullResults_p0.05.rds"))
+daf2<-daf2[!is.na(daf2$padj),]
+daf2<-daf2[daf2$padj<0.05,]
+saveRDS(daf2,paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf2up_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange>1.5] #2453
+agingRegData[["daf2down_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1.5] #239
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+
 
 
 ######################-

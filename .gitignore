@@ -1,6 +1,5 @@
 slurm*
 .Rproj.user
-publicData/*.rds
 publicData/*.pdf
 variableSettings.R
 plots/
