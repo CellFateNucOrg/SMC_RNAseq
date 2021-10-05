@@ -374,7 +374,7 @@ makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
 
 
 #####################################################-
-## Gene set enrichment-----
+## Gene set enrichment - aging time course -----
 #####################################################-
 # note: gseaplot2 function from enrichplot function supports multiple gene sets
 # in a single plot:
@@ -444,11 +444,12 @@ print(p)
 dev.off()
 
 
-write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_agingTCdata.tsv"),sep="\t")
+write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_agingTCdata.tsv"),sep="\t",row.names=F,
+            quote=F)
 
 
 #####################################################-
-## Gene set enrichment-----
+## Gene set enrichment - aging regulators -----
 #####################################################-
 # note: gseaplot2 function from enrichplot function supports multiple gene sets
 # in a single plot:
@@ -518,31 +519,47 @@ print(p)
 dev.off()
 
 
-write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_agingRegData.tsv"),sep="\t")
+write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_agingRegData.tsv"),sep="\t",row.names=F,
+            quote=F)
 
 
 keepPath<-c("daf16down-daf2BG_Riedel2013","daf2up_Riedel2013","daf2up_Zarse2012")
 leadEdgeTbl<-leadEdgeTbl[leadEdgeTbl$pathway %in% keepPath,]
-dim(leadEdgeTbl)
 
-leadEdgeTbl %>% count(wormbaseID) #269 unique genes
-leadEdgeTbl %>% group_by(group) %>% count(wormbaseID) #1656
-leadEdgeTbl %>% group_by(pathway) %>% count(wormbaseID) #1419
-leadEdgeTbl %>% count(wormbaseID) %>% filter(n>1) #657 genes appear more than once
+keepGroup<-c("aux_sdc3BG","dpy26")
+leadEdgeTbl<-leadEdgeTbl[leadEdgeTbl$group %in% keepGroup,]
+dim(leadEdgeTbl) #1573
 
-df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% filter(numPaths>2 | numGroups>3)
+leadEdgeTbl %>% count(wormbaseID) #895 unique genes
+leadEdgeTbl %>% group_by(group) %>% count(wormbaseID) #1142
+leadEdgeTbl %>% group_by(pathway) %>% count(wormbaseID) #1243
+leadEdgeTbl %>% count(wormbaseID) %>% filter(n>1) #456 genes appear more than once
 
-# in at least two paths or 3 groups - 433 genes
+# in at least two paths or 2 groups
+df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% filter(numGroups==2)
+
 df1<-left_join(df,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
                by="wormbaseID") %>% distinct() %>% arrange(chr) %>% print(n=Inf)
-df1[df1$chr=="chrX",] #187 genes
+#247
+df1[df1$chr=="chrX",]#166
 
+# in at least two paths or 2 groups - 433 genes
+df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% filter(numGroups==2 & numPaths==3)
 
-df2<-leadEdgeTbl %>% filter(chr=="chrX") %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group))
+df1<-left_join(df,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
+               by="wormbaseID") %>% distinct() %>% arrange(chr) %>% print(n=Inf) #23
+df1[df1$chr=="chrX",]#9
 
-#338 genes
+write.table(df1,paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_allPath&Group_agingRegData.tsv"),sep="\t",row.names=F,
+            quote=F)
+
+# only on X
+df2<-leadEdgeTbl %>% filter(chr=="chrX") %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group))%>% filter(numGroups==2)
+
 df3<-left_join(df2,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
-               by="wormbaseID") %>% distinct() %>% print(n=Inf)
+               by="wormbaseID") %>% distinct() %>% print(n=Inf) # 166 genes
 
+write.table(df3,paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_chrXallGroup_agingRegData.tsv"),sep="\t",row.names=F,
+            quote=F)
 
 

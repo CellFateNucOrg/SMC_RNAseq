@@ -881,8 +881,8 @@ daf2<-readRDS(paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_ful
 daf2<-daf2[!is.na(daf2$padj),]
 daf2<-daf2[daf2$padj<0.05,]
 saveRDS(daf2,paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_fullResults_p0.05.rds"))
-agingRegData[["daf2up_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange>1.5] #2453
-agingRegData[["daf2down_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1.5] #239
+agingRegData[["daf2up_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange>1.5] #2375
+agingRegData[["daf2down_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1.5] #231
 saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
 
 
