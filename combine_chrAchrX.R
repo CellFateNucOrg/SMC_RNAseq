@@ -10,7 +10,7 @@ library(tximport)
 library(tidyr)
 library(EnhancedVolcano)
 #library(affy)
-#library("gplots")
+library("gplots")
 library(ggpubr)
 library(plyr)
 library(dplyr)
@@ -130,6 +130,45 @@ for (grp in names(contrastNames)){
          format="bed")
 
 
+  ##########-
+  # heirarchical clustering of most significantly changed genes -------------
+  ##########-
+  dds<-readRDS(file=paste0(outPath,chrXprefix,"dds_object.rds"))
+  epsilon<-1 #pseudo counts
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                  "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
+  # select gene names based on FDR (5%)
+  gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>lfcVal]
+
+  # Retrieve the normalized counts for gene of interest
+  countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
+  dim(countTable.kept)
+  colnames(countTable.kept)<-colData(dds)$sampleName
+
+
+  annClrs<-brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2")
+  names(annClrs)<-varOIlevels
+  colClrs<-factor(colData(dds)[,varOI])
+  levels(colClrs)<-annClrs[levels(colClrs)]
+
+  # Perform the hierarchical clustering with
+  # A distance based on Pearson-correlation coefficient
+  # and average linkage clustering as agglomeration criteria
+  heatmap.2(as.matrix(countTable.kept),
+            scale="row",
+            hclust=function(x) stats::hclust(x,method="average"),
+            distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+            margin=c(6,0),
+            trace="none",
+            density="none",
+            labRow="",
+            #labCol = names(countTable.kept),
+            cexCol=1,
+            main=paste0(grp," changed genes (p<",padjVal,", lfc>",lfcVal,")"),
+            ColSideColors=as.vector(colClrs),
+            colCol=as.vector(colClrs))
+
+  dev.off()
 
 
 

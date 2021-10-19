@@ -19,7 +19,7 @@ if(combineChrAX){
   source("DESeqAnalysis_SALMON.R")
 }
 
-#
+
 #make bigwigs from STAR data
 #source("makeSTARbw.R")
 

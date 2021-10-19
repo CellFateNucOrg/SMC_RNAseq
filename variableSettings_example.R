@@ -132,13 +132,13 @@ if(advancedContrasts){
   modMat[,grep(paste0("^",varOI),colnames(modMat),invert=T)]<-0
 
   # get coefficients for existing subsets in data table
-  wt_wt_wt_0mM<-colMeans(modMat[sampleTable$SMC == "wt.wt.wt.0mM", ])
-  wt_wt_wt_1mM<-colMeans(modMat[sampleTable$SMC == "wt.wt.wt.1mM", ])
-  wt_TIR1_wt_1mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.wt.1mM", ])
-  wt_TIR1_sdc3deg_0mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.sdc3deg.0mM", ])
-  wt_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.sdc3deg.1mM", ])
-  dpy26cs_wt_wt_0mM<-colMeans(modMat[sampleTable$SMC == "dpy26cs.wt.wt.0mM", ])
-  dpy26cs_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable$SMC == "dpy26cs.TIR1.sdc3deg.1mM", ])
+  wt_wt_wt_0mM<-colMeans(modMat[sampleTable[,varOI] == "wt.wt.wt.0mM", ])
+  wt_wt_wt_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.wt.wt.1mM", ])
+  wt_TIR1_wt_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.wt.1mM", ])
+  wt_TIR1_sdc3deg_0mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.sdc3deg.0mM", ])
+  wt_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.sdc3deg.1mM", ])
+  dpy26cs_wt_wt_0mM<-colMeans(modMat[sampleTable[,varOI] == "dpy26cs.wt.wt.0mM", ])
+  dpy26cs_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable[,varOI] == "dpy26cs.TIR1.sdc3deg.1mM", ])
 
   # add special contrasts by subtracting relevant coefficient vectors
   #contratsOI<-list()

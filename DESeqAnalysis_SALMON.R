@@ -121,7 +121,7 @@ dds <- nbinomWaldTest(dds, maxit=1000)
 # resultsNames(dds)
 colMeans(coef(dds))
 
-saveRDS(dds,file=paste0(outPath,"/rds/dds_object.rds"))
+saveRDS(dds,file=paste0(outPath,"/rds/",fileNamePrefix,"dds_object.rds"))
 
 ######################################################-
 # Basic sample stats ------------------------------------------------------
@@ -187,17 +187,27 @@ sampleDistMatrix <- as.matrix(sampleDists)
 rownames(sampleDistMatrix) <- colData(dds)$sampleName
 colnames(sampleDistMatrix) <- colData(dds)$sampleName
 colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+df <- data.frame(colData(dds)[,c(varOI)])
+rownames(df)<-colData(dds)$sampleName
+colnames(df)<-varOI
+annClrs<-list(brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2"))
+names(annClrs)<-varOI
+names(annClrs[[varOI]])<-levels(colData(dds)[,c(varOI)])
 pheatmap(sampleDistMatrix,
          clustering_distance_rows=sampleDists,
          clustering_distance_cols=sampleDists,
-         col=colors)
+         col=colors,
+         annotation_row=df,
+         annotation_col=df,
+         annotation_colors=annClrs)
 
 #########-
 # Heatmap - most highly expressed genes -----------------------------------
 #########-
 select <- order(rowMeans(counts(dds,normalized=TRUE)),
                 decreasing=TRUE)[1:500]
-df <- as.data.frame(colData(dds)[,c(varOI)])
+df <- data.frame(colData(dds)[,c(varOI)])
+colnames(df)<-varOI
 rownames(df)<-colData(dds)$sampleName
 #pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,cluster_cols=FALSE, annotation_col=df, main="Top 500 expressed genes - no clustering")
 
@@ -318,14 +328,11 @@ for(grp in names(contrastNames)){
    resLFC<-resLFC[!idx,]
 
 
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
-                   "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
-
-
-
    ##########-
    # heirarchical clustering of most significantly changed genes -------------
    ##########-
+   pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                   "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
    # select gene names based on FDR (5%)
    gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>lfcVal]
 
@@ -333,6 +340,12 @@ for(grp in names(contrastNames)){
    countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
    dim(countTable.kept)
    colnames(countTable.kept)<-colData(dds)$sampleName
+
+
+   annClrs<-brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2")
+   names(annClrs)<-varOIlevels
+   colClrs<-factor(colData(dds)[,varOI])
+   levels(colClrs)<-annClrs[levels(colClrs)]
 
    # Perform the hierarchical clustering with
    # A distance based on Pearson-correlation coefficient
@@ -347,7 +360,9 @@ for(grp in names(contrastNames)){
              labRow="",
              #labCol = names(countTable.kept),
              cexCol=1,
-             main=paste0(grp," changed genes (p<",padjVal,", lfc>",lfcVal,")"))
+             main=paste0(grp," changed genes (p<",padjVal,", lfc>",lfcVal,")"),
+             ColSideColors=as.vector(colClrs),
+             colCol=as.vector(colClrs))
 
    dev.off()
 
@@ -458,87 +473,86 @@ for(grp in names(contrastNames)){
 
       plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),
              ylim=c(-4,4),alpha=padjVal)
+
+
+      #############-
+      # MAplotautosomal genes
+      #############-
+      autosomalGenes<-resLFC$wormbaseID[resLFC$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
+      #autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
+      autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
+
+      autosomalRes05<- autosomalRes[autosomalRes$padj<padjVal,]
+
+      plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",
+                                       padjVal),ylim=c(-4,4),alpha=padjVal)
    }
-
-
-   #############-
-   # MAplotautosomal genes
-   #############-
-   autosomalGenes<-resLFC$wormbaseID[resLFC$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
-   #autosomalGenes<-mcols(dds)$gene[mcols(dds)$chr %in% c("chrI","chrII","chrIII","chrIV","chrV")]
-   autosomalRes<-resLFC[rownames(resLFC) %in% autosomalGenes,]
-
-   autosomalRes05<- autosomalRes[autosomalRes$padj<padjVal,]
-
-   plotMA(autosomalRes, main=paste0(grp, " autosomal genes, threshold=",
-                                    padjVal),ylim=c(-4,4),alpha=padjVal)
-
    dev.off()
 
+   if(length(chrXgenes)>0) {
+      # Fisher tests ------------------------------------------------------------
+      #############-
+      # Fisher test of number of up and down genes on X v autosomes
+      #############-
+      if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))){
+         file.remove(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))
+      }
 
-   # Fisher tests ------------------------------------------------------------
-   #############-
-   # Fisher test of number of up and down genes on X v autosomes
-   #############-
-   if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))){
-      file.remove(paste0(outPath,"/txt/",fileNamePrefix,grp,"_logfile.txt"))
+      sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                       "_logfile.txt"),append=TRUE, type="output")
+      upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
+                                sum(chrXres05$log2FoldChange<0),
+                                sum(autosomalRes05$log2FoldChange>0),
+                                sum(autosomalRes05$log2FoldChange<0)),nrow=2,
+                         dimnames=list(group=c("Up","Down"),
+                                       chr=c("chrX","chrA")))
+
+      cat("\nFisher Test, up v down:\n")
+      print(upVdownXvA)
+      print(fisher.test(upVdownXvA))
+
+
+      #############-
+      # Fisher test of number of differentially expressed genes on X v autosomes
+      #############-
+
+      testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
+                           dim(autosomalRes)[1],
+                           dim(autosomalRes05)[1]),
+                         nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
+      cat("\nFisher Test, enrichment of differentially expressed genes:\n")
+      print(testEnrich)
+      print(fisher.test(testEnrich))
+      sink()
+
+
+      # boxplots X vs autosomes -------------------------------------------------
+      #############-
+      # Box plot by X v autosomes
+      #############-
+      pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                      "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+
+      #idx<-resLFC$log2FoldChange!=0
+      chrType<-factor(rownames(resLFC) %in% chrXgenes)
+      levels(chrType)<-c("Autosomal","X chr")
+      geneCounts<-table(chrType)
+
+      sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                       "_logfile.txt"),append=TRUE, type="output")
+      cat(paste0("\n T test, of ",grp," LFC X v autosomes:\n"))
+      ttst<-t.test(resLFC$log2FoldChange~chrType)
+      print(ttst)
+      sink()
+
+      boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
+              main=paste0("Expression changes ", grp), col="grey", ylab="Log2 fold change",
+              xlab="Chromosome type (number of genes)",
+              names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""),
+              sub=paste0("p.value ",Hmisc::format.pval(ttst$p.value)))
+      abline(h=0,lty=2,col="blue")
+      dev.off()
    }
-
-   sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
-                    "_logfile.txt"),append=TRUE, type="output")
-   upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                             sum(chrXres05$log2FoldChange<0),
-                             sum(autosomalRes05$log2FoldChange>0),
-                             sum(autosomalRes05$log2FoldChange<0)),nrow=2,
-                      dimnames=list(group=c("Up","Down"),
-                                    chr=c("chrX","chrA")))
-
-   cat("\nFisher Test, up v down:\n")
-   print(upVdownXvA)
-   print(fisher.test(upVdownXvA))
-
-
-   #############-
-   # Fisher test of number of differentially expressed genes on X v autosomes
-   #############-
-
-   testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
-                        dim(autosomalRes)[1],
-                        dim(autosomalRes05)[1]),
-                      nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-   cat("\nFisher Test, enrichment of differentially expressed genes:\n")
-   print(testEnrich)
-   print(fisher.test(testEnrich))
-   sink()
-
-
-   # boxplots X vs autosomes -------------------------------------------------
-   #############-
-   # Box plot by X v autosomes
-   #############-
-   pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                   "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
-
-   #idx<-resLFC$log2FoldChange!=0
-   chrType<-factor(rownames(resLFC) %in% chrXgenes)
-   levels(chrType)<-c("Autosomal","X chr")
-   geneCounts<-table(chrType)
-
-   sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
-                    "_logfile.txt"),append=TRUE, type="output")
-   cat(paste0("\n T test, of ",grp," LFC X v autosomes:\n"))
-   ttst<-t.test(resLFC$log2FoldChange~chrType)
-   print(ttst)
-   sink()
-
-   boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-           main=paste0("Expression changes ", grp), col="grey", ylab="Log2 fold change",
-           xlab="Chromosome type (number of genes)",
-           names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""),
-           sub=paste0("p.value ",Hmisc::format.pval(ttst$p.value)))
-   abline(h=0,lty=2,col="blue")
-   dev.off()
-
 
    #############-
    # Box plot by chromosome
