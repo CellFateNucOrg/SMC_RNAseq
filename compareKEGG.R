@@ -59,7 +59,7 @@ for (grp in useContrasts){
 
     k2 <- pairwise_termsim(kk)
     if(dim(k2)[1]>6){
-      plotList[["treeplot"]] <- treeplot(k2, hclust_method="average", fontsize=5)
+      plotList[["treeplot"]] <- treeplot(k2, fontsize=5)
     }
     plotList[["emapplot"]] <- emapplot(k2, cex_category=1,
                                        cex_label_category=0.6, cex_line=0.5) +

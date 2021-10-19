@@ -1185,7 +1185,8 @@ p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(xtads),
                    refgenome="ce11", bin=10000L, xmin=flankSize,
                    xmax=flankSize, type="af",
-                   xanchored=median(width(tads)))
+                   xanchored=median(width(xtads)))
+
 
 
 dd<-plotHeatmap(p,plotz=F)
@@ -1367,3 +1368,4 @@ p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
 ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
                      padjVal,".pdf")),
        width=9, height=11, paper="a4",plot=p,device="pdf")
+

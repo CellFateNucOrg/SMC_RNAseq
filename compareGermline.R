@@ -43,7 +43,6 @@ if(filterData){
 
 
 for (grp in useContrasts){
-  #grp="dpy26cs"
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
@@ -294,7 +293,6 @@ germline<-c(boeckLst,reinkeLst)
 gseaTbl<-list()
 leadEdgeTbl<-NULL
 for (grp in useContrasts){
-  grp="aux_sdc3BG"
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
