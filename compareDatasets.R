@@ -51,64 +51,68 @@ for (grp in useContrasts){
 # check if datasets have chrX genes included
 includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
 
-pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_allGenes_",
-                paste(useContrasts, collapse="_"),"_padj",
+threesomes<-combn(seq_along(useContrasts),m=3)
+for(j in 1:ncol(threesomes)){
+  currentTriplet<-useContrasts[threesomes[,j]]
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_allGenes_",
+                paste(currentTriplet, collapse="_"),"_padj",
                 padjVal, "_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
 
 
-sigGenes<-lapply(sigTables,"[[","wormbaseID")
-fit<-euler(sigGenes)
-p1<-plot(fit, quantities=list(type=eulerLabelsType),
-         main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
-          paste(lapply(row.names(fit$ellipses), function(x){
-          paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
-          }), collapse="  ")), fontsize=8))
-
-print(p1)
-
-# dotplot(resid(fit), xlab = "Residuals",
-#         panel = function(...) {
-#           panel.abline(v = 0, lty = 2)
-#           panel.dotplot(...)
-#         })
-# error_plot(fit)
-# coef(fit)
-#
-# #http://www.pangloss.com/wiki/VennSignificance
-# sigResult$phyper<-1-phyper(q=sum(subTbl[,1]*subTbl[,2]),#overlap
-# m=sum(subTbl[,1]), #changed in first dataset
-# n=nrow(subTbl)-sum(subTbl[,1]), #not changed in first dataset
-# k=sum(subTbl[,2])) #changed in second dataset
-
-####### chrX----
-if(includeChrX){
-  xchr<-lapply(sigTables,function(x) x[x$chr=="chrX",])
-  sigGenes<-lapply(xchr,"[[","wormbaseID")
+  sigGenes<-lapply(sigTables[currentTriplet],"[[","wormbaseID")
   fit<-euler(sigGenes)
-  fit
-  p2<-plot(fit, quantities=list(type=eulerLabelsType),
-           main=list(label=paste0("chrX: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
-                       paste(lapply(row.names(fit$ellipses), function(x){
-             paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
-           }), collapse="  ")), fontsize=8))
-} else {
-  p2<-NULL
+  p1<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste0("All genes: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+                                  paste(lapply(row.names(fit$ellipses), function(x){
+                                    paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                                  }), collapse="  ")), fontsize=8))
+
+  print(p1)
+
+  # dotplot(resid(fit), xlab = "Residuals",
+  #         panel = function(...) {
+  #           panel.abline(v = 0, lty = 2)
+  #           panel.dotplot(...)
+  #         })
+  # error_plot(fit)
+  # coef(fit)
+  #
+  # #http://www.pangloss.com/wiki/VennSignificance
+  # sigResult$phyper<-1-phyper(q=sum(subTbl[,1]*subTbl[,2]),#overlap
+  # m=sum(subTbl[,1]), #changed in first dataset
+  # n=nrow(subTbl)-sum(subTbl[,1]), #not changed in first dataset
+  # k=sum(subTbl[,2])) #changed in second dataset
+
+  ####### chrX----
+  if(includeChrX){
+    xchr<-lapply(sigTables[currentTriplet],function(x) x[x$chr=="chrX",])
+    sigGenes<-lapply(xchr,"[[","wormbaseID")
+    fit<-euler(sigGenes)
+    fit
+    p2<-plot(fit, quantities=list(type=eulerLabelsType),
+             main=list(label=paste0("chrX: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+                                    paste(lapply(row.names(fit$ellipses), function(x){
+                                      paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                                    }), collapse="  ")), fontsize=8))
+  } else {
+    p2<-NULL
+  }
+  print(p2)
+
+  ##### autosomes -----
+  achr<-lapply(sigTables[currentTriplet],function(x) x[x$chr!="chrX",])
+  sigGenes<-lapply(achr, "[[", "wormbaseID")
+  fit<-euler(sigGenes)
+  p3<-plot(fit, quantities=list(type=eulerLabelsType),
+           main=list(label=paste0("Autosomal: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
+                                  paste(lapply(row.names(fit$ellipses), function(x){
+                                    paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
+                                  }), collapse="  ")), fontsize=8))
+
+  print(p3)
+  dev.off()
 }
-print(p2)
-
-##### autosomes -----
-achr<-lapply(sigTables,function(x) x[x$chr!="chrX",])
-sigGenes<-lapply(achr, "[[", "wormbaseID")
-fit<-euler(sigGenes)
-p3<-plot(fit, quantities=list(type=eulerLabelsType),
-       main=list(label=paste0("Autosomal: |lfc|>", lfcVal, ", padj<",padjVal,"\n",
-            paste(lapply(row.names(fit$ellipses), function(x){
-            paste(x, sum(fit$original.values[grep(x,names(fit$original.values))]))
-            }), collapse="  ")), fontsize=8))
-
-print(p3)
-dev.off()
 #p<-arrangeGrob(grobs=list(p1,p2,p3), ncol=3,padding=2)
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
 # ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_allGenes_",
