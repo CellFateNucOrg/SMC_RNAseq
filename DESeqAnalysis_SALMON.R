@@ -35,7 +35,7 @@ seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
-makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),paste0("p",padjVal,"_lfc",lfcVal)))
+makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),dirname(fileNamePrefix)))
 
 
 
@@ -1180,7 +1180,7 @@ ss1<-sig %>% dplyr::group_by(SMC,XvA) %>% dplyr::mutate(expOnChr=n()) %>%
              percentq25Exp=sigInGrp*qnt25*100/expOnChr,
              percentq50Exp=sigInGrp*qnt50*100/expOnChr,
              .groups="keep")
-write.table(ss1,file=paste0(outPath,"/txt/ecdf_lfcThresholds_p",padjVal,".tsv"),
+write.table(ss1,file=paste0(outPath,"/txt/",fileNamePrefix,"ecdf_lfcThresholds_p",padjVal,".tsv"),
             sep="\t",row.names=F,quote=F)
 
 

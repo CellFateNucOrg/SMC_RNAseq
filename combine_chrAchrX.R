@@ -36,7 +36,7 @@ seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
-makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),paste0("p",padjVal,"_lfc",lfcVal)))
+makeDirs(outPath,dirNameList=paste0(c("rds/","plots/","txt/","tracks/"),dirname(fileNamePrefix)))
 
 
 fileNamePrefix<-filterPrefix

@@ -20,15 +20,15 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 eulerLabelsType<-c("counts","percent")
 eulerLabelsType<-c("counts")
 
-###########################
-## compare samples
-##########################
+###########################-
+## compare samples----
+##########################-
 
 
 #######-
@@ -629,9 +629,9 @@ if(plotPDFs==T){
 
 
 if(!combineChrAX){
-  #########################
-  ## compare LFC to wt mean
-  #########################
+  #########################-
+  ## compare LFC to wt mean-----
+  #########################-
   dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
   wtMean<-rowMeans(counts(dds)[,colData(dds)$SMC==controlGrp])
   idx<-wtMean!=0
@@ -695,7 +695,7 @@ if(!combineChrAX){
 
 
 #########################-
-## lists of overlapping genes
+## lists of overlapping genes-----
 #########################-
 
 ## significantly changed genes
@@ -761,5 +761,183 @@ if(length(idx)>0){
   write.table(geneTable[idx,],
               file=paste0(outPath,"/txt/",outputNamePrefix,"sigIntersectDOWN_all.tsv"),
               sep="\t",row.names=F)
+}
+
+
+
+##########-
+# heirarchical clustering of all LFC -------------
+##########-
+
+geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+pdf(file=paste0(outPath,"/plots/",outputNamePrefix,
+                "hclust_LFC_all.pdf"), width=6,height=11,paper="a4")
+
+lfcCols<-grep("lfc",colnames(geneTable))
+colnames(geneTable)<-gsub("_lfc$","",colnames(geneTable))
+
+#annClrs<-brewer.pal(length(useContrasts), name="Dark2")
+#names(annClrs)<-useContrasts
+#colClrs<-factor(colnames(geneTable)[lfcCols])
+#levels(colClrs)<-annClrs[levels(colClrs)]
+
+heatmapCol<-colorRampPalette(c("cyan","black","pink"))(20)
+# Perform the hierarchical clustering with
+# A distance based on Pearson-correlation coefficient
+# and average linkage clustering as agglomeration criteria
+heatmap.2(as.matrix(geneTable[,lfcCols]),
+          scale="row",
+          hclust=function(x) stats::hclust(x,method="average"),
+          distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+          margin=c(6,0),
+          trace="none",
+          density="none",
+          col=heatmapCol,
+          labRow="",
+          #labCol = names(countTable.kept),
+          cexCol=1,
+          main=paste0("LFC of all genes (n=",nrow(geneTable),")"),
+          #ColSideColors=as.vector(colClrs),
+          #colCol=as.vector(colClrs)
+          )
+
+# check if datasets have chrX genes included
+includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+
+if(includeChrX){
+  chrAidx<-geneTable$chr!="chrX"
+  heatmap.2(as.matrix(geneTable[chrAidx,lfcCols]),
+            scale="row",
+            hclust=function(x) stats::hclust(x,method="average"),
+            distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+            margin=c(6,0),
+            trace="none",
+            density="none",
+            col=heatmapCol,
+            labRow="",
+            #labCol = names(countTable.kept),
+            cexCol=1,
+            main=paste0("LFC of all autosomal genes (n=",nrow(geneTable[chrAidx,]),")"),
+            #ColSideColors=as.vector(colClrs),
+            #colCol=as.vector(colClrs)
+  )
+
+  chrXidx<-geneTable$chr=="chrX"
+  heatmap.2(as.matrix(geneTable[chrXidx,lfcCols]),
+            scale="row",
+            hclust=function(x) stats::hclust(x,method="average"),
+            distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+            margin=c(6,0),
+            trace="none",
+            density="none",
+            col=heatmapCol,
+            labRow="",
+            #labCol = names(countTable.kept),
+            cexCol=1,
+            main=paste0("LFC of all chrX genes (n=",nrow(geneTable[chrXidx,]),")"),
+            #ColSideColors=as.vector(colClrs),
+            #colCol=as.vector(colClrs)
+  )
+}
+
+dev.off()
+
+
+
+# plot the same for all grp levels
+
+if(length(contrastNames)>length(useContrasts)){
+  geneTable<-NULL
+  for (grp in names(contrastNames)){
+    salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+                                         contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+    colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+    if(is.null(geneTable)){
+      geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+    } else {
+      geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+    }
+  }
+
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,
+                  "hclust_LFC_all_allLevels.pdf"), width=6,height=11,paper="a4")
+
+  lfcCols<-grep("lfc",colnames(geneTable))
+  colnames(geneTable)<-gsub("_lfc$","",colnames(geneTable))
+
+  #annClrs<-brewer.pal(length(useContrasts), name="Dark2")
+  #names(annClrs)<-useContrasts
+  #colClrs<-factor(colnames(geneTable)[lfcCols])
+  #levels(colClrs)<-annClrs[levels(colClrs)]
+
+  heatmapCol<-colorRampPalette(c("cyan","black","pink"))(20)
+  # Perform the hierarchical clustering with
+  # A distance based on Pearson-correlation coefficient
+  # and average linkage clustering as agglomeration criteria
+  heatmap.2(as.matrix(geneTable[,lfcCols]),
+            scale="row",
+            hclust=function(x) stats::hclust(x,method="average"),
+            distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+            margin=c(6,0),
+            trace="none",
+            density="none",
+            col=heatmapCol,
+            labRow="",
+            #labCol = names(countTable.kept),
+            cexCol=1,
+            main=paste0("LFC of all genes (n=",nrow(geneTable),")"),
+            #ColSideColors=as.vector(colClrs),
+            #colCol=as.vector(colClrs)
+  )
+
+  # check if datasets have chrX genes included
+  includeChrX<-"chrX" %in% unlist(lapply(sigTables,"[","chr"))
+
+  if(includeChrX){
+    chrAidx<-geneTable$chr!="chrX"
+    heatmap.2(as.matrix(geneTable[chrAidx,lfcCols]),
+              scale="row",
+              hclust=function(x) stats::hclust(x,method="average"),
+              distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+              margin=c(6,0),
+              trace="none",
+              density="none",
+              col=heatmapCol,
+              labRow="",
+              #labCol = names(countTable.kept),
+              cexCol=1,
+              main=paste0("LFC of all autosomal genes (n=",nrow(geneTable[chrAidx,]),")"),
+              #ColSideColors=as.vector(colClrs),
+              #colCol=as.vector(colClrs)
+    )
+
+    chrXidx<-geneTable$chr=="chrX"
+    heatmap.2(as.matrix(geneTable[chrXidx,lfcCols]),
+              scale="row",
+              hclust=function(x) stats::hclust(x,method="average"),
+              distfun=function(x) stats::as.dist((1-cor(t(x)))/2),
+              margin=c(6,0),
+              trace="none",
+              density="none",
+              col=heatmapCol,
+              labRow="",
+              #labCol = names(countTable.kept),
+              cexCol=1,
+              main=paste0("LFC of all chrX genes (n=",nrow(geneTable[chrXidx,]),")"),
+              #ColSideColors=as.vector(colClrs),
+              #colCol=as.vector(colClrs)
+    )
+  }
 }
 

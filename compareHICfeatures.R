@@ -24,7 +24,7 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/","tracks/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 # AB compartments - N2 ----------------------------------------------------

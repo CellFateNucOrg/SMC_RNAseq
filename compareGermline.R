@@ -18,7 +18,7 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 eulerLabelsType<-c("counts")

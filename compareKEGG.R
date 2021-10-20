@@ -15,7 +15,7 @@ if(filterData){
 # KEGG pathway enrichment -----
 #########################-
 
-makeDirs(outPath,dirNameList=paste0("kegg/p",padjVal,"_lfc",lfcVal))
+makeDirs(outPath,dirNameList=paste0("kegg/",dirname(fileNamePrefix)))
 
 #search_kegg_organism('cel', by='kegg_code')
 

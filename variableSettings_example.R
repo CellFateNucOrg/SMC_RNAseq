@@ -5,7 +5,10 @@ plotPDFs=F
 padjVal=0.05
 lfcVal=0.5
 fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/salmon_")
-filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"/filtCycChrAX_")
+filterName=NULL
+filterPrefix=NULL
+chrXprefix=NULL
+chrAprefix=NULL
 
 outPath="."
 genomeVer="WS275"
@@ -18,32 +21,57 @@ genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
 remakeFiles=F # remake publicData files?
-combineChrAX=T # artificially combine chrA and X from different datasets?
-if(combineChrAX){
-  chrXprefix<-paste0("/rds/p",padjVal,"_lfc",lfcVal,"_filtCyc/filtCyc_")
-  chrAprefix<-paste0("/rds/p",padjVal,"_lfc",lfcVal,"_filtCycChrA/filtCycChrA_")
-}
+combineChrAX=F # artificially combine chrA and X from different datasets?
+filterData=F # filter by certain gene lists
+#filterBy=c("chrX") #names in filterList of gene lists to use
+filterBy=c("Cycling_Meeuse","Cycling_Latorre")
+#filterBy=c("Cycling_Meeuse","Cycling_Latorre","chrX")
+customNameTxt="" #some other text you want to add to the filename prefix
 
-filterData=T
-if(filterData){
-  oscillating<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T,
-                            stringsAsFactors=F) #3739
-  latorre<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv")) #3235
-  toFilter<-unique(c(oscillating$wormbaseID, latorre$wormbaseID))
+
+filterList<-list()
+if(filterData | combineChrAX){
+  filterList[["Cycling_Meeuse"]]<-read.delim(paste0(outPath,"/publicData/oscillatingGenes.tsv"), header=T, stringsAsFactors=F)$wormbaseID #3739
+  filterList[["Cycling_Latorre"]]<-read.delim(paste0(outPath,"/publicData/oscillatingGenes_latorre.tsv"))$wormbaseID #3235
   #hsUP<-readRDS(file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds")) #1680
   #hsDOWN<-readRDS(file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds")) #455
   #toFilter<-unique(c(oscillating$wormbaseID, latorre$wormbaseID,
   #hsUP$wormbaseID, hsDOWN$wormbaseID))
-  #md<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
-  #chrXidx<-as.vector(seqnames(md)=="chrX")
+  md<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+  chrXidx<-as.vector(seqnames(md)=="chrX")
   #length(md$wormbaseID[chrXidx]) #5821
-  #toFilter<-unique(c(oscillating$wormbaseID, latorre$wormbaseID, md$wormbaseID[chrXidx]))
+  filterList[["chrX"]]<-md$wormbaseID[chrXidx]
   #print(paste0("filtering ", length(toFilter), " genes"))
   #4522 genes osc+latorre
   #9541 genes osc+latorre+chrX
   #6101 genes osc+latorre+hs
+  lapply(filterList,length)
+  toFilter<-unique(unlist(filterList[filterBy]))
+  length(toFilter) #9603
+  filterName<-paste0("filt",
+                       ifelse(any(grepl("Cycling",filterBy)),"Cyc",""),
+                       ifelse(combineChrAX,"ChrAX",""),
+                       ifelse(any(grepl("chrX",filterBy)) & !combineChrAX,"ChrA",""),
+                       ifelse(customNameTxt!="",paste0("_",customNameTxt),""))
+  fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterName,"/",
+                        ifelse(customNameTxt!="",customNameTxt,"salmon"),"_")
+  filterPrefix=paste0("p",padjVal,"_lfc",lfcVal,"_",filterName,"/",
+                      filterName,"_")
 }
 
+if(combineChrAX){
+  chrXprefix<-paste0("/rds/",gsub("ChrAX","",filterPrefix))
+    #paste0("/rds/p",padjVal,"_lfc",lfcVal,"_",filterName,"/",
+    #                 filterName,"_")
+  chrAprefix<-paste0("/rds/",gsub("ChrAX","ChrA",filterPrefix))
+  # filterName<-paste0("filt",
+  #                    ifelse(any(grepl("Cycling",filterBy)),"Cyc",""),
+  #                    ifelse(any(grepl("chrX",filterBy)),"ChrA",""),
+  #                    ifelse(customNameTxt!="",paste0("_",customNameTxt),""))
+  # chrAprefix<-paste0("/rds/p",padjVal,"_lfc",lfcVal,"_",filterName,"/",
+  #                    filterName,"_")
+  fileNamePrefix<-filterPrefix
+}
 
 #strainLevels<-c("366","382","775","784")
 #varOIlevels<-c("wt","dpy26cs","kle2cs","scc1cs")
@@ -132,13 +160,13 @@ if(advancedContrasts){
   modMat[,grep(paste0("^",varOI),colnames(modMat),invert=T)]<-0
 
   # get coefficients for existing subsets in data table
-  wt_wt_wt_0mM<-colMeans(modMat[sampleTable[,varOI] == "wt.wt.wt.0mM", ])
-  wt_wt_wt_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.wt.wt.1mM", ])
-  wt_TIR1_wt_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.wt.1mM", ])
-  wt_TIR1_sdc3deg_0mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.sdc3deg.0mM", ])
-  wt_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable[,varOI] == "wt.TIR1.sdc3deg.1mM", ])
-  dpy26cs_wt_wt_0mM<-colMeans(modMat[sampleTable[,varOI] == "dpy26cs.wt.wt.0mM", ])
-  dpy26cs_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable[,varOI] == "dpy26cs.TIR1.sdc3deg.1mM", ])
+  wt_wt_wt_0mM<-colMeans(modMat[sampleTable$SMC == "wt.wt.wt.0mM", ])
+  wt_wt_wt_1mM<-colMeans(modMat[sampleTable$SMC == "wt.wt.wt.1mM", ])
+  wt_TIR1_wt_1mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.wt.1mM", ])
+  wt_TIR1_sdc3deg_0mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.sdc3deg.0mM", ])
+  wt_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable$SMC == "wt.TIR1.sdc3deg.1mM", ])
+  dpy26cs_wt_wt_0mM<-colMeans(modMat[sampleTable$SMC == "dpy26cs.wt.wt.0mM", ])
+  dpy26cs_TIR1_sdc3deg_1mM<-colMeans(modMat[sampleTable$SMC == "dpy26cs.TIR1.sdc3deg.1mM", ])
 
   # add special contrasts by subtracting relevant coefficient vectors
   #contratsOI<-list()

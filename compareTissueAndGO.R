@@ -22,7 +22,7 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
@@ -34,8 +34,8 @@ metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 ## need to process by dropping excel file into http://www.wormcat.com
 ## since r function does not seem to work.
 
-if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/wormcat/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/wormcat/",dirname(fileNamePrefix)),
              recursive=T)
 }
 
@@ -129,8 +129,8 @@ problemIDs<-c(177376, 190779, 188651, 13217889, 3565958, 13183957, 189501, 18587
 
 
 
-if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/tissue/wormtissue/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/tissue/wormtissue/",dirname(fileNamePrefix)),
              recursive=T)
 }
 
@@ -237,8 +237,8 @@ for(grp in useContrasts){
 ########-
 # https://www.micropublication.org/media/2018/03/microPublication.biology-10.17912-W25Q2N.pdf
 
-if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/tissue/tea/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/tissue/tea/",dirname(fileNamePrefix)),
              recursive=T)
 }
 

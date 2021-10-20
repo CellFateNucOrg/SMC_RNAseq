@@ -15,15 +15,15 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 
 eulerLabelsType<-c("counts")
 
-###########################
-## compare samples
-##########################
+###########################-
+## compare samples -----
+##########################-
 
 #######-
 ## venn diagrams----
@@ -39,9 +39,9 @@ for (grp in useContrasts){
     salmon<-salmon[!idx,]
   }
 
-  #####################################################
-  ## compare to public data
-  #####################################################
+  #####################################################-
+  ## compare to public data ----
+  #####################################################-
 
   # kramerURL<-"https://doi.org/10.1371/journal.pgen.1005698.s011"
   # kramerFileName="Kramer_2015_PlotGen_S3file.xlsx"
@@ -155,9 +155,9 @@ for (grp in useContrasts){
     dev.off()
   }
 
-  ###############################
-  ## autosome changed
-  ###############################
+  ###############################-
+  ## autosome changed -----
+  ###############################-
 
   dim(kramer)
   dim(salmon)
@@ -208,9 +208,9 @@ for (grp in useContrasts){
 grp="dpy26cs"
 #for(grp in c("dpy26cs")){
 for(grp in useContrasts){
-  ###############################
-  ## classical dc genes
-  ###############################
+  ###############################-
+  ## classical dc genes -----
+  ###############################-
 
   pubDC<-readRDS(paste0(outPath,"/publicData/published_DCgr.rds"))
   pubNDC<-readRDS(paste0(outPath,"/publicData/published_NDCgr.rds"))

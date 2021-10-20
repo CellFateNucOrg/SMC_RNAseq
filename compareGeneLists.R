@@ -19,7 +19,7 @@ if(filterData){
 }
 
 makeDirs(outPath,dirNameList=paste0(c("plots/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
 
@@ -205,6 +205,65 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 p<-ggarrange(p1,p2,nrow=2)
 
 ggsave(paste0(outPath,"/plots/",outputNamePrefix,"smc.pdf"),height=19,width=29,units="cm",device="pdf")
+
+
+#######################-
+## Classic dosage compensation genes-------
+#######################-
+
+pubDC1<-readRDS(paste0(outPath,"/publicData/published_DCgr.rds"))
+#add her-1
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+her1<-metadata[grep("her-1",metadata$publicID),]
+pubDC1<-c(her1,pubDC1)
+
+if(filterData){
+  # remove filtered genes
+  idx<-pubDC1$wormbaseID %in% toFilter
+  pubDC1<-pubDC1[!idx,]
+}
+
+
+pubDC<-join(data.frame(pubDC1),geneTable,by="wormbaseID")
+pubDC$publicID<-ifelse(pubDC$publicID!="",pubDC$publicID,pubDC$sequenceID)
+pubDC$publicID<-factor(pubDC$publicID,levels=unique(pubDC$publicID))
+
+
+lfcCols<-grep("_lfc",names(pubDC))
+df<-cbind(pubDC[c("publicID")],pubDC[,lfcCols])
+df <-df %>% gather(key="sample",value="Log2FoldChange",2:dim(df)[2])
+df$sample<-gsub("_lfc","",df$sample)
+colnames(df)[1]<-"gene"
+#roleLab<-rle(df$role[df$sample==df$sample[1]])
+#labPos<-cumsum(c(0,roleLab$lengths[-length(roleLab$lengths)]))+(roleLab$lengths/2)
+
+p1<-ggplot(df,aes(x=gene,y=Log2FoldChange)) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Dosage compensated genes - log2 fold change") +
+  geom_hline(yintercept=c(-0.5,0.5),linetype="dashed", color="grey60") #+
+#annotate("text", x=c(labPos), y = - 1, label =roleLab$values, size=2)
+
+
+padjCols<-grep("_padj",names(pubDC))
+
+df<-cbind(pubDC$publicID,pubDC[,padjCols])
+
+df <-df %>% gather(key="sample",value="padj",2:dim(df)[2])
+df$sample<-gsub("_padj","",df$sample)
+colnames(df)[1]<-"gene"
+
+p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() + ylab("-log10(P adjusted)") +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Dosage compensated genes - adjusted p value") +
+  geom_hline(yintercept=-log(0.05,base=10),linetype="dashed", color="grey60")
+
+p<-ggarrange(p1,p2,nrow=2)
+
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"pubDC.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 
