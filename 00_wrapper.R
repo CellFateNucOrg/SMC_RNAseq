@@ -76,3 +76,6 @@ source("compareGermline.R")
 print("look for longevity/aging enrichment")
 source("compareAging.R")
 
+# rex mex associated stuff
+print("plot distance of significant genes to rex/mex sites")
+source("compareToRexMex.R")

@@ -405,3 +405,47 @@ summaryByChr<-function(resLFC,padj,lfc) {
   rownames(allChr)<-paste0(rownames(allChr),"_p",padj,"_lfc",lfc)
   return(allChr)
 }
+
+
+
+#' Plot average signal around motifs in particular sized bins
+#'
+#' @param motif_gr GRanges object for motifs of interest
+#' @param bwFiles List of bwFiles whose signal you want to average
+#' @winSize Size of the windows on which to avrage (in bp)
+#' @numWins Number of windows either side of the motif to look at
+#' @return ggplot2 object
+#' @export
+avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
+  avrbins<-list()
+  for (b in 1:length(bwFiles)){
+    gr<-resize(motif_gr,width=winSize,fix="center")
+    bwdata<-import.bw(bwFiles[[b]])
+    cov<-coverage(bwdata,weight="score")
+    gr<-binnedAverage(gr,cov,paste0(names(bwFiles)[b],"__win",0))
+
+    upstream<-resize(motif_gr,width=winSize,fix="center")
+    downstream<-resize(motif_gr,width=winSize,fix="center")
+    for(i in 1:numWins){
+      print(i)
+      upstream<-flank(upstream,width=winSize,start=T)
+      upstream<-binnedAverage(upstream,cov,paste0(names(bwFiles)[b],"__win-",i))
+      downstream<-flank(downstream,width=winSize,start=F)
+      downstream<-binnedAverage(downstream,cov,paste0(names(bwFiles)[b],"__win",i))
+      df<-cbind(data.frame(gr),mcols(upstream)[,c(-1,-2)],mcols(downstream)[,c(-1,-2)])
+      df<-pivot_longer(df,cols=colnames(df)[grep("__win",colnames(df))],names_to="window")
+      df$SMC<-do.call(rbind,strsplit(df$window,split="__win"))[,1]
+      df$window<-as.numeric(do.call(rbind,strsplit(df$window,split="__win"))[,2])*winSize/1000
+      avrbins[[names(bwFiles)[b]]]<-df
+    }
+  }
+
+  allavrbins<-do.call(rbind,avrbins)
+  allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
+  p<-ggplot(allavrbins,aes(x=window,y=value,col=SMC)) + facet_grid(SMC~.)+
+    ylim(quantile(allavrbins$value,c(0.01,0.99)))+
+    geom_boxplot(outlier.shape=NA,col="black",notch=T) +
+    geom_jitter(size=0.5,alpha=0.4) + xlab("Window (kb)") + theme_bw()+
+    ylab("Average score per bin")
+  return(p)
+}
