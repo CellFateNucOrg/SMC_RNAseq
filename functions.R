@@ -419,21 +419,21 @@ summaryByChr<-function(resLFC,padj,lfc) {
 avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
   avrbins<-list()
   for (b in 1:length(bwFiles)){
-    gr<-resize(motif_gr,width=winSize,fix="center")
-    bwdata<-import.bw(bwFiles[[b]])
-    cov<-coverage(bwdata,weight="score")
-    gr<-binnedAverage(gr,cov,paste0(names(bwFiles)[b],"__win",0))
+    gr<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
+    bwdata<-rtracklayer::import.bw(bwFiles[[b]])
+    cov<-GenomicRanges::coverage(bwdata,weight="score")
+    gr<-GenomicRanges::binnedAverage(gr,cov,paste0(names(bwFiles)[b],"__win",0))
 
-    upstream<-resize(motif_gr,width=winSize,fix="center")
-    downstream<-resize(motif_gr,width=winSize,fix="center")
+    upstream<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
+    downstream<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
     for(i in 1:numWins){
       print(i)
       upstream<-flank(upstream,width=winSize,start=T)
-      upstream<-binnedAverage(upstream,cov,paste0(names(bwFiles)[b],"__win-",i))
+      upstream<-GenomicRanges::binnedAverage(upstream,cov,paste0(names(bwFiles)[b],"__win-",i))
       downstream<-flank(downstream,width=winSize,start=F)
-      downstream<-binnedAverage(downstream,cov,paste0(names(bwFiles)[b],"__win",i))
-      df<-cbind(data.frame(gr),mcols(upstream)[,c(-1,-2)],mcols(downstream)[,c(-1,-2)])
-      df<-pivot_longer(df,cols=colnames(df)[grep("__win",colnames(df))],names_to="window")
+      downstream<-GenomicRanges::binnedAverage(downstream,cov,paste0(names(bwFiles)[b],"__win",i))
+      df<-cbind(data.frame(gr),mcols(upstream),mcols(downstream))
+      df<-tidyr::pivot_longer(df,cols=colnames(df)[grep("__win",colnames(df))],names_to="window")
       df$SMC<-do.call(rbind,strsplit(df$window,split="__win"))[,1]
       df$window<-as.numeric(do.call(rbind,strsplit(df$window,split="__win"))[,2])*winSize/1000
       avrbins[[names(bwFiles)[b]]]<-df
@@ -442,10 +442,11 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
 
   allavrbins<-do.call(rbind,avrbins)
   allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
-  p<-ggplot(allavrbins,aes(x=window,y=value,col=SMC)) + facet_grid(SMC~.)+
-    ylim(quantile(allavrbins$value,c(0.01,0.99)))+
-    geom_boxplot(outlier.shape=NA,col="black",notch=T) +
-    geom_jitter(size=0.5,alpha=0.4) + xlab("Window (kb)") + theme_bw()+
-    ylab("Average score per bin")
+  p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) + ggplot2::facet_grid(SMC~.)+
+    ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
+    ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
+    ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
+    ggplot2::theme_bw()+
+    ggplot2::ylab("Average score per bin")
   return(p)
 }

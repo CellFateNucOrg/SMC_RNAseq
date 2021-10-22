@@ -110,7 +110,7 @@ dev.off()
 
 
 ###############-
-## seqplots for rex/mex sites
+## seqplots for rex/mex sites------
 ###############-
 
 # anchors - seqplots heatmaps ---------------------------------------------
@@ -119,13 +119,11 @@ dev.off()
 ####
 
 # rex Motifs
+winSize=10000
 rexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
-
 rexMotifs<-rexMotifs[seqnames(rexMotifs)=="chrX"]
-
-rexMotifs<-resize(rexMotifs,width=10000,fix="center")
-
-flankSize<-60000
+rexMotifs<-resize(rexMotifs,width=winSize,fix="center")
+flankSize<-winSize*6
 
 smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
                   useContrasts,"_lfc.bw")
@@ -141,7 +139,7 @@ if(plotPDFs==F){
       height=16, units="cm", res=150)
 }
 
-#############################
+############################# seqplots ---------
 ##### subsitute for getREF function from seqplots thaht has an unfixed bug.
 ##### Fix comes form  https://github.com/Przemol/seqplots/issues/58
 #' Get reference genome
@@ -177,6 +175,31 @@ assignInNamespace("getREF",getREF,ns="seqplots")
 #####################
 
 
+# rex Motifs
+winSize=10000
+rexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
+rexMotifs<-rexMotifs[seqnames(rexMotifs)=="chrX"]
+rexMotifs<-resize(rexMotifs,width=winSize,fix="center")
+flankSize<-winSize*6
+
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+
+if(plotPDFs==T){
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"seqplots_rexMotifs-chrX_flank",
+                  flankSize/1000,"kb.pdf"), width=19,
+      height=16, paper="a4")
+}
+
+if(plotPDFs==F){
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"heatmap_rexMotifs-chrX_flank",
+                      flankSize/1000,"kb.png"),width=19,
+      height=16, units="cm", res=150)
+}
+
+
+
+#plotting heatmaps
 p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(rexMotifs),
                    refgenome="ce11", bin=100L, xmin=flankSize,
@@ -186,17 +209,121 @@ p<-getPlotSetArray(tracks=c(smcRNAseq),
 
 dd<-plotHeatmap(p,plotz=F)
 heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
-roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
 minVal<-min(heatmapQuantiles[1,])
 maxVal<-max(heatmapQuantiles[2,])
 plotHeatmap(p,main="chrX rex motifs", plotScale="no", sortrows=T,
             clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
             indi=F, sort_mids=T,sort_by=c(T,F,F))
+
+#plotting averages
+winSize=10000
+rexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
+rexMotifs<-rexMotifs[seqnames(rexMotifs)=="chrX"]
+rexMotifs<-resize(rexMotifs,width=winSize,fix="center")
+flankSize<-winSize*6
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+
 if(plotPDFs==F){
   dev.off()
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_rexMotifs-chrX_flank",
+                      flankSize/1000,"kb.png"),width=19,
+      height=16, units="cm", res=150)
+}
+
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(rexMotifs),
+                   refgenome="ce11", bin=winSize/10, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=winSize)
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+plotAverage(p,main="chrX rex motifs",plotScale="",ylim=c(minVal,maxVal))
+
+
+dev.off()
+
+
+# rex sites  -----
+winSize=10000
+rexSites<-import.bed(paste0(outPath,"/publicData/rexSites_Albritton2017_ce11.bed"))
+rexSites<-rexSites[seqnames(rexSites)=="chrX"]
+rexSites<-resize(rexSites,width=winSize,fix="center")
+flankSize<-winSize*6
+
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+
+if(plotPDFs==T){
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"seqplots_rexSites-chrX_flank",
+                  flankSize/1000,"kb.pdf"), width=19,
+      height=16, paper="a4")
+}
+
+if(plotPDFs==F){
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"heatmap_rexSites-chrX_flank",
+                      flankSize/1000,"kb.png"),width=19,
+      height=16, units="cm", res=150)
 }
 
 
+
+#plotting heatmaps
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(rexSites),
+                   refgenome="ce11", bin=100L, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=10000)
+
+
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+plotHeatmap(p,main="chrX rex motifs", plotScale="no", sortrows=T,
+            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+            indi=F, sort_mids=T,sort_by=c(T,F,F))
+
+#plotting averages
+winSize=10000
+rexSites<-import.bed(paste0(outPath,"/publicData/rexSites_Albritton2017_ce11.bed"))
+rexSites<-rexSites[seqnames(rexSites)=="chrX"]
+rexSites<-resize(rexSites,width=winSize,fix="center")
+flankSize<-winSize*6
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+
+if(plotPDFs==F){
+  dev.off()
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_rexSites-chrX_flank",
+                      flankSize/1000,"kb.png"),width=19,
+      height=16, units="cm", res=150)
+}
+
+p<-getPlotSetArray(tracks=c(smcRNAseq),
+                   features=c(rexSites),
+                   refgenome="ce11", bin=winSize/10, xmin=flankSize,
+                   xmax=flankSize, type="af",
+                   xanchored=winSize)
+p$data$feature_1
+dd<-plotHeatmap(p,plotz=F)
+heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+minVal<-min(heatmapQuantiles[1,])
+maxVal<-max(heatmapQuantiles[2,])
+plotAverage(p,main="chrX rex motifs",plotScale="",ylim=c(minVal,maxVal))
+
+
+dev.off()
+
+
+
+
+
+#############################-
+## Motif score vs average RNAseq score-----
+#############################-
 # rex Motifs
 winSize=10000
 rexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))

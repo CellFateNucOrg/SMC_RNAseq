@@ -9,6 +9,7 @@ library(ggpubr)
 library(genomation)
 library(seqplots)
 library(RColorBrewer)
+library(ggpubr)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -1128,9 +1129,15 @@ plotHeatmap(p,main="chrX loop anchors", plotScale="no", sortrows=T,
             indi=F, sort_mids=T,sort_by=c(T,F,F))
 if(plotPDFs==F){
   dev.off()
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_anchors-chrX_flank",
+                      flankSize/1000,"kb.png"), width=19,
+      height=16, units="cm", res=150)
 }
 
+plotAverage(p,main="chrX loop anchors",plotScale="",ylim=c(minVal,maxVal))
+
 if(plotPDFs==F){
+  dev.off()
   png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-autosomal_flank",
                       flankSize/1000,"kb.png"), width=19,
     height=16, units="cm", res=150)
@@ -1144,13 +1151,18 @@ p<-getPlotSetArray(tracks=c(smcRNAseq),
 plotHeatmap(p,main="Autosomal loop anchors", plotScale="no", sortrows=T,
             clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
             indi=F, sort_mids=T,sort_by=c(T,F,F))
+
 if(plotPDFs==F){
   dev.off()
+  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_anchors-autosomal_flank",
+                      flankSize/1000,"kb.png"), width=19,
+      height=16, units="cm", res=150)
 }
 
-if(plotPDFs==T){
-  dev.off()
-}
+plotAverage(p,main="Autosomal loop anchors",plotScale="",ylim=c(minVal,maxVal))
+
+dev.off()
+
 
 ######################-
 # TADs ----
@@ -1201,13 +1213,14 @@ plotHeatmap(p,main="ChrX TADs", plotScale="no", sortrows=T,
             indi=F, sort_mids=T,sort_by=c(T,F,F),
             clspace=c("#00008B", "#FFFFE0","#8B0000"))
 
-
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
 # reduced tads
 p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(reduce(xtads)),
                    refgenome="ce11", bin=10000L, xmin=flankSize,
                    xmax=flankSize, type="af",
-                   xanchored=median(width(tads)))
+                   xanchored=median(width(xtads)))
 
 
 dd<-plotHeatmap(p,plotz=F)
@@ -1368,4 +1381,80 @@ p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
 ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
                      padjVal,".pdf")),
        width=9, height=11, paper="a4",plot=p,device="pdf")
+
+
+
+####################-
+## new loops
+####################-
+
+loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
+gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
+mcols(gr1)<-loops[,c(8:15)]
+mcols(gr2)<-loops[,c(8:15)]
+gr1$loopNum<-paste0("loop",1:length(gr1))
+gr2$loopNum<-paste0("loop",1:length(gr2))
+
+anchors<-c(gr1,gr2)
+#anchors<-reduce(anchors,min.gapwidth=0L)
+seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+names(smcRNAseq)<-useContrasts
+for(grp in useContrasts){
+  rnaSeq<-import.bw(smcRNAseq[[grp]])
+  cov<-coverage(rnaSeq,weight="score")
+  anchors<-binnedAverage(anchors,cov,grp)
+}
+
+
+pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
+           width=11,height=8,paper="a4r")
+winSize=10000
+metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
+plotList<-list()
+for (colOI in metricsOI){
+  df<-data.frame(anchors)
+  df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
+  plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
+    ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
+    ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
+}
+p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
+print(p)
+dev.off()
+
+
+
+###################-
+## binned signal around anchors
+###################-
+
+loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
+             strand="+")
+gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
+             strand="-")
+mcols(gr1)<-loops[,c(8:15)]
+mcols(gr2)<-loops[,c(8:15)]
+gr1$loopNum<-paste0("loop",1:length(gr1))
+gr2$loopNum<-paste0("loop",1:length(gr2))
+
+anchors<-c(gr1,gr2)
+anchors<-reduce(anchors,min.gapwidth=0L)
+seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  useContrasts,"_lfc.bw")
+names(smcRNAseq)<-useContrasts
+
+p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=10000,numWins=10)
+p<-p+ggtitle("Average RNAseq LFC around chrX SIP loop anchors")
+#print(p)
+ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_nearSIPanchors.pdf"), p,
+       device="pdf",width=19,height=24,units="cm")
 
