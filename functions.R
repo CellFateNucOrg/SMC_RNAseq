@@ -428,9 +428,9 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
     downstream<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
     for(i in 1:numWins){
       print(i)
-      upstream<-flank(upstream,width=winSize,start=T)
+      upstream<-GenomicRanges::flank(upstream,width=winSize,start=T)
       upstream<-GenomicRanges::binnedAverage(upstream,cov,paste0(names(bwFiles)[b],"__win-",i))
-      downstream<-flank(downstream,width=winSize,start=F)
+      downstream<-GenomicRanges::flank(downstream,width=winSize,start=F)
       downstream<-GenomicRanges::binnedAverage(downstream,cov,paste0(names(bwFiles)[b],"__win",i))
       df<-cbind(data.frame(gr),mcols(upstream),mcols(downstream))
       df<-tidyr::pivot_longer(df,cols=colnames(df)[grep("__win",colnames(df))],names_to="window")
@@ -442,11 +442,12 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
 
   allavrbins<-do.call(rbind,avrbins)
   allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
-  p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) + ggplot2::facet_grid(SMC~.)+
+  p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) + ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
     ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
     ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
     ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
     ggplot2::theme_bw()+
-    ggplot2::ylab("Average score per bin")
+    ggplot2::ylab("Average score per bin") +
+    ggplot2::xlab("Relative distance (kb)")
   return(p)
 }

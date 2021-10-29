@@ -282,10 +282,10 @@ if(filterData){
   reinke<-reinke[!idx,]
 }
 
-boeckLst<-split(boeck,boeck$germline)
+boeckLst<-split(boeck$wormbaseID,boeck$germline)
 names(boeckLst)<-paste0("Boeck2016_",names(boeckLst))
 
-reinkeLst<-split(reinke,reinke$exclusive.category)
+reinkeLst<-split(reinke$wormbaseID,reinke$exclusive.category)
 names(reinkeLst)<-paste0("Reinke2004_",gsub(" ",".",names(reinkeLst)))
 
 germline<-c(boeckLst,reinkeLst)

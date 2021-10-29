@@ -37,9 +37,10 @@ getSimSig<-function(simTbl,numSims,grp, chrSubset,
   return(do.call(rbind,recordSig))
 }
 
-geneLengthHist<-function(simTbl,metricName,numSims,grp,chrSubset){
+geneLengthHist<-function(simTbl,metricName,numSims,grp,chrSubset,direction){
   qval=sum(simTbl[numSims+1,metricName]>simTbl[1:numSims,metricName])/numSims
-  hist(simTbl[1:numSims,metricName], main=paste0(grp," ",chrSubset,": Sim ",metricName," gene length"),
+  hist(simTbl[1:numSims,metricName], main=paste0(grp," ",chrSubset,"(",direction,
+                                                 "): Sim ",metricName," gene length"),
        sub=paste0("quantile:",qval,ifelse(qval<0.05 | qval>0.95,"**","")),
        xlab=paste0(metricName," gene length"), xlim=c(min(simTbl[,metricName])*0.9,
                                                       max(simTbl[,metricName])*1.1),
@@ -49,7 +50,7 @@ geneLengthHist<-function(simTbl,metricName,numSims,grp,chrSubset){
   legend("topright",legend=c("true value","sims median"),lty=c(1,2),col=c("red","black"))
 }
 
-doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,outputNamePrefix,outPath="."){
+doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,direction,outputNamePrefix,outPath="."){
   #get a randomly sampled distribution of same size
   simTbl<-as.data.frame(matrix(NA,nrow=numSims+1,ncol=5))
   #names(simTbl)<-c("min","mean","median","max","meanT10")
@@ -71,15 +72,15 @@ doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,outputNamePrefix,ou
   #simTbl[numSims+1,"max"]<-max(geneLengths)
   #simTbl[numSims+1,"meanT10"]<-mean(geneLengths[1:10])
   pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"geneLengthHist_",
-                  grp,"_",chrSubset,"_padj",padj,"_lfc", lfc,".pdf"),
+                  grp,"_",chrSubset,"_",direction,"_padj",padj,"_lfc", lfc,".pdf"),
       width=11, height=3.5, paper="a4r")
   par(mfrow=c(1,3))
   hist(geneLengths, main=paste0(grp," ",chrSubset,": Gene length distribution"),
-       sub=paste0(length(sig.gr)," regulated genes, ",length(bg.gr)," all expressed genes"),
+       sub=paste0(length(sig.gr)," regulated genes, ",length(bg.gr)," ",direction," genes"),
        xlab="Gene length",col="lightblue",breaks=50)
   #geneLengthHist(simTbl=simTbl,metricName="min",numSims=numSims,grp=grp,chrSubset=chrSubset)
-  geneLengthHist(simTbl=simTbl,metricName="mean",numSims=numSims,grp=grp,chrSubset=chrSubset)
-  geneLengthHist(simTbl=simTbl,metricName="median",numSims=numSims,grp=grp,chrSubset=chrSubset)
+  geneLengthHist(simTbl=simTbl,metricName="mean",numSims=numSims,grp=grp,chrSubset=chrSubset,direction=direction)
+  geneLengthHist(simTbl=simTbl,metricName="median",numSims=numSims,grp=grp,chrSubset=chrSubset,direction=direction)
   #geneLengthHist(simTbl=simTbl,metricName="max",numSims=numSims,grp=grp,chrSubset=chrSubset)
   #geneLengthHist(simTbl=simTbl,metricName="meanT10",numSims=numSims,grp=grp,chrSubset=chrSubset)
   dev.off()
@@ -90,7 +91,6 @@ doSims<-function(numSims,sig.gr,bg.gr,grp,chrSubset,padj,lfc,outputNamePrefix,ou
 
 
 # compare lengths of genes
-
 sigTable<-list()
 bgTable<-list()
 sigGR<-list()
@@ -100,15 +100,20 @@ recordSig<-list()
 set.seed(97232151)
 #df<-data.frame(matrix(nrow=10,ncol=3))
 #names(df)<-useContrasts
-for (grp in names(contrastNames)){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  bgTable<-as.data.frame(salmon[!is.na(salmon$padj),])
-  sigTable<-as.data.frame(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                              namePadjCol="padj",
-                                              nameLfcCol="log2FoldChange",
-                                              direction="both",
-                                              chr="all", nameChrCol="chr"))
+compareLengthToSims<-function(grp,contrastNames,fileNamePrefix,padjVal,lfcVal,direction) {
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+  bgTable<-data.frame(getSignificantGenes(salmon, padj=1, lfc=0,
+                               namePadjCol="padj",
+                               nameLfcCol="log2FoldChange",
+                               direction=direction,
+                               chr="all", nameChrCol="chr"))
+  sigTable<-data.frame(getSignificantGenes(salmon, padj=padjVal,
+                                lfc=ifelse(direction=="lt",-lfcVal,lfcVal),
+                                namePadjCol="padj",
+                                nameLfcCol="log2FoldChange",
+                                direction=direction,
+                                chr="all", nameChrCol="chr"))
   sigTable<-sigTable[!is.na(sigTable$chr),] # removes mtDNA genes
   bgTable<-bgTable[!is.na(bgTable$chr),] # removes mtDNA genes
   sigGR<-GRanges(seqnames=sigTable$chr,
@@ -132,6 +137,7 @@ for (grp in names(contrastNames)){
       recordSig[[paste(grp,"chrX",sep="_")]]<-doSims(numSims=numSims,sig.gr=chrXgr,
                                                      bg.gr=chrXgrBg,grp=grp,
                                                      chrSubset="chrX",
+                                                     direction=direction,
                                                      padj=padjVal,lfc=lfcVal,
                                                      outputNamePrefix=outputNamePrefix,
                                                      outPath=".")
@@ -144,14 +150,30 @@ for (grp in names(contrastNames)){
     recordSig[[paste(grp,"chrA",sep="_")]]<-doSims(numSims=numSims,sig.gr=chrAgr,
                                                    bg.gr=chrAgrBg,grp=grp,
                                                    chrSubset="chrA",
+                                                   direction=direction,
                                                    padj=padjVal,lfc=lfcVal,
                                                    outputNamePrefix=outputNamePrefix,
                                                    outPath=".")
   }
-
+  return(recordSig)
 }
-par(mfrow=c(1,1))
-recordSig1<-do.call(rbind,recordSig)
-rownames(recordSig1)<-NULL
-recordSig1 %>%  filter(metric=="mean") %>% group_by(subset)
-recordSig1 %>%  filter(metric=="median") %>% group_by(subset)
+
+
+for (grp in useContrasts){
+  print(grp)
+  print("both")
+  compareLengthToSims(grp,contrastNames,fileNamePrefix,padjVal,lfcVal,direction="both")
+  print("gt")
+  compareLengthToSims(grp,contrastNames,fileNamePrefix,padjVal,lfcVal,direction="gt")
+  print("lt")
+  compareLengthToSims(grp,contrastNames,fileNamePrefix,padjVal,lfcVal,direction="lt")
+}
+# par(mfrow=c(1,1))
+# recordSig1<-do.call(rbind,recordSig)
+# rownames(recordSig1)<-NULL
+# recordSig1 %>%  filter(metric=="mean") %>% group_by(subset)
+# recordSig1 %>%  filter(metric=="median") %>% group_by(subset)
+
+
+
+

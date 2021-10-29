@@ -104,7 +104,7 @@ for (grp in useContrasts){
   print(p1)
   dev.off()
 
-
+  includeChrX<-ifelse("chrX" %in% salmonSig$chr,T,F)
 
   if(includeChrX){
     ###############################-
@@ -224,29 +224,29 @@ for(grp in useContrasts){
     pubNDC<-pubNDC[!idx,]
   }
 
-  if(includeChrX){
-    salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
-    DC<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbaseID,
-             nonDC=pubNDC$wormbaseID)
-    names(DC)<-c(grp, "DC", "nonDC")
-    txtLabels<-list()
-    txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
-    txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
-
-    fit<-euler(DC)
-    percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
-                        txtLabels[[2]], names(txtLabels)[2])
-
-    pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
-                    grp, "VsPapers_padj",
-                    padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,
-        paper="a4")
-    p1<-plot(fit, quantities=list(type=eulerLabelsType),
-             main=list(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",
-                                    padjVal,"\n",percentages), fontsize=8, y=0.7))
-    print(p1)
-    dev.off()
-  }
+  # if(includeChrX){
+  #   salmondc<-filterResults(salmon,padjVal,lfcVal,direction="gt",chr="chrX")
+  #   DC<-list(salmon=salmondc$wormbaseID, DC=pubDC$wormbaseID,
+  #            nonDC=pubNDC$wormbaseID)
+  #   names(DC)<-c(grp, "DC", "nonDC")
+  #   txtLabels<-list()
+  #   txtLabels[paste0("% ",names(DC)[2]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[2]]))/length(DC[[2]]),1)
+  #   txtLabels[paste0("% ",names(DC)[3]," in ",names(DC)[1])]<-round(100*length(intersect(DC[[1]],DC[[3]]))/length(DC[[3]]),1)
+  #
+  #   fit<-euler(DC)
+  #   percentages<-paste0(txtLabels[[1]], names(txtLabels)[1], " & ",
+  #                       txtLabels[[2]], names(txtLabels)[2])
+  #
+  #   pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
+  #                   grp, "VsPapers_padj",
+  #                   padjVal,"_lfc", lfcVal,".pdf"),width=5, height=10,
+  #       paper="a4")
+  #   p1<-plot(fit, quantities=list(type=eulerLabelsType),
+  #            main=list(label=paste0("chrX dc genes: lfc>", lfcVal, ", padj<",
+  #                                   padjVal,"\n",percentages), fontsize=8, y=0.7))
+  #   print(p1)
+  #   dev.off()
+  # }
 
 
 

@@ -140,8 +140,8 @@ sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=lfcVal,direction="both")
 
 # count genes by category (chr & A/B)
-dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
-bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
+bgCount<-lapply(lapply(listgr,as.data.frame), function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
 # add name of SMC protein
 dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
 bgCount<-do.call(rbind, mapply(cbind,bgCount,"SMC"=names(bgCount),SIMPLIFY=F))
@@ -175,7 +175,7 @@ p1a<-ggplot(dfl,aes(x=seqnames,y=Frac,group=compartment)) +
 sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=lfcVal,direction="gt")
 # count genes by category (chr & A/B)
-dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+dflUp<-lapply(sigListUp, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
 # add name of SMC protein
 dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
 dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
@@ -190,7 +190,7 @@ dflUp$expression<-"up"
 # downregulated genes
 sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc= -lfcVal, direction="lt")
-dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+dflDown<-lapply(sigListDown, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
 # add name of SMC protein
 dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
 dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
@@ -409,7 +409,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
                   padj=padjVal,lfc=lfcVal,direction="both")
 
   # count genes by category (chr & A/B)
-  dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
   # add name of SMC protein
   dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
   dfl$seqnames<-gsub("chr","",dfl$seqnames)
@@ -427,7 +427,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
   sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                     padj=padjVal,lfc=lfcVal,direction="gt")
   # count genes by category (chr & A/B)
-  dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  dflUp<-lapply(sigListUp, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
   # add name of SMC protein
   dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
   dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
@@ -436,7 +436,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                       padj=padjVal, lfc= -lfcVal, direction="lt")
-  dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,compartment) %>% tally()})
+  dflDown<-lapply(sigListDown, function(x){x%>% dplyr::group_by(seqnames,compartment) %>% tally()})
   # add name of SMC protein
   dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
   dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
@@ -683,7 +683,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
                   padj=padjVal,lfc=lfcVal,direction="both")
 
   # count genes by category (chr & A/B)
-  dfl<-lapply(sigList, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+  dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
 
   # add name of SMC protein
   dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
@@ -718,7 +718,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
   sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                     padj=padjVal,lfc=lfcVal,direction="gt")
   # count genes by category (chr & A/B)
-  dflUp<-lapply(sigListUp, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+  dflUp<-lapply(sigListUp, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
   # add name of SMC protein
   dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
   dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
@@ -727,7 +727,7 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
   # downregulated genes
   sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                       padj=padjVal, lfc= -lfcVal, direction="lt")
-  dflDown<-lapply(sigListDown, function(x){x%>% group_by(seqnames,switch,.drop=F) %>% tally()})
+  dflDown<-lapply(sigListDown, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
   # add name of SMC protein
   dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
   dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
@@ -1018,49 +1018,9 @@ if(all(c("wt","dpy26cs","kle2cs","scc1cs") %in% varOIlevels)){
 
 
 
-# anchors - seqplots heatmaps ---------------------------------------------
-####
-## anchors
-####
+# seqplots heatmaps and averages ---------------------------------------------
 
-loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
-                           format="bedpe")
-
-anchors<-zipup(loops)
-anchors<-unlist(anchors)
-strand(anchors)[seq(1,length(anchors),by=2)]<-"+"
-strand(anchors)[seq(2,length(anchors),by=2)]<-"-"
-
-anchors<-reduce(sort(anchors))
-#anchors$region<-1:length(anchors)
-anchors$chr<-seqnames(anchors)
-
-loopsAll<-paste0(outPath,"/tracks/",outputNamePrefix,"loops.bed")
-export(anchors,con=loopsAll,format="bed")
-
-loopsX<-paste0(outPath,"/tracks/",outputNamePrefix,"loopsX.bed")
-export(anchors[seqnames(anchors)=="chrX"], con=loopsX,format="bed")
-
-loopsA<-paste0(outPath,"/tracks/",outputNamePrefix,"loopsA.bed")
-export(anchors[seqnames(anchors)!="chrX"], con=loopsA,format="bed")
-
-flankSize<-60000
-
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-                  useContrasts,"_lfc.bw")
-if(plotPDFs==T){
-  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"anchors-all_flank",
-                      flankSize/1000,"kb.pdf"), width=19,
-      height=16, paper="a4")
-}
-
-if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-all_flank",
-                      flankSize/1000,"kb.png"),width=19,
-    height=16, units="cm", res=150)
-}
-
-#############################
+#############################-
 ##### subsitute for getREF function from seqplots thaht has an unfixed bug.
 ##### Fix comes form  https://github.com/Przemol/seqplots/issues/58
 #' Get reference genome
@@ -1095,84 +1055,27 @@ getREF <- function(genome) {
 assignInNamespace("getREF",getREF,ns="seqplots")
 #####################
 
-p<-getPlotSetArray(tracks=c(smcRNAseq),
-                   features=c(loopsAll),
-                refgenome="ce11", bin=100L, xmin=flankSize,
-                xmax=flankSize, type="af",
-                xanchored=10000)
-
-
-dd<-plotHeatmap(p,plotz=F)
-heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
-roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
-minVal<-min(heatmapQuantiles[1,])
-maxVal<-max(heatmapQuantiles[2,])
-plotHeatmap(p,main="All loop anchors", plotScale="no", sortrows=T,
-            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
-            indi=F, sort_mids=T,sort_by=c(T,F,F))
-if(plotPDFs==F){
-  dev.off()
-}
-
-if(plotPDFs==F){
-  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-chrX_flank",
-                      flankSize/1000,"kb.png"), width=19,
-    height=16, units="cm", res=150)
-}
-p<-getPlotSetArray(tracks=c(smcRNAseq),
-                   features=c(loopsX),
-                   refgenome="ce11", bin=100L, xmin=flankSize,
-                   xmax=flankSize, type="af",
-                   xanchored=10000)
-plotHeatmap(p,main="chrX loop anchors", plotScale="no", sortrows=T,
-            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
-            indi=F, sort_mids=T,sort_by=c(T,F,F))
-if(plotPDFs==F){
-  dev.off()
-  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_anchors-chrX_flank",
-                      flankSize/1000,"kb.png"), width=19,
-      height=16, units="cm", res=150)
-}
-
-plotAverage(p,main="chrX loop anchors",plotScale="",ylim=c(minVal,maxVal))
-
-if(plotPDFs==F){
-  dev.off()
-  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"anchors-autosomal_flank",
-                      flankSize/1000,"kb.png"), width=19,
-    height=16, units="cm", res=150)
-}
-
-p<-getPlotSetArray(tracks=c(smcRNAseq),
-                   features=c(loopsA),
-                   refgenome="ce11", bin=100L, xmin=flankSize,
-                   xmax=flankSize, type="af",
-                   xanchored=10000)
-plotHeatmap(p,main="Autosomal loop anchors", plotScale="no", sortrows=T,
-            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
-            indi=F, sort_mids=T,sort_by=c(T,F,F))
-
-if(plotPDFs==F){
-  dev.off()
-  png(filename=paste0(outPath,"/plots/",outputNamePrefix,"lineplot_anchors-autosomal_flank",
-                      flankSize/1000,"kb.png"), width=19,
-      height=16, units="cm", res=150)
-}
-
-plotAverage(p,main="Autosomal loop anchors",plotScale="",ylim=c(minVal,maxVal))
-
-dev.off()
-
 
 ######################-
 # TADs ----
 ######################-
-loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"), format="bedpe")
-head(loops)
-#extract the separate anchors
-grl<-zipup(loops)
-anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"), format="bedpe")
+# head(loops)
+# #extract the separate anchors
+# grl<-zipup(loops)
+# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+
+# new SIP loops
+loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
+                 strand="+")
+anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
+                 strand="-")
+mcols(anchor1)<-loops[,c(8:15)]
+mcols(anchor2)<-loops[,c(8:15)]
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
 
 #make TADs
 tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
@@ -1187,6 +1090,7 @@ flankSize<-200000
 
 smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
                   useContrasts,"_lfc.bw")
+names(smcRNAseq)<-useContrasts
 
 pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"tads-chrX_flank",
                   flankSize/1000,"kb.pdf"), width=11,
@@ -1207,14 +1111,14 @@ roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
 minVal<-min(heatmapQuantiles[1,])
 maxVal<-max(heatmapQuantiles[2,])
 #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
-plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs",error.estimates=T)
+plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs",
+            error.estimates=ifelse(length(useContrasts>3),F,T))
 plotHeatmap(p,main="ChrX TADs", plotScale="no", sortrows=T,
             clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
             indi=F, sort_mids=T,sort_by=c(T,F,F),
             clspace=c("#00008B", "#FFFFE0","#8B0000"))
 
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-                  useContrasts,"_lfc.bw")
+
 # reduced tads
 p<-getPlotSetArray(tracks=c(smcRNAseq),
                    features=c(reduce(xtads)),
@@ -1287,14 +1191,28 @@ dev.off()
 # p1+p2
 
 
+# ## old loops
+# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
+#                            format="bedpe")
+# head(loops)
+# #extract the separate anchors
+# grl<-zipup(loops)
+# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
 
-loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
-                           format="bedpe")
-head(loops)
-#extract the separate anchors
-grl<-zipup(loops)
-anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+
+### new SIP loops
+loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
+anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
+mcols(anchor1)<-loops[,c(8:15)]
+mcols(anchor2)<-loops[,c(8:15)]
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
+
+# anchors<-c(anchor1,anchor2)
+# #anchors<-reduce(anchors,min.gapwidth=0L)
+# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
 
 
 #make TADs
@@ -1306,11 +1224,12 @@ sort(width(tads))
 
 # find regions not in tads
 notads<-gaps(tads)
+sort(width(notads))
 
 
 plotList<-list()
+#grp=useContrasts[3]
 for (grp in useContrasts){
-  #grp=useContrasts[3]
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
 
@@ -1328,7 +1247,7 @@ for (grp in useContrasts){
   genesInTads$TADs<-"inside"
   genesNotTads$TADs<-"outside"
   df<-data.frame(c(genesInTads,genesNotTads))
-  df<-df%>%group_by(seqnames,TADs)%>%mutate(count=n())
+  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
 
   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
@@ -1351,8 +1270,8 @@ ol<-findOverlaps(anchors,tads_in)
 anchors<-anchors[-queryHits(ol)]
 
 plotList<-list()
+#grp=useContrasts[3]
 for (grp in useContrasts){
-  #grp=useContrasts[3]
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
 
@@ -1370,7 +1289,7 @@ for (grp in useContrasts){
   insideTads$TADs<-"TAD"
   atAnchors$TADs<-"Anchor"
   df<-data.frame(c(insideTads,atAnchors))
-  df<-df%>%group_by(seqnames,TADs)%>%mutate(count=n())
+  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
 
   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
@@ -1385,46 +1304,47 @@ ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
 
 
 ####################-
-## new loops
+## new SIP loops -----
 ####################-
 
-loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
-gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
-mcols(gr1)<-loops[,c(8:15)]
-mcols(gr2)<-loops[,c(8:15)]
-gr1$loopNum<-paste0("loop",1:length(gr1))
-gr2$loopNum<-paste0("loop",1:length(gr2))
-
-anchors<-c(gr1,gr2)
-#anchors<-reduce(anchors,min.gapwidth=0L)
-seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-                  useContrasts,"_lfc.bw")
-names(smcRNAseq)<-useContrasts
-for(grp in useContrasts){
-  rnaSeq<-import.bw(smcRNAseq[[grp]])
-  cov<-coverage(rnaSeq,weight="score")
-  anchors<-binnedAverage(anchors,cov,grp)
-}
-
-
-pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
-           width=11,height=8,paper="a4r")
-winSize=10000
-metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
-plotList<-list()
-for (colOI in metricsOI){
-  df<-data.frame(anchors)
-  df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
-  plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
-    ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
-    ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
-}
-p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
-print(p)
-dev.off()
+# loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+# gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
+# gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
+# mcols(gr1)<-loops[,c(8:15)]
+# mcols(gr2)<-loops[,c(8:15)]
+# gr1$loopNum<-paste0("loop",1:length(gr1))
+# gr2$loopNum<-paste0("loop",1:length(gr2))
+#
+# anchors<-c(gr1,gr2)
+# #anchors<-reduce(anchors,min.gapwidth=0L)
+# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+#
+# smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+#                   useContrasts,"_lfc.bw")
+# names(smcRNAseq)<-useContrasts
+# for(grp in useContrasts){
+#   rnaSeq<-import.bw(smcRNAseq[[grp]])
+#   cov<-coverage(rnaSeq,weight="score")
+#   anchors<-binnedAverage(anchors,cov,grp)
+# }
+#
+#
+# pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
+#            width=11,height=8,paper="a4r")
+# winSize=10000
+# metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
+# plotList<-list()
+# for (colOI in metricsOI){
+#   df<-data.frame(anchors)
+#   colnames(df)<-c(colnames(df)[1:5],colnames(mcols(anchors)))
+#   df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
+#   plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
+#     ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
+#     ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
+# }
+# p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
+# print(p)
+# dev.off()
 
 
 
@@ -1432,17 +1352,18 @@ dev.off()
 ## binned signal around anchors
 ###################-
 
+# new SIP loops
 loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
+anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
              strand="+")
-gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
+anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
              strand="-")
-mcols(gr1)<-loops[,c(8:15)]
-mcols(gr2)<-loops[,c(8:15)]
-gr1$loopNum<-paste0("loop",1:length(gr1))
-gr2$loopNum<-paste0("loop",1:length(gr2))
+mcols(anchor1)<-loops[,c(8:15)]
+mcols(anchor2)<-loops[,c(8:15)]
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
 
-anchors<-c(gr1,gr2)
+anchors<-c(anchor1,anchor2)
 anchors<-reduce(anchors,min.gapwidth=0L)
 seqlevels(anchors)<-seqlevels(Celegans)[1:6]
 
@@ -1454,7 +1375,7 @@ names(smcRNAseq)<-useContrasts
 
 p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=10000,numWins=10)
 p<-p+ggtitle("Average RNAseq LFC around chrX SIP loop anchors")
-#print(p)
+print(p)
 ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_nearSIPanchors.pdf"), p,
-       device="pdf",width=19,height=24,units="cm")
+       device="pdf",width=19,height=29,units="cm")
 

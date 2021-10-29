@@ -17,8 +17,9 @@ if(filterData){
   outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 makeDirs(outPath,dirNameList=paste0(c("plots/"),
-                                    paste0("p",padjVal,"_lfc",lfcVal,"/",
+                                    paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
+
 
 
 ###########################

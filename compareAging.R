@@ -530,13 +530,13 @@ keepGroup<-c("aux_sdc3BG","dpy26")
 leadEdgeTbl<-leadEdgeTbl[leadEdgeTbl$group %in% keepGroup,]
 dim(leadEdgeTbl) #1573
 
-leadEdgeTbl %>% count(wormbaseID) #895 unique genes
-leadEdgeTbl %>% group_by(group) %>% count(wormbaseID) #1142
-leadEdgeTbl %>% group_by(pathway) %>% count(wormbaseID) #1243
-leadEdgeTbl %>% count(wormbaseID) %>% filter(n>1) #456 genes appear more than once
+leadEdgeTbl %>% dplyr::count(wormbaseID) #895 unique genes
+leadEdgeTbl %>% dplyr::group_by(group) %>% dplyr::count(wormbaseID) #1142
+leadEdgeTbl %>% dplyr::group_by(pathway) %>% dplyr::count(wormbaseID) #1243
+leadEdgeTbl %>% dplyr::count(wormbaseID) %>% dplyr::filter(n>1) #456 genes appear more than once
 
 # in at least two paths or 2 groups
-df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% filter(numGroups==2)
+df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% dplyr::filter(numGroups==2)
 
 df1<-left_join(df,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
                by="wormbaseID") %>% distinct() %>% arrange(chr) %>% print(n=Inf)
@@ -544,7 +544,7 @@ df1<-left_join(df,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
 df1[df1$chr=="chrX",]#166
 
 # in at least two paths or 2 groups - 433 genes
-df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% filter(numGroups==2 & numPaths==3)
+df<-leadEdgeTbl %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group)) %>% dplyr::filter(numGroups==2 & numPaths==3)
 
 df1<-left_join(df,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
                by="wormbaseID") %>% distinct() %>% arrange(chr) %>% print(n=Inf) #23
@@ -554,7 +554,7 @@ write.table(df1,paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdge_allPath&Gr
             quote=F)
 
 # only on X
-df2<-leadEdgeTbl %>% filter(chr=="chrX") %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group))%>% filter(numGroups==2)
+df2<-leadEdgeTbl %>% dplyr::filter(chr=="chrX") %>% dplyr::group_by(wormbaseID) %>% dplyr::summarise(numPaths=n_distinct(pathway),numGroups=n_distinct(group))%>% dplyr::filter(numGroups==2)
 
 df3<-left_join(df2,leadEdgeTbl[,c("wormbaseID","publicID","sequenceID","chr")],
                by="wormbaseID") %>% distinct() %>% print(n=Inf) # 166 genes
