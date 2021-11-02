@@ -6,6 +6,7 @@ library(tidyr)
 library(eulerr)
 library(lattice)
 library(gridExtra)
+library(gplots)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -421,13 +422,25 @@ p2<-ggplot(sigTbl,aes(x=chr,y=abs(log2FoldChange),fill=SMC)) +
   ggtitle("Absolute LFC of significantly changed genes by chromosome") +
   theme_minimal() + scale_fill_brewer(palette="Dark2")
 
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
+chrAtbl<-sigTbl[sigTbl$chr!="chrX",]
+yminmax=c(0,median(abs(chrAtbl$log2FoldChange))+quantile(abs(chrAtbl$log2FoldChange))[4]*2)
+p3<-ggplot(chrAtbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA) +
   ggtitle("LFC of significantly changed autosomal genes") +
   theme_minimal()  +
   scale_y_continuous(limits = yminmax) + xlab(NULL) +
   scale_fill_brewer(palette="Dark2")
+
+chrXtbl<-sigTbl[sigTbl$chr=="chrX",]
+yminmax=c(0,median(abs(chrXtbl$log2FoldChange))+quantile(abs(chrXtbl$log2FoldChange))[4]*2)
+p3a<-ggplot(chrXtbl,aes(x=updown,y=abs(log2FoldChange),fill=SMC)) +
+  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA) +
+  ggtitle("LFC of significantly changed chrX genes") +
+  theme_minimal()  +
+  scale_y_continuous(limits = yminmax) + xlab(NULL) +
+  scale_fill_brewer(palette="Dark2")
+
+
 
 countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>%
   dplyr::summarise(count=n(),groups="keep")
@@ -458,6 +471,20 @@ p6<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
   theme_minimal() +xlab(NULL) +
   scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
 
+
+
+countbytype<-sigTbl %>% filter(chr=="chrX") %>% group_by(updown,SMC) %>%
+  dplyr::summarise(count=n(),groups="keep")
+
+yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
+p6a<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
+  geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
+  ylim(yminmax) +
+  ggtitle("Count of significantly changed chrX genes") +
+  theme_minimal() +xlab(NULL) +
+  scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
+
+
 # up vs down
 bb<-countbytype %>% pivot_wider(names_from=updown,values_from=count) %>% group_by(SMC) %>% mutate(ratioupdown=as.character(round(up/down,1)), updown="up")
 bb1<-bb
@@ -486,6 +513,13 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 padjVal,"_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=13,height=22,units="cm")
 
+
+p<-ggpubr::ggarrange(p3a,p6a,ncol=1,nrow=2)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                "count&LFCchrX_",
+                                paste(useContrasts,collapse="_"), "_padj",
+                                padjVal,"_lfc", lfcVal,".pdf"),
+                plot=p, device="pdf",width=13,height=22,units="cm")
 
 
 #########-
@@ -628,68 +662,76 @@ if(plotPDFs==T){
 
 
 
+
+#########################-
+## compare LFC to wt mean-----
+#########################-
+
 if(!combineChrAX){
-  #########################-
-  ## compare LFC to wt mean-----
-  #########################-
-  dds<-readRDS(file=paste0(outPath,"/rds/dds_object.rds"))
-  wtMean<-rowMeans(counts(dds)[,colData(dds)$SMC==controlGrp])
-  idx<-wtMean!=0
-  logwtcounts<-log2(wtMean[idx])
-  logwtcounts[is.infinite(logwtcounts)]<-NA
+  dds<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,"dds_object.rds"))
+} else {
+  dds<-readRDS(file=paste0(outPath,"/rds/",
+                           gsub("ChrAX","",fileNamePrefix),
+                           "dds_object.rds"))
+}
 
-  geneTable<-NULL
-  for (grp in useContrasts){
-    salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
-                contrastNames[[grp]], "_DESeq2_fullResults_p",padjVal,".rds")))
-    colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
-    if(is.null(geneTable)){
-      geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr", paste0(grp,"_lfc"))]
-    } else {
-      geneTable<-inner_join(geneTable,salmon[,c("wormbaseID", "chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
-    }
+wtMean<-rowMeans(counts(dds)[,colData(dds)[,varOI]==controlGrp])
+idx<-wtMean!=0
+logwtcounts<-log2(wtMean[idx])
+logwtcounts[is.infinite(logwtcounts)]<-NA
+
+geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]], "_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr", paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-inner_join(geneTable,salmon[,c("wormbaseID", "chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
   }
+}
 
-  dim(geneTable)
-  # all genes
-  geneTable<-na.omit(geneTable)
+dim(geneTable)
+# all genes
+geneTable<-na.omit(geneTable)
 
-  lfcCols<-grep("_lfc$",names(geneTable))
-  minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.001)*1.1
-  maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999)*1.1
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.01)*1.1
+maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.99)*1.1
 
-  if(plotPDFs==T){
-    pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr.pdf"), width=5,
-        height=5, paper="a4")
+if(plotPDFs==T){
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr.pdf"), width=5,
+      height=5, paper="a4")
+}
+for (grp in useContrasts){
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr_",grp,
+                    "_366.png"), width=5, height=5, units="in", res=150)
   }
-  for (grp in useContrasts){
-    if(plotPDFs==F){
-      png(file=paste0(outPath, "/plots/",outputNamePrefix,"cor_wtExpr_",grp1,"_",
-                      grp2,".png"), width=5, height=5, units="in", res=150)
-    }
-    idx<-match(geneTable$wormbaseID,names(wtMean))
-    noNAtbl<-na.omit(cbind(as.vector(geneTable[,paste0(grp,"_lfc")]),
-                           logwtcounts[idx]))
-    Rval<-round(cor(noNAtbl[,1],noNAtbl[,2]),2)
+  idx<-match(geneTable$wormbaseID,names(wtMean))
+  noNAtbl<-na.omit(cbind(as.vector(geneTable[,paste0(grp,"_lfc")]),
+                         logwtcounts[idx]))
+  Rval<-round(cor(noNAtbl[,1],noNAtbl[,2]),2)
 
-    plot(logwtcounts[idx],geneTable[,paste0(grp,"_lfc")],pch=16,
-         cex=0.5,col="#11111155", xlim=c(minScale,maxScale),
-         ylab=paste0("log2(",grp,"/", controlGrp,")"),
-         xlab=paste0("log2(",controlGrp,")"))
-    abline(v=0,h=0,col="grey60",lty=3)
-    bestFitLine<-lm(geneTable[,paste0(grp,"_lfc")]~logwtcounts[idx],
-                    na.action=na.exclude)
-    abline(bestFitLine,col="red")
-    title(paste0(grp," LFC vs ",controlGrp,
-                 " log counts (R=", Rval,")"))
-    if(plotPDFs==F){
-      dev.off()
-    }
-  }
-  if(plotPDFs==T){
+  plot(logwtcounts[idx],geneTable[,paste0(grp,"_lfc")],pch=16,
+       cex=0.5,col="#11111155", ylim=c(minScale,maxScale),
+       ylab=paste0("log2(",grp,"/", controlGrp,")"),
+       xlab=paste0("log2(",controlGrp,")"))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp,"_lfc")]~logwtcounts[idx],
+                  na.action=na.exclude)
+  abline(bestFitLine,col="red")
+  title(paste0(grp," LFC vs ",controlGrp,
+               " log counts (R=", Rval,")"))
+  if(plotPDFs==F){
     dev.off()
   }
 }
+if(plotPDFs==T){
+  dev.off()
+}
+
 
 
 

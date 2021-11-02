@@ -182,7 +182,7 @@ JansDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_DCgr.rds
 JansNDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_NDCgr.rds")))
 
 localPadj=0.05
-localLFC=0.25
+localLFC=0.5
 kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy27_RNAi_L3_padj",
                                    nameLfcCol="dpy27_RNAi_L3_log2_fold_change",

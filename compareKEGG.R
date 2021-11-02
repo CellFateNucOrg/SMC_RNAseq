@@ -76,11 +76,11 @@ for (grp in useContrasts){
     for(pathID in kk$ID){
       if(pathID!="cel01100"){
         pathview(gene.data=ranks, pathway.id=pathID, gene.idtype="kegg",
-               kegg.dir=paste0(outPath,"/kegg/p",padjVal,"_lfc",lfcVal),
+               kegg.dir=paste0(outPath,"/kegg/",dirname(fileNamePrefix),"/"),
                out.suffix=paste0("ORA_",grp),
                species="cel")
         system(paste0("mv ",outPath,"/",pathID,".ORA_",grp,".png ",
-                      outPath,"/kegg/p",padjVal,"_lfc",lfcVal,"/"))
+                      outPath,"/kegg/",dirname(fileNamePrefix),"/"))
       }
     }
   }

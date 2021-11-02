@@ -11,6 +11,9 @@ source("./variableSettings.R")
 scriptName <- "compareGeneLists"
 print(scriptName)
 
+#chosenSubset=names(contrastNames) # for all complex contrasts
+chosenSubset=useContrasts #for most biologicall interesting contrasts
+
 if(filterData){
   fileNamePrefix<-filterPrefix
   outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
@@ -27,7 +30,7 @@ makeDirs(outPath,dirNameList=paste0(c("plots/"),
 # Make combined table ----------------------------------------------
 ######################-
 geneTable<-NULL
-for (grp in names(contrastNames)){
+for (grp in chosenSubset){
   salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                                        "_DESeq2_fullResults_p",padjVal,".rds")))
   colnames(salmon)[colnames(salmon)=="baseMean"]<-paste0(grp,"_baseMean")

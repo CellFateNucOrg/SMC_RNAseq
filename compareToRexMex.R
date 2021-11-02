@@ -24,64 +24,144 @@ makeDirs(outPath,dirNameList=paste0(c("plots/","tracks/"),
                                            scriptName)))
 
 ##################-
-## distance of rex/mex from significant genes
+## distance of rex/mex from significant genes LFC-----
 ##################-
 
-sigGR<-list()
+geneGR<-list()
 for (grp in useContrasts){
   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
                          "_DESeq2_fullResults_p",padjVal,".rds"))
-  sigGR[[grp]]<-GRanges(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
-                                                      namePadjCol="padj",
-                                                      nameLfcCol="log2FoldChange",
-                                                      direction="both",
-                                                      chr="all", nameChrCol="chr"))
+  geneGR[[grp]]<-GRanges(salmon)
+  sigGR<-GRanges(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                                     namePadjCol="padj",
+                                                     nameLfcCol="log2FoldChange",
+                                                     direction="both",
+                                                     chr="all", nameChrCol="chr"))
+  geneGR[[grp]]$significant<-F
+  geneGR[[grp]]$significant[geneGR[[grp]]$wormbaseID %in% sigGR$wormbaseID]<-T
+  #sigGR[[grp]]<-GRanges(salmon)
 }
 
 
 
-pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"distance2rex_",
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"distance2rex_LFC",
                 "_padj",padjVal, "_lfc", lfcVal,".pdf"),
-    width=11,height=8,paper="a4r")
+    width=11,height=6,paper="a4r")
 
 # mex Motifs
 mexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
 
 for(grp in useContrasts){
-  dist2rex<-distanceToNearest(sigGR[[grp]],mexMotifs,ignore.strand=T)
-  sigGR[[grp]]$dist2rex<-NA
-  sigGR[[grp]]$dist2rex[queryHits(dist2rex)]<-mcols(dist2rex)$distance
-  sigGR[[grp]]$SMC<-grp
+  dist2rex<-distanceToNearest(geneGR[[grp]],mexMotifs,ignore.strand=T)
+  geneGR[[grp]]$dist2rex_anystrand<-NA
+  geneGR[[grp]]$mexScore_anystrand<-NA
+  geneGR[[grp]]$dist2rex_anystrand[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$mexScore_anystrand[queryHits(dist2rex)]<-mcols(mexMotifs)[subjectHits(dist2rex),"score"]
+  geneGR[[grp]]$mexStrand_anystrand[queryHits(dist2rex)]<-as.vector(strand(mexMotifs))[subjectHits(dist2rex)]
+  dist2rex<-distanceToNearest(geneGR[[grp]],mexMotifs,ignore.strand=F)
+  geneGR[[grp]]$dist2rex_samestrand<-NA
+  geneGR[[grp]]$mexScore_samestrand<-NA
+  geneGR[[grp]]$dist2rex_samestrand[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$mexScore_samestrand[queryHits(dist2rex)]<-mcols(mexMotifs)[subjectHits(dist2rex),"score"]
+  geneGR[[grp]]$SMC<-grp
 }
 
-dfall<-do.call(rbind,lapply(sigGR,data.frame))
+dfall<-do.call(rbind,lapply(geneGR,data.frame))
 row.names(dfall)<-NULL
 dfall$XvA<-ifelse(dfall$seqnames=="chrX","X","A")
 dfall$upVdown<-ifelse(dfall$log2FoldChange>0,"up","down")
+dfall$sameStrand<-ifelse(dfall$strand==dfall$mexStrand_anystrand,"sameStrand",
+                         "differentStrand")
+#dfall$mexScore_anystrand<-factor(dfall$mexScore_anystrand)
+#dfall$mexScore_samestrand<-factor(dfall$mexScore_samestrand)
 head(dfall)
 
-p1<-ggplot(dfall,aes(x=dist2rex/1000,fill=XvA))+geom_histogram() +facet_grid(XvA~SMC) +
-  theme_bw() +xlab("Distance to mex Motif (kb)") +
-  ggtitle("Distance of significantly changed genes to nearest mex motif")
+# histograms
+p1<-ggplot(dfall,aes(x=dist2rex_anystrand/1000,fill=significant))+geom_histogram() +facet_grid(XvA~SMC) +
+  theme_bw() +xlab("Distance to mex Motif on any strand (kb)") +
+  ggtitle("Distance of significantly changed genes to nearest mex motif on any strand")
 print(p1)
 
-p2<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex/1000,fill=upVdown))+geom_histogram() +facet_grid(upVdown~SMC) +
-  theme_bw() +xlab("Distance to mex motif (kb)") +
-  ggtitle("Distance of chrX significantly changed genes to nearest mex motif")
+p1a<-ggplot(dfall,aes(x=dist2rex_samestrand/1000,fill=significant))+geom_histogram() +facet_grid(XvA~SMC) +
+  theme_bw() +xlab("Distance to mex Motif on same strand (kb)") +
+  ggtitle("Distance of significantly changed genes to nearest mex motif on same strand")
+print(p1a)
+
+p2<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_anystrand/1000,fill=significant))+geom_histogram() +facet_grid(upVdown~SMC) +
+  theme_bw() +xlab("Distance to mex motif on any strand (kb)") +
+  ggtitle("Distance of chrX significantly changed genes to nearest mex motif on any strand")
 print(p2)
 
+p2a<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_samestrand/1000,fill=significant))+geom_histogram() +facet_grid(upVdown~SMC) +
+  theme_bw() +xlab("Distance to mex motif on same strand (kb)") +
+  ggtitle("Distance of chrX significantly changed genes to nearest mex motif on same strand")
+print(p2a)
+
+# jitter
+p2b<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_anystrand,y=log2FoldChange,
+                                        col=significant)) +
+  facet_grid(.~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("LFC of gene v nearest mex motif score on any strand")
+print(p2b)
+
+p2b1<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_samestrand,y=log2FoldChange,
+                                         col=significant)) +
+  facet_grid(.~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("LFC of gene v nearest mex motif score on same strand")
+print(p2b1)
+
+p2b2<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_anystrand,y=log2FoldChange,
+                                     col=significant)) +
+  facet_grid(sameStrand~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("Effect of score and strand of nearest mex motif on LFC of gene")
+print(p2b2)
+
+# scatter
+dfall$mexScore_anystrand<-as.numeric(as.character(dfall$mexScore_anystrand))
+p2c<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_anystrand/1000,y=log2FoldChange,col=mexScore_anystrand,shape=significant)) +
+  facet_grid(significant~SMC)+ theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on any strand (kb)") +
+  ggtitle("Effect of score and distance of mex motif on any strand on LFC")
+print(p2c)
+
+dfall$mexScore_samestrand<-as.numeric(as.character(dfall$mexScore_samestrand))
+p2c1<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_samestrand/1000,y=log2FoldChange,col=mexScore_samestrand,shape=significant)) +
+  facet_grid(significant~SMC)+theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on same strand (kb)") +
+  ggtitle("Effect of score and distance of mex motif on same strand on LFC")
+print(p2c1)
+
+
+dfall$mexScore_anystrand<-as.numeric(as.character(dfall$mexScore_anystrand))
+p2c2<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_anystrand/1000,y=log2FoldChange,col=mexScore_anystrand,shape=significant)) +
+  facet_grid(sameStrand~SMC)+ theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on any strand (kb)") +
+  ggtitle("Effect of score, strand and distance of nearest mex motif on LFC")
+print(p2c2)
 
 #### rex sites
 rexSites<-import.bed(paste0(outPath,"/publicData/rexSites_Albritton2017_ce11.bed"))
 
 for(grp in useContrasts){
-  dist2rex<-distanceToNearest(sigGR[[grp]],rexSites,ignore.strand=T)
-  sigGR[[grp]]$dist2rex<-NA
-  sigGR[[grp]]$dist2rex[queryHits(dist2rex)]<-mcols(dist2rex)$distance
-  sigGR[[grp]]$SMC<-grp
+  dist2rex<-distanceToNearest(geneGR[[grp]],rexSites,ignore.strand=T)
+  geneGR[[grp]]$dist2rex<-NA
+  geneGR[[grp]]$dist2rex[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$SMC<-grp
 }
 
-dfall<-do.call(rbind,lapply(sigGR,data.frame))
+dfall<-do.call(rbind,lapply(geneGR,data.frame))
 row.names(dfall)<-NULL
 dfall$XvA<-ifelse(dfall$seqnames=="chrX","X","A")
 dfall$upVdown<-ifelse(dfall$log2FoldChange>0,"up","down")
@@ -91,12 +171,166 @@ head(dfall)
 #   theme_bw() +xlab("Distance to rex Site (kb)")
 # print(p3)
 
-p4<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex/1000,fill=upVdown))+geom_histogram() +facet_grid(upVdown~SMC) +
+# histogram
+p4<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex/1000,fill=significant))+
+  geom_histogram() +facet_grid(.~SMC) +
   theme_bw() +xlab("Distance to rex Site (kb)") +
   ggtitle("Distance of chrX significantly changed genes to nearest Rex Site")
 print(p4)
 
+# scatter
+p4a<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex/1000,y=log2FoldChange,
+                                       col=significant)) +
+  facet_grid(.~SMC)+ scale_color_manual(values=c("grey","darkblue"))+
+  geom_point(alpha=0.4) +
+  xlab("Distance to rex site (kb)") +
+  ggtitle("Effect of rex site distance from gene on LFC")
+print(p4a)
+
 dev.off()
+
+
+
+##################-
+## distance of rex/mex from significant genes log10pVal-----
+##################-
+
+geneGR<-list()
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                         "_DESeq2_fullResults_p",padjVal,".rds"))
+  geneGR[[grp]]<-GRanges(salmon)
+  sigGR<-GRanges(getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                                     namePadjCol="padj",
+                                     nameLfcCol="log2FoldChange",
+                                     direction="both",
+                                     chr="all", nameChrCol="chr"))
+  geneGR[[grp]]$significant<-F
+  geneGR[[grp]]$significant[geneGR[[grp]]$wormbaseID %in% sigGR$wormbaseID]<-T
+  #sigGR[[grp]]<-GRanges(salmon)
+}
+
+
+
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"distance2rex_log10pVal",
+                "_padj",padjVal, "_lfc", lfcVal,".pdf"),
+    width=11,height=6,paper="a4r")
+
+# mex Motifs
+mexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
+
+for(grp in useContrasts){
+  dist2rex<-distanceToNearest(geneGR[[grp]],mexMotifs,ignore.strand=T)
+  geneGR[[grp]]$dist2rex_anystrand<-NA
+  geneGR[[grp]]$mexScore_anystrand<-NA
+  geneGR[[grp]]$dist2rex_anystrand[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$mexScore_anystrand[queryHits(dist2rex)]<-mcols(mexMotifs)[subjectHits(dist2rex),"score"]
+  geneGR[[grp]]$mexStrand_anystrand[queryHits(dist2rex)]<-as.vector(strand(mexMotifs))[subjectHits(dist2rex)]
+  dist2rex<-distanceToNearest(geneGR[[grp]],mexMotifs,ignore.strand=F)
+  geneGR[[grp]]$dist2rex_samestrand<-NA
+  geneGR[[grp]]$mexScore_samestrand<-NA
+  geneGR[[grp]]$dist2rex_samestrand[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$mexScore_samestrand[queryHits(dist2rex)]<-mcols(mexMotifs)[subjectHits(dist2rex),"score"]
+  geneGR[[grp]]$SMC<-grp
+}
+
+dfall<-do.call(rbind,lapply(geneGR,data.frame))
+row.names(dfall)<-NULL
+dfall$XvA<-ifelse(dfall$seqnames=="chrX","X","A")
+dfall$upVdown<-ifelse(dfall$log2FoldChange>0,"up","down")
+dfall$sameStrand<-ifelse(dfall$strand==dfall$mexStrand_anystrand,"sameStrand",
+                         "differentStrand")
+
+dfall$log10pVal<- -log10(dfall$padj)
+#dfall$mexScore_anystrand<-factor(dfall$mexScore_anystrand)
+#dfall$mexScore_samestrand<-factor(dfall$mexScore_samestrand)
+head(dfall)
+
+# jitter
+p2b<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_anystrand,y=log10pVal,
+                                        col=significant)) +
+  facet_grid(.~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("-Log10pVal of gene v nearest mex motif score on any strand")
+print(p2b)
+
+p2b1<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_samestrand,y=log10pVal,
+                                         col=significant)) +
+  facet_grid(.~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("-Log10pVal of gene v nearest mex motif score on same strand")
+print(p2b1)
+
+p2b2<-ggplot(dfall[dfall$XvA=="X",], aes(x=mexScore_anystrand,y=log10pVal,
+                                         col=significant)) +
+  facet_grid(sameStrand~SMC) +
+  geom_jitter(width=0.1,alpha=0.4)+
+  scale_color_manual(values=c("grey","darkblue"))+
+  ggtitle("Effect of score and strand of nearest mex motif on -log10pVal of gene")
+print(p2b2)
+
+# scatter
+dfall$mexScore_anystrand<-as.numeric(as.character(dfall$mexScore_anystrand))
+p2c<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_anystrand/1000,y=log10pVal,col=mexScore_anystrand,shape=significant)) +
+  facet_grid(significant~SMC)+ theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on any strand (kb)") +
+  ggtitle("Effect of score and distance of mex motif on any strand on -log10pVal")
+print(p2c)
+
+dfall$mexScore_samestrand<-as.numeric(as.character(dfall$mexScore_samestrand))
+p2c1<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_samestrand/1000,y=log10pVal,
+                                  col=mexScore_samestrand,shape=significant)) +
+  facet_grid(significant~SMC)+theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on same strand (kb)") +
+  ggtitle("Effect of score and distance of mex motif on same strand on -log10pVal")
+print(p2c1)
+
+
+dfall$mexScore_anystrand<-as.numeric(as.character(dfall$mexScore_anystrand))
+p2c2<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex_anystrand/1000,y=log10pVal,
+                                  col=mexScore_anystrand,shape=significant)) +
+  facet_grid(sameStrand~SMC)+ theme_bw()+
+  geom_point(alpha=0.4) +
+  scale_color_gradient(low="lightblue",high="darkblue") +
+  xlab("Distance to mex motif on any strand (kb)") +
+  ggtitle("Effect of score, strand and distance of nearest mex motif on -log10pVal")
+print(p2c2)
+
+#### rex sites
+rexSites<-import.bed(paste0(outPath,"/publicData/rexSites_Albritton2017_ce11.bed"))
+
+for(grp in useContrasts){
+  dist2rex<-distanceToNearest(geneGR[[grp]],rexSites,ignore.strand=T)
+  geneGR[[grp]]$dist2rex<-NA
+  geneGR[[grp]]$dist2rex[queryHits(dist2rex)]<-mcols(dist2rex)$distance
+  geneGR[[grp]]$SMC<-grp
+}
+
+dfall<-do.call(rbind,lapply(geneGR,data.frame))
+row.names(dfall)<-NULL
+dfall$XvA<-ifelse(dfall$seqnames=="chrX","X","A")
+dfall$upVdown<-ifelse(dfall$log2FoldChange>0,"up","down")
+dfall$log10pVal<- -log10(dfall$padj)
+head(dfall)
+
+
+# scatter
+p4a<-ggplot(dfall[dfall$XvA=="X",],aes(x=dist2rex/1000,y=log10pVal,
+                                       col=significant)) +
+  facet_grid(.~SMC)+ scale_color_manual(values=c("grey","darkblue"))+
+  geom_point(alpha=0.4) +
+  xlab("Distance to rex site (kb)") +
+  ggtitle("Effect of rex site distance from gene on -log10pVal")
+print(p4a)
+
+dev.off()
+
 
 
 
@@ -419,7 +653,7 @@ if(!file.exists("./publicData/chromStates_L3_Evans2016_ce11_rgb.bed")){
 
 
 
-######### mex motif score vs distance to nearest gene
+######### mex motif score vs distance to nearest gene ------
 md<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 mexMotifs<-import.bed(paste0(outPath,"/publicData/rexMotifs_Albritton2017_ce11.bed"))
 rexSites<-import.bed(paste0(outPath,"/publicData/rexSites_Albritton2017_ce11.bed"))
@@ -473,6 +707,21 @@ levels(df$chromState)<-c(names(stateClrs))
 
 pdf(paste0(outPath,"/plots/",outputNamePrefix,"MexMotifScoreVlfc.pdf"),width=11,height=8, paper="a4r")
 
+p1<-ggplot(df,aes(x=score,y=lfcNearest_anyStrand,col=mexInRex,
+                  size=dist_anyStrand)) + geom_point() +
+  scale_color_manual(values=stateClrs,na.value="white")+
+  ggtitle("Mex motif score vs LFC of nearest gene (both strands)")
+print(p1)
+p2<-ggplot(df,aes(x=score,y=lfcNearest_sameStrand,col=mexInRex,
+                  size=dist_sameStrand)) + geom_point()+
+  scale_color_manual(values=c(stateClrs),na.value="white")+
+  ggtitle("Mex motif score vs LFC of nearest gene (same strand)")
+print(p2)
+dev.off()
+
+
+pdf(paste0(outPath,"/plots/",outputNamePrefix,"MexMotifScoreVlfc1.pdf"),width=11,height=8, paper="a4r")
+
 p1<-ggplot(df,aes(x=score,y=lfcNearest_anyStrand,shape=mexInRex,col=chromState,
                   size=dist_anyStrand)) + geom_point() +
   scale_color_manual(values=stateClrs,na.value="white")+
@@ -484,6 +733,8 @@ p2<-ggplot(df,aes(x=score,y=lfcNearest_sameStrand,shape=mexInRex,col=chromState,
   ggtitle("Mex motif score vs LFC of nearest gene (same strand)")
 print(p2)
 dev.off()
+
+
 
 pdf(paste0(outPath,"/plots/",outputNamePrefix,"MexMotifScoreVdistance.pdf"),width=11,height=8, paper="a4r")
 
@@ -500,3 +751,10 @@ print(p2)
 dev.off()
 
 
+# get expression of chagned genes
+sigGR<-list()
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                         "_DESeq2_fullResults_p",padjVal,".rds"))
+  sigGR[[grp]]<-GRanges(salmon)
+}
