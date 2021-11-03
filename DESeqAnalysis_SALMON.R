@@ -134,6 +134,8 @@ if(file.exists(paste0(outPath,"/txt/",fileNamePrefix,"all_logfile.txt"))){
 ## basic sample stats
 sink(file=paste0(outPath,"/txt/", fileNamePrefix,"all_logfile.txt"),
      append=TRUE, type="output")
+print("Average model coefficients:")
+print(colMeans(coef(dds)))
 statsPerSample<-data.frame(t(apply(counts(dds),2,summary)))
 statsPerSample$totalCounts<-colSums(counts(dds))
 rownames(statsPerSample)<-colData(dds)$sampleName
