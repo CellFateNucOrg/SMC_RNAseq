@@ -666,7 +666,10 @@ if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
 
 # Document S6. Table S5: age-1 Microarray Data
 age1MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/b1a6e947-10b7-438b-8a3a-690c71964854/mmc6.xls"
-if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
+if(remakeFiles & file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))){
+  file.remove(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))
+}
+if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))){
   download.file(age1MAurl,paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
   # there is some in the file. need to open manually and save as xlsx
   age1MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"),skip=9)
@@ -686,6 +689,7 @@ if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.csv"))){
   write.table(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"),
             row.names=F,quote=F,sep="\t")
   file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+  file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"))
 }
 
 
@@ -1051,7 +1055,7 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   ce10toCe11<-"ce10Toce11.over.chain"
   download.file(ce10toCe11url,paste0(outPath,"/publicData/",ce10toCe11,".gz"))
   system(paste0("gunzip ",outPath,"/publicData/",ce10toCe11,".gz"))
-  file.remove(paste0(outPath,"/publicData/",ce10toCe11,".gz"))
+  #file.remove(paste0(outPath,"/publicData/",ce10toCe11,".gz"))
 
   chrAstates<-readxl::read_excel(paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"),sheet="L3 autosome states",col_names=c("chr","start","end","state"))
   chrXstates<-readxl::read_excel(paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"),sheet="L3 chr X states",col_names=c("chr","start","end","state"))

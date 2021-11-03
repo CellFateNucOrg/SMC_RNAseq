@@ -190,7 +190,12 @@ colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
 df <- data.frame(colData(dds)[,c(varOI)])
 rownames(df)<-colData(dds)$sampleName
 colnames(df)<-varOI
-annClrs<-list(brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2"))
+numLevels<-length(levels(colData(dds)[,c(varOI)]))
+annClrs<-brewer.pal(min(numLevels,8), name="Dark2")
+if(length(annClrs)<numLevels){
+   annClrs<-c(annClrs,brewer.pal(numLevels-length(annClrs), name="Set1"))
+}
+annClrs<-list(annClrs)
 names(annClrs)<-varOI
 names(annClrs[[varOI]])<-levels(colData(dds)[,c(varOI)])
 pheatmap(sampleDistMatrix,
@@ -342,7 +347,18 @@ for(grp in names(contrastNames)){
    colnames(countTable.kept)<-colData(dds)$sampleName
 
 
-   annClrs<-brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2")
+   #annClrs<-brewer.pal(length(levels(colData(dds)[,c(varOI)])), name="Dark2")
+   #names(annClrs)<-varOIlevels
+   #colClrs<-factor(colData(dds)[,varOI])
+   #levels(colClrs)<-annClrs[levels(colClrs)]
+
+   numLevels<-length(levels(colData(dds)[,c(varOI)]))
+   annClrs<-brewer.pal(min(numLevels,8), name="Dark2")
+   if(length(annClrs)<numLevels){
+      annClrs<-c(annClrs,brewer.pal(numLevels-length(annClrs), name="Set1"))
+   }
+
+   #annClrs<-list(annClrs)
    names(annClrs)<-varOIlevels
    colClrs<-factor(colData(dds)[,varOI])
    levels(colClrs)<-annClrs[levels(colClrs)]
