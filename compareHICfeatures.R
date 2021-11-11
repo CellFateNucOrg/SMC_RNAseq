@@ -1379,3 +1379,178 @@ print(p)
 ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_nearSIPanchors.pdf"), p,
        device="pdf",width=19,height=29,units="cm")
 
+
+
+#########################-
+## insulation score ----
+#########################-
+
+insWin<-"500kb"
+#insWin<-"250kb"
+insulation<-read.delim(paste0(outPath,"/otherData/Insulation_10kb_",insWin,".csv"),
+                       header=T,sep=" ")
+#insulation<-read.delim(paste0(outPath,"/otherData/Insulation_10kb_250kb.csv"),
+#                       header=T,sep=",")
+ins.gr<-GRanges(seqnames=insulation$chrom, IRanges(start=insulation$start,
+                                                   end=insulation$end),
+                strand="*")
+seqinfo(ins.gr)<-seqinfo(Celegans)
+ins.gr$N2_L3<-insulation$N2_L3
+ins.gr$N2_emb<-insulation$N2_Em
+#export.bw(ins.gr,paste0(outPath,"/otherData/insulationScore_10kb_",insWin,".bw"))
+
+listgr<-NULL
+for (grp in useContrasts){
+  #grp=useContrasts[1]
+  salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,
+                              contrastNames[[grp]],"_DESeq2_fullResults_p",
+                              padjVal,".rds"))
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+  salmongr<-sort(salmongr)
+  ol<-findOverlaps(salmongr,ins.gr)
+  df<-data.frame(ol)
+  df$N2_L3<-ins.gr$N2_L3[subjectHits(ol)]
+  df$N2_emb<-ins.gr$N2_emb[subjectHits(ol)]
+  df1<-df %>% group_by(queryHits) %>% summarise(l3=mean(N2_L3),emb=mean(N2_emb))
+  salmongr$N2_L3<-NA
+  salmongr$N2_L3[df1$queryHits]<-df1$l3
+  salmongr$N2_emb<-NA
+  salmongr$N2_emb[df1$queryHits]<-df1$emb
+  salmongr$SMC<-grp
+  listgr[[grp]]<-salmongr
+}
+
+
+
+insTbls<-do.call(rbind,lapply(listgr,data.frame))
+row.names(insTbls)<-NULL
+insTbls$XvA<-ifelse(insTbls$seqnames=="chrX","chrX","Autosomes")
+
+
+p1<-ggplot(insTbls,aes(x=N2_L3,y=log2FoldChange)) +
+  geom_point(size=1,color="#44444455") + ylim(c(-5,5))+
+  facet_grid(SMC~XvA) +ggtitle(paste0(insWin," L3 insulation score Vs LFC"))
+p1
+ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsL3InsulationScore.png"),
+       p1, device="png",width=19,height=29,units="cm")
+
+
+p2<-ggplot(insTbls,aes(x=N2_emb,y=log2FoldChange)) +
+  geom_point(size=1,color="#44444455") + ylim(c(-5,5))+
+  facet_grid(SMC~XvA) +ggtitle(paste0(insWin," Emb insulation score Vs LFC"))
+p2
+ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png"),
+       p2, device="png",width=19,height=29,units="cm")
+
+
+
+
+
+########### moustache loops------
+
+### new Moustache loops
+mustacheBatch="PMW366"
+mustacheBatch="PMW382"
+
+loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
+grl<-zipup(loops)
+anchor1<-do.call(c,lapply(grl,"[",1))
+anchor2<-do.call(c,lapply(grl,"[",2))
+mcols(anchor1)<-mcols(loops)
+mcols(anchor2)<-mcols(loops)
+
+anchor1$loopNum<-paste0("loop",1:length(anchor1))
+anchor2$loopNum<-paste0("loop",1:length(anchor2))
+
+# anchors<-c(anchor1,anchor2)
+# #anchors<-reduce(anchors,min.gapwidth=0L)
+# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+#make TADs
+tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
+head(tads)
+sort(width(tads))
+tads<-reduce(tads)
+sort(width(tads))
+
+# find regions not in tads
+notads<-gaps(tads)
+sort(width(notads))
+
+
+plotList<-list()
+#grp=useContrasts[3]
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tads,type="within")
+  genesInTads<-salmongr[queryHits(ol)]
+
+  ol<-findOverlaps(salmongr,notads)
+  genesNotTads<-salmongr[queryHits(ol)]
+
+  genesInTads$TADs<-"inside"
+  genesNotTads$TADs<-"outside"
+  df<-data.frame(c(genesInTads,genesNotTads))
+  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
+
+  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+    facet_grid(.~seqnames) +ylim(c(-1,1))+
+    ggtitle(grp)
+}
+p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSinout_",mustacheBatch,"Mustache_",
+                     padjVal,".pdf")),
+       width=9, height=11, paper="a4",plot=p,device="pdf")
+
+
+
+#separate anchors from inside tads
+tads_in<-reduce(GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1)))
+tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+anchors<-reduce(sort(c(anchor1,anchor2)))
+anchors<-resize(anchors,width=10000,fix="center")
+ol<-findOverlaps(anchors,tads_in)
+anchors<-anchors[-queryHits(ol)]
+
+plotList<-list()
+#grp=useContrasts[3]
+for (grp in useContrasts){
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+
+  ol<-findOverlaps(salmongr,tads_in,type="within")
+  insideTads<-salmongr[queryHits(ol)]
+
+  ol<-findOverlaps(salmongr,anchors)
+  atAnchors<-salmongr[queryHits(ol)]
+
+  insideTads$TADs<-"TAD"
+  atAnchors$TADs<-"Anchor"
+  df<-data.frame(c(insideTads,atAnchors))
+  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
+
+  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+    facet_grid(.~seqnames) +ylim(c(-1,1))+
+    ggtitle(grp)
+}
+p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",mustacheBatch,"-Mostache_",
+                     padjVal,".pdf")),
+       width=9, height=11, paper="a4",plot=p,device="pdf")
+
+

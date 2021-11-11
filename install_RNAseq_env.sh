@@ -10,7 +10,7 @@ source $CONDA_ACTIVATE RNAseq
 # OR in a specific location
 #conda activate /Volumes/Seagate/opt/miniconda3/env/salmon
 conda install cutadapt fastqc salmon star samtools htseq wiggletools -c bioconda -c conda-forge
-
+conda install -c iuc ucsc_tools
 
 conda create --name cufflinks python=3.5
 source $CONDA_ACTIVATE cufflinks
