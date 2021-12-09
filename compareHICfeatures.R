@@ -28,63 +28,22 @@ makeDirs(outPath,dirNameList=paste0(c("plots/","tracks/"),
                                     paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
-# why is pca1 just splitting the chromosome in two?
-# mm<-matrix(data=rep(0,100),nrow=10)
-# for (i in 1:10) {mm[i,i]<-10+rnorm(1)}
-# for (i in 2:10) {mm[i,i-1]<-5+rnorm(1)}
-# for (i in 2:10) {mm[i-1,i]<-5+rnorm(1)}
-# for (i in 1:9) {mm[i,i+1]<-5+rnorm(1)}
-# for (i in 1:9) {mm[i+1,i]<-5+rnorm(1)}
-#
-# pcaRes<-prcomp(mm)
-# pcaRes$x[,1]
-#
-# plot(1:10,pcaRes$x[,1])
-# lines(1:10,pcaRes$x[,1])
-# abline(h=0)
 
-
-# AB compartments - N2 ----------------------------------------------------
-
-####
-## AB compartments
-####
-
-####
-## N2 compartments
-####
-pca1<-import.bw(paste0(outPath,"/otherData/N2_merge_2000.E1.vecs.bw"))
-pca2<-import.bw(paste0(outPath,"/otherData/N2_merge_2000.E2.vecs.bw"))
-
-listgr<-NULL
-for (grp in useContrasts){
-  #grp=useContrasts[1]
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-                  contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-
-  salmongr<-sort(salmongr)
-  salmongr<-assignGRtoAB(salmongr,pca1,grName=grp,pcaName="E1")
-  salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName="E2")
-  listgr[[grp]]<-salmongr
-}
-
-
-
-####-
-## AB compartment by chromosome-----
-####-
-######### N2 first Eigenvector ------
+####### Supplementary functions---------------
 
 #' Collect counts of significantly changed genes per chromosome and per compartment
 #'
-#' @param listgr List of GRanges for different RNAseq
+#' @param listgr List of GRanges for different RNAseq with PCA data in mcols
+#' @param namePCAcol Name of PCA column in the listgr object
+#' @param padjVal adjusted p value to use as threshold
+#' @param lfcVal Log2 fold change value to use as threshold
+#' @result Table of significant genes with significant up and down regulated genes
+#' counted by chromosome for each sample
+#' @export
 processCountsPerChr<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0.5){
   # genes that change significantly
   sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=lfcVal,direction="both")
+                  padj=padjVal,lfc=lfcVal,direction="both")
 
   # count genes by category (chr & A/B)
   dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames, get(namePCAcol)) %>% tally()})
@@ -104,10 +63,17 @@ processCountsPerChr<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0.5){
   return(dfl)
 }
 
-
-plotCountsPerChrPerCompartment<-function(dfl,namePCAcol,namePCA){
-  ymax=max(dfl$n)
-  p<-ggplot(dfl,aes(x=seqnames,y=n,group=get(namePCAcol))) +
+#' Plot counts of significantly changed genes per chromosome and per compartment
+#'
+#' @param df Data frame with counts of significant genes per chromosome and compartment
+#' @param namePCAcol Name of PCA column in the df object
+#' @param padjVal Name of eigen vector to use in plot title
+#' @result Plot of significant genes with significant changed genes
+#' counted by chromosome for each sample
+#' @export
+plotCountsPerChrPerCompartment<-function(df,namePCAcol,namePCA){
+  ymax=max(df$n)
+  p<-ggplot(df,aes(x=seqnames,y=n,group=get(namePCAcol))) +
     geom_bar(stat="identity", position=position_dodge(), aes(fill=get(namePCAcol))) +
     facet_grid(cols=vars(SMC)) +
     theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
@@ -118,18 +84,33 @@ plotCountsPerChrPerCompartment<-function(dfl,namePCAcol,namePCA){
 }
 
 
-
-plotFractionPerChrPerCompartment<-function(dfl,namePCAcol,namePCA){
-  p<-ggplot(dfl,aes(x=seqnames,y=Frac,group=get(namePCAcol))) +
-  geom_bar(stat="identity", position=position_dodge(),aes(fill=get(namePCAcol))) +
-  facet_grid(cols=vars(SMC)) +
-  theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-  xlab("chr")+ylab("Number of genes") +
-  ggtitle(paste0("Fraction changed genes per chromosome by ",namePCA," compartment")) + labs(fill=namePCA)
+#' Plot fractions of significantly changed genes per chromosome and per compartment
+#'
+#' @param df Data frame with fractions of significant genes per chromosome and compartment
+#' @param namePCAcol Name of PCA column in the df object
+#' @param padjVal Name of eigen vector to use in plot title
+#' @result Plot of significant genes with significant changed genes
+#' counted by chromosome for each sample presented as fraction
+#' @export
+plotFractionPerChrPerCompartment<-function(df,namePCAcol,namePCA){
+  p<-ggplot(df,aes(x=seqnames,y=Frac,group=get(namePCAcol))) +
+    geom_bar(stat="identity", position=position_dodge(),aes(fill=get(namePCAcol))) +
+    facet_grid(cols=vars(SMC)) +
+    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
+    xlab("chr")+ylab("Number of genes") +
+    ggtitle(paste0("Fraction changed genes per chromosome by ",namePCA," compartment")) + labs(fill=namePCA)
   return(p)
 }
 
-
+#' Collect counts of significantly up/down genes per chromosome and per compartment
+#'
+#' @param listgr List of GRanges for different RNAseq with PCA data in mcols
+#' @param namePCAcol Name of PCA column in the listgr object
+#' @param padjVal adjusted p value to use as threshold
+#' @param lfcVal Log2 fold change value to use as threshold
+#' @result Table of significant genes with significant up and down regulated genes
+#' counted by chromosome for each sample
+#' @export
 processUpDownCountsPerChrPerCompartment<-function(listgr, namePCAcol, namePCA, padjVal=0.05, lfcVal=0.5){
   # upregulated genes
   sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
@@ -170,10 +151,18 @@ processUpDownCountsPerChrPerCompartment<-function(listgr, namePCAcol, namePCA, p
   return(dfl)
 }
 
-
-plotUpDownByCompartment<-function(dfl,namePCAcol,namePCA,compartment){
-  yminmax=c(0,max(dfl$n))
-  p<-ggplot(dfl[dfl[,namePCAcol]==compartment,],aes(x=seqnames,y=n,group=expression)) +
+#' Plot counts of significantly up/down genes per compartment
+#'
+#' @param df Data frame with fractions of significant genes per chromosome and compartment
+#' @param namePCAcol Name of PCA column in the df object
+#' @param namePCA Name of eigen vector to use in plot title
+#' @param compartment Name of compartment to plot ("A" or "B")
+#' @result Plot of significant genes with significant changed genes
+#' counted by chromosome for each sample presented as fraction
+#' @export
+plotUpDownByCompartment<-function(df,namePCAcol,namePCA,compartment){
+  yminmax=c(0,max(df$n))
+  p<-ggplot(df[df[,namePCAcol]==compartment,],aes(x=seqnames,y=n,group=expression)) +
     geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
     facet_grid(cols=vars(SMC)) +
     theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
@@ -182,6 +171,127 @@ plotUpDownByCompartment<-function(dfl,namePCAcol,namePCA,compartment){
                    " compartment"))
   return(p)
 }
+
+#' Collect LFC of significantly changed genes per chromosome and per compartment
+#'
+#' @param listgr List of GRanges for different RNAseq with PCA data in mcols
+#' @param namePCAcol Name of PCA column in the listgr object
+#' @param padjVal adjusted p value to use as threshold
+#' @param lfcVal Log2 fold change value to use as threshold
+#' @result Table of significant genes with LFC of significant up and down regulated genes
+#' for each sample
+#' @export
+processLFCbyCompartment<-function(listgr,namePCAcol,padjVal=0.05,lfcVal=0){
+  # upregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal,lfc=lfcVal,direction="gt")
+
+  sigList<-lapply(sigList, "[", ,c(namePCAcol,"log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList[,namePCAcol]),]
+  sigTbl<-sigList
+  sigTbl$updown<-"up"
+
+  # downregulated
+  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                  padj=padjVal, lfc= -lfcVal, direction="lt")
+
+  sigList<-lapply(sigList, "[", ,c(namePCAcol,"log2FoldChange"))
+  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
+  sigList<-do.call(rbind,sigList)
+  sigList<-sigList[!is.na(sigList[,namePCAcol]),]
+  sigList$updown<-"down"
+  sigTbl<-rbind(sigTbl,sigList)
+  sigTbl[,namePCAcol]<-as.factor(sigTbl[,namePCAcol])
+  sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+  return(sigTbl)
+}
+
+give.n <- function(x){
+  return(c(y = 0, label = length(x)))
+  # experiment with the multiplier to find the perfect position
+}
+
+
+#' Plot LFC of significantly up/down genes per compartment
+#'
+#' @param df Data frame with LFC of significant genes in A/B compartments
+#' @param namePCAcol Name of PCA column in the df object
+#' @param namePCA Name of eigen vector to use in plot title
+#' @param compartment Name of compartment to plot ("A" or "B")
+#' @result Plot of significant genes with significant changed genes
+#' counted by chromosome for each sample presented as fraction
+#' @export
+plotLFCbyCompartment<-function(df,namePCAcol,namePCA){
+  #df<-sigTbl[sigTbl[,namePCAcol]==compartment,]
+  #df<-sigTbl
+  yminmax=c(0,median(abs(df$log2FoldChange))+quantile(abs(df$log2FoldChange))[4]*2)
+  p<-ggplot(df,aes(x=get(namePCAcol),y=abs(log2FoldChange),col=updown,fill=updown)) +
+    geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),
+                 outlier.shape=NA) +
+    facet_grid(cols=vars(SMC)) +
+    ggtitle(paste0("Significantly changed genes by ",namePCA," compartment")) +
+    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
+    scale_y_continuous(limits = yminmax) +
+    scale_color_grey(start=0.2,end=0.2,guide="none") +
+    stat_summary(fun.data = give.n, geom = "text",size=3,angle=90,
+                 position=position_dodge(width=0.6))
+  return(p)
+}
+
+
+
+# why is pca1 just splitting the chromosome in two?
+# mm<-matrix(data=rep(0,100),nrow=10)
+# for (i in 1:10) {mm[i,i]<-10+rnorm(1)}
+# for (i in 2:10) {mm[i,i-1]<-5+rnorm(1)}
+# for (i in 2:10) {mm[i-1,i]<-5+rnorm(1)}
+# for (i in 1:9) {mm[i,i+1]<-5+rnorm(1)}
+# for (i in 1:9) {mm[i+1,i]<-5+rnorm(1)}
+#
+# pcaRes<-prcomp(mm)
+# pcaRes$x[,1]
+#
+# plot(1:10,pcaRes$x[,1])
+# lines(1:10,pcaRes$x[,1])
+# abline(h=0)
+
+
+# AB compartments - N2 ----------------------------------------------------
+
+####
+## AB compartments
+####
+
+####
+## N2 compartments
+####
+pca1<-import.bw(paste0(outPath,"/otherData/N2_merge_2000.oriented_E1.vecs.bw"))
+pca2<-import.bw(paste0(outPath,"/otherData/N2_merge_2000.oriented_E2.vecs.bw"))
+
+listgr<-NULL
+for (grp in useContrasts){
+  #grp=useContrasts[1]
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                  contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  salmongr<-sort(salmongr)
+  salmongr<-assignGRtoAB(salmongr,pca1,grName=grp,pcaName="E1")
+  salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName="E2")
+  listgr[[grp]]<-salmongr
+}
+
+
+
+####-
+## AB compartment by chromosome-----
+####-
+######### N2 first Eigenvector ------
+
 
 pcaSource="N2"
 dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
@@ -225,120 +335,40 @@ ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
 ####-
 #### first N2 eigenvector-----
 
+pcaSource="N2"
 localLFC=0
-#localLFC=lfcVal
+sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E1_compartment", padjVal=padjVal,
+                        lfcVal=localLFC)
 
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=localLFC,direction="gt")
+p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E1_compartment", namePCA=paste(pcaSource,"E1"))
 
-sigList<-lapply(sigList, "[", ,c("N2.E1_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$N2.E1_compartment),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
-
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal, lfc= -localLFC, direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("N2.E1_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$N2.E1_compartment),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$N2.E1_compartment<-as.factor(sigTbl$N2.E1_compartment)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=N2.E1_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.size=0.4,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by N2 E1 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=N2.E1_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by N2 E1 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                "ABcomp_",pcaSource,"-E1_LFC_padj",
+                          padjVal,"_lfc", localLFC,".pdf"),
+                plot=p1, device="pdf",width=29,height=19,units="cm")
 
 # test significance of LFC
-summary(aov(abs(log2FoldChange)~updown+N2.E1_compartment,data=sigTbl))
+for(s in unique(sigTbl$SMC)){
+  print(s)
+  sigTblss<-sigTbl[sigTbl$SMC==s,]
+  resAOV<-aov(abs(log2FoldChange)~updown*E1_compartment,data=sigTblss)
+  print(summary(resAOV))
+  #  TukeyHSD(resAOV)
+}
 
-p<-ggpubr::ggarrange(p2,p3,ncol=1,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                "ABcomp_N2-E1_LFC_padj",
-                          padjVal,"_lfc", localLFC,".pdf"),
-                plot=p, device="pdf",width=29,height=19,units="cm")
 
 ### second N2 eigenvector------
 
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=localLFC,direction="gt")
+localLFC=0
+sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E2_compartment", padjVal=padjVal,
+                                lfcVal=localLFC)
 
-sigList<-lapply(sigList, "[", ,c("N2.E2_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$N2.E2_compartment),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
+p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E2_compartment", namePCA=paste(pcaSource,"E2"))
 
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal, lfc= -localLFC, direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("N2.E2_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$N2.E2_compartment),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$N2.E2_compartment<-as.factor(sigTbl$N2.E2_compartment)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=N2.E2_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.size=0.4,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by N2 E2 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=N2.E2_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by N2 E2 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-# test significance of LFC
-summary(aov(abs(log2FoldChange)~updown+N2.E2_compartment,data=sigTbl))
-
-p<-ggpubr::ggarrange(p2,p3,ncol=1,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                "ABcomp_N2-E2_LFC_padj",
+                                "ABcomp_",pcaSource,"-E2_LFC_padj",
                                 padjVal,"_lfc", localLFC,".pdf"),
-                plot=p, device="pdf",width=29,height=19,units="cm")
-
-
+                plot=p1, device="pdf",width=29,height=19,units="cm")
 
 
 
@@ -350,8 +380,8 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
 ####
 ## 366 compartments
 ####
-pca1<-import.bw(paste0(outPath,"/otherData/366_merge_2000.E1.vecs.bw"))
-pca2<-import.bw(paste0(outPath,"/otherData/366_merge_2000.E2.vecs.bw"))
+pca1<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E1.vecs.bw"))
+pca2<-import.bw(paste0(outPath,"/otherData/366_merge_2000.oriented_E2.vecs.bw"))
 
 
 listgr<-NULL
@@ -371,7 +401,7 @@ for (grp in useContrasts){
 
 pcaSource="366"
 
-######### 366 first Eigenvector ------
+### 366 first Eigenvector ------
 dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
 
 p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
@@ -390,7 +420,7 @@ ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                  device="pdf",width=10,height=5, units="cm")
 
 
-########## 366 second eigenvector ------
+### 366 second eigenvector ------
 dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
 
 p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
@@ -412,145 +442,43 @@ ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
 ####-
 ## AB comp LFC-----
 ####-
-#### first 366 eigenvector------
-#localLFC=0
-localLFC=lfcVal
 
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=localLFC,direction="gt")
+localLFC=0
+pcaSource="366"
+### first 366 eigenvector------
+sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E1_compartment", padjVal=padjVal,
+                                lfcVal=localLFC)
 
-sigList<-lapply(sigList, "[", ,c("PMW366.E1_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$PMW366.E1_compartment),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
+p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E1_compartment", namePCA=paste(pcaSource,"E1"))
 
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal, lfc= -localLFC, direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("PMW366.E1_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$PMW366.E1_compartment),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$PMW366.E1_compartment<-as.factor(sigTbl$PMW366.E1_compartment)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=PMW366.E1_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.size=0.4,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by 366 E1 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  theme(legend.title = element_text(size=10)) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=PMW366.E1_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by 366 E1 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  theme(legend.title = element_text(size=10)) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                "ABcomp_",pcaSource,"-E1_LFC_padj",
+                                padjVal,"_lfc", localLFC,".pdf"),
+                plot=p1, device="pdf",width=29,height=19,units="cm")
 
 # test significance of LFC
-summary(aov(abs(log2FoldChange)~updown+PMW366.E1_compartment,data=sigTbl))
+for(s in unique(sigTbl$SMC)){
+  print(s)
+  sigTblss<-sigTbl[sigTbl$SMC==s,]
+  resAOV<-aov(abs(log2FoldChange)~updown*E1_compartment,data=sigTblss)
+  print(summary(resAOV))
+  #  TukeyHSD(resAOV)
+}
 
-p<-ggpubr::ggarrange(p2,p3,ncol=1,nrow=2)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                "ABcomp_PMW366-E1_LFC_padj",
-                                padjVal,"_lfc", localLFC,".pdf"),
-                plot=p, device="pdf",width=29,height=19,units="cm")
 
 ### second 366 eigenvector------
-# genes that change significantly
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=localLFC,direction="both")
-#sigList<-lapply(listgr, as.data.frame)
 
-sigList<-lapply(listgr,as.data.frame)
+localLFC=0
+sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E2_compartment", padjVal=padjVal,
+                                lfcVal=localLFC)
 
-sigList<-lapply(sigList, "[", ,c("PMW366.E2_compartment","log2FoldChange"))
-# #sigList$SMC<-NA
-# for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-# sigList<-do.call(rbind,sigList)
-# sigList<-sigList[!is.na(sigList$compartment),]
-# sigList$compartment<-as.factor(sigList$compartment)
-#
-# yminmax=max(abs(min(sigList$log2FoldChange)),max(sigList$log2FoldChange))
-# yminmax<-c(-yminmax,yminmax)
-# p1<-ggplot(sigList,aes(x=compartment,y=log2FoldChange,fill=compartment)) +
-#   geom_violin() + facet_grid(cols=vars(SMC)) +
-#   ylim(yminmax) +
-#   ggtitle("Significantly changed genes by N2 compartment") +
-#   theme_minimal() + scale_fill_grey(start=0.8,end=0.3)
+p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E2_compartment", namePCA=paste(pcaSource,"E2"))
 
-
-# upregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal,lfc=localLFC,direction="gt")
-
-sigList<-lapply(sigList, "[", ,c("PMW366.E2_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$PMW366.E2_compartment),]
-sigTbl<-sigList
-sigTbl$updown<-"up"
-
-
-# downregulated
-sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                padj=padjVal, lfc= -localLFC, direction="lt")
-
-sigList<-lapply(sigList, "[", ,c("PMW366.E2_compartment","log2FoldChange"))
-for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-sigList<-do.call(rbind,sigList)
-sigList<-sigList[!is.na(sigList$PMW366.E2_compartment),]
-sigList$updown<-"down"
-sigTbl<-rbind(sigTbl,sigList)
-sigTbl$PMW366.E2_compartment<-as.factor(sigTbl$PMW366.E2_compartment)
-sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-p2<-ggplot(sigTbl,aes(x=PMW366.E2_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.size=0.4,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by 366 E2 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  theme(legend.title = element_text(size=10)) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-p3<-ggplot(sigTbl,aes(x=PMW366.E2_compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-  geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2), outlier.shape=NA,
-               outlier.color="grey50") +
-  facet_grid(cols=vars(SMC)) +
-  ggtitle("Significantly changed genes by 366 E2 compartment") +
-  theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-  theme(legend.title = element_text(size=10)) +
-  scale_y_continuous(limits = yminmax) +
-  scale_color_grey(start=0.2,end=0.2,guide="none")
-
-# test significance of LFC
-summary(aov(abs(log2FoldChange)~updown+PMW366.E2_compartment,data=sigTbl))
-
-p<-ggpubr::ggarrange(p2,p3,ncol=1,nrow=2)
 ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                "ABcomp_PMW366-E2_LFC_padj",
+                                "ABcomp_",pcaSource,"-E2_LFC_padj",
                                 padjVal,"_lfc", localLFC,".pdf"),
-                plot=p, device="pdf",width=29,height=19,units="cm")
+                plot=p1, device="pdf",width=29,height=19,units="cm")
+
 
 
 #############-
@@ -561,24 +489,26 @@ localLFC=0
 #localLFC=lfcVal
 
 # unfiltered
-sigList<-lapply(lapply(listgr,as.data.frame), "[", ,c("wormbaseID","PMW366.E1_compartment","PMW366.E2_compartment","log2FoldChange","padj"))
+sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
+                padj=padjVal,lfc=localLFC,direction="both")
+sigList<-lapply(sigList, "[", ,c("wormbaseID","E1_compartment","E2_compartment","log2FoldChange","padj"))
 for(g in names(sigList)){ sigList[[g]]$SMC<-g }
 sigList<-do.call(rbind,sigList)
-sigList$PMW366.E1.E2<-paste0(sigList$PMW366.E1_compartment,"1.",sigList$PMW366.E2_compartment,"2")
+sigList$E1.E2<-paste0(sigList$E1_compartment,"1.",sigList$E2_compartment,"2")
 sigList<-sigList[!is.na(sigList$padj),]
-sigList$PMW366.E1.E2<-factor(sigList$PMW366.E1.E2)
-totalPerCat<-sigList %>% group_by(SMC,PMW366.E1.E2) %>% summarise(count=n())
+sigList$E1.E2<-factor(sigList$E1.E2)
+totalPerCat<-sigList %>% group_by(SMC,E1.E2) %>% summarise(count=n())
 
-ggplot(totalPerCat,aes(x=PMW366.E1.E2,y=count,group=SMC))+geom_bar(stat="identity")+
+p1<-ggplot(totalPerCat,aes(x=E1.E2,y=count,group=SMC))+geom_bar(stat="identity")+
   facet_wrap(vars(SMC))
 
 #yminmax=c(0,median(abs(sigList$log2FoldChange))+quantile(abs(sigList$log2FoldChange))[4]*2)
-yminmax=c(0,0.6)
+yminmax=c(0,1)
 give.n <- function(x){
-  return(c(y = 0.5, label = length(x)))
+  return(c(y = 0, label = length(x)))
   # experiment with the multiplier to find the perfect position
 }
-ggplot(sigList,aes(x=PMW366.E1.E2,y=abs(log2FoldChange))) +
+p2<-ggplot(sigList,aes(x=E1.E2,y=abs(log2FoldChange))) +
   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),
                outlier.shape=NA, outlier.color="grey50")+
   facet_wrap(vars(SMC))+
@@ -597,12 +527,12 @@ ggplot(sigList,aes(x=PMW366.E1.E2,y=abs(log2FoldChange))) +
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal,lfc=localLFC,direction="gt")
 
-sigList<-lapply(sigList, "[", ,c("PMW366.E1_compartment","PMW366.E2_compartment","log2FoldChange"))
+sigList<-lapply(sigList, "[", ,c("E1_compartment","E2_compartment","log2FoldChange"))
 for(g in names(sigList)){ sigList[[g]]$SMC<-g }
 sigList<-do.call(rbind,sigList)
-sigList$PMW366.E1.E2<-paste0(sigList$PMW366.E1_compartment,"1.",sigList$PMW366.E2_compartment,"2")
+sigList$E1.E2<-paste0(sigList$E1_compartment,"1.",sigList$E2_compartment,"2")
 
-sigList<-sigList[!is.na(sigList$PMW366.E1.E2),]
+sigList<-sigList[!is.na(sigList$E1.E2),]
 sigTbl<-sigList
 sigTbl$updown<-"up"
 
@@ -611,14 +541,14 @@ sigTbl$updown<-"up"
 sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
                 padj=padjVal, lfc= -localLFC, direction="lt")
 
-sigList<-lapply(sigList, "[", ,c("PMW366.E1_compartment","PMW366.E2_compartment","log2FoldChange"))
+sigList<-lapply(sigList, "[", ,c("E1_compartment","E2_compartment","log2FoldChange"))
 for(g in names(sigList)){ sigList[[g]]$SMC<-g }
 sigList<-do.call(rbind,sigList)
-sigList$PMW366.E1.E2<-paste0(sigList$PMW366.E1_compartment,"1.",sigList$PMW366.E2_compartment,"2")
-sigList<-sigList[!is.na(sigList$PMW366.E1.E2),]
+sigList$E1.E2<-paste0(sigList$E1_compartment,"1.",sigList$E2_compartment,"2")
+sigList<-sigList[!is.na(sigList$E1.E2),]
 sigList$updown<-"down"
 sigTbl<-rbind(sigTbl,sigList)
-sigTbl$PMW366.E1.E2<-as.factor(sigTbl$PMW366.E1.E2)
+sigTbl$E1.E2<-as.factor(sigTbl$E1.E2)
 sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
 
 yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
@@ -627,7 +557,7 @@ give.n <- function(x){
   # experiment with the multiplier to find the perfect position
 }
 
-p2<-ggplot(sigTbl,aes(x=PMW366.E1.E2,y=abs(log2FoldChange),col=updown,fill=updown)) +
+p3<-ggplot(sigTbl,aes(x=E1.E2,y=abs(log2FoldChange),col=updown,fill=updown)) +
   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,
                outlier.color="grey50") +
   facet_wrap(facets=vars(SMC),nrow=2,strip.position="top") +
@@ -640,12 +570,13 @@ p2<-ggplot(sigTbl,aes(x=PMW366.E1.E2,y=abs(log2FoldChange),col=updown,fill=updow
                position=position_dodge(width=0.6))
 
 # test significance of LFC
-summary(aov(abs(log2FoldChange)~updown+PMW366.E1.E2,data=sigTbl))
+summary(aov(abs(log2FoldChange)~updown+E1.E2,data=sigTbl))
 
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
+p<-ggarrange(ggarrange(p1,p2,ncol=2,nrow=1),p3,nrow=1,ncol=1)
+ggpubr::ggexport(filename=paste0(outPath, "/plots/",outputNamePrefix,
                                 "ABcomp_PMW366-E1.E2_LFC_padj",
                                 padjVal,"_lfc", localLFC,".pdf"),
-                plot=p2, device="pdf",width=29,height=19,units="cm")
+                plot=p, device="pdf",width=19,height=9,units="cm")
 
 
 
@@ -665,11 +596,11 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                    E1=NA, E2=NA)
 
   E1files=list.files(paste0(outPath,"/otherData"),
-                            pattern="_merge_2000\\.E1\\.vecs\\.bw")
+                            pattern="_merge_2000\\.oriented_E1\\.vecs\\.bw")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.E2\\.vecs\\.bw")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000.E1.vecs.bw")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000.E2.vecs.bw")))]
+                     pattern="_merge_2000\\.oriented_E2\\.vecs\\.bw")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000.oriented_E1.vecs.bw")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000.oriented_E2.vecs.bw")))]
   listgr<-NULL
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
@@ -692,10 +623,9 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   ####
   ## AB compartment by chromosome -----
   ####
-  #### First eigen vector-----
 
   pcaSource="same"
-  ######### 366 first Eigenvector ------
+  ### sample specific first eigenvector ------
   dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
 
   p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
@@ -714,7 +644,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                    device="pdf",width=10,height=5, units="cm")
 
 
-  ########## 366 second eigenvector ------
+  ### sample specific second eigenvector ------
   dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
 
   p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
@@ -739,68 +669,40 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   ## AB comp LFC -----
   ####
 
+  localLFC=0
+  pcaSource="same"
+  ### sample specific fist eigenvector------
+  sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E1_compartment", padjVal=padjVal,
+                                  lfcVal=localLFC)
 
-  #sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-  #                padj=padjVal,lfc=lfcVal,direction="both")
-  #sigList<-lapply(listgr, as.data.frame)
-  #sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
+  p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E1_compartment", namePCA=paste(pcaSource,"E1"))
 
-
-
-  # upregulated
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="gt")
-
-  sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
-  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-  sigList<-do.call(rbind,sigList)
-  sigList<-sigList[!is.na(sigList$compartment),]
-  sigTbl<-sigList
-  sigTbl$updown<-"up"
-
-
-  # downregulated
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal, lfc= -lfcVal, direction="lt")
-
-  sigList<-lapply(sigList, "[", ,c("compartment","log2FoldChange"))
-  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-  sigList<-do.call(rbind,sigList)
-  sigList<-sigList[!is.na(sigList$compartment),]
-  sigList$updown<-"down"
-  sigTbl<-rbind(sigTbl,sigList)
-  sigTbl$compartment<-as.factor(sigTbl$compartment)
-  sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
-
-  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-  p2<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),outlier.size=0.4,
-                 outlier.color="grey50") +
-    facet_grid(cols=vars(SMC)) +
-    ggtitle("Significantly changed genes by compartment") +
-    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-    theme(legend.title = element_text(size=10)) +
-    scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.2,end=0.2,guide="none")
-
-  yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
-  p3<-ggplot(sigTbl,aes(x=compartment,y=abs(log2FoldChange),col=updown,fill=updown)) +
-    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-                 outlier.shape=NA) +
-    facet_grid(cols=vars(SMC)) +
-    ggtitle("Significantly changed genes by compartment") +
-    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-    theme(legend.title = element_text(size=10)) +
-    scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.2,end=0.2,guide="none")
-
-
-  p<-ggpubr::ggarrange(p2,p3,ncol=2,nrow=1)
   ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                  "ABcomp_LFC_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p, device="pdf",width=29,height=16,units="cm")
+                                  "ABcomp_",pcaSource,"-E1_LFC_padj",
+                                  padjVal,"_lfc", localLFC,".pdf"),
+                  plot=p1, device="pdf",width=29,height=19,units="cm")
 
+  # test significance of LFC
+  for(s in unique(sigTbl$SMC)){
+    print(s)
+    sigTblss<-sigTbl[sigTbl$SMC==s,]
+    resAOV<-aov(abs(log2FoldChange)~updown*E1_compartment,data=sigTblss)
+    print(summary(resAOV))
+    #  TukeyHSD(resAOV)
+  }
+
+
+  ###  sample specific second eigenvector------
+  localLFC=0
+  sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E2_compartment", padjVal=padjVal,
+                                  lfcVal=localLFC)
+
+  p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E2_compartment", namePCA=paste(pcaSource,"E2"))
+
+  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                  "ABcomp_",pcaSource,"-E2_LFC_padj",
+                                  padjVal,"_lfc", localLFC,".pdf"),
+                  plot=p1, device="pdf",width=29,height=19,units="cm")
 
 
   # AB compartments - switching ---------------------------------------------
@@ -808,135 +710,36 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   ####
   ## sample specific compartments - changes between TEVonly and cs
   ####
-
-  pcas<-data.frame(SMC=varOIlevels,
-                   file=list.files(paste0(outPath,"/otherData"),
-                                   pattern="_5000_laminDamID_pca2.bw"))
+  pcas
+  pcaSource="switch"
   listgr<-NULL
-  for (grp in useContrasts){
+  for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
     salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
                                 "_DESeq2_fullResults_p",padjVal,".rds"))
-    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==grp]))
-    pca2control<-import.bw(paste0(outPath,"/otherData/",pcas$file[pcas$SMC==controlGrp]))
+
+
+    pca1<-import.bw(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+    pca1wt<-import.bw(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC=="TEVonly"]))
+    pca2wt<-import.bw(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC=="TEVonly"]))
 
     salmon<-salmon[!is.na(salmon$chr),]
     salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
 
     salmongr<-sort(salmongr)
 
+    salmongr<-assignGRtoAB(salmongr,pca1,grName=grp,pcaName=paste0("E1"))
+    salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=paste0("E2"))
+    salmongr<-assignGRtoAB(salmongr,pca1wt,grName=grp,pcaName=paste0("E1wt"))
+    salmongr<-assignGRtoAB(salmongr,pca2wt,grName=grp,pcaName=paste0("E2wt"))
 
-    salmongr<-assignGRtoAB(salmongr,pca2control,grName=controlGrp,pcaName=controlGrp)
-    idx<-which(colnames(mcols(salmongr)) %in% c("pcaScore","compartment"))
-    colnames(mcols(salmongr))[idx]<-paste(colnames(mcols(salmongr))[idx],"control",sep="_")
-    salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=grp)
-    salmongr$switch<-factor(paste0(salmongr$compartment_control,salmongr$compartment),levels=c("AA","BB","AB","BA"))
-    listgr[[prettyGeneName(grp)]]<-salmongr
+    salmongr$E1_switch<-factor(paste0(salmongr$E1wt_compartment,salmongr$E1_compartment),levels=c("AA","BB","AB","BA"))
+
+    salmongr$E2_switch<-factor(paste0(salmongr$E2wt_compartment,salmongr$E2_compartment),levels=c("AA","BB","AB","BA"))
+
+    listgr[[grp]]<-salmongr
   }
-
-
-  pairedCols<-c(brewer.pal(4,"Paired"))
-
-  pdf(file=paste0(paste0(outPath,"/plots/",outputNamePrefix,
-                         "ABcompSwitch_geneCount_padj",
-                         padjVal,"_lfc", lfcVal,".pdf")),
-      width=19, height=29, paper="a4")
-
-
-  par(mfrow=c(3,1))
-  # genes that change significantly
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="both")
-
-  compartmentTable<-do.call(rbind,lapply(lapply(sigList, "[", ,"switch"),table))
-
-  yminmax=c(0,max(compartmentTable))
-  xx<-barplot(t(compartmentTable),beside=T,col=pairedCols,
-              main="Significantly changed genes by compartment",cex.axis=1.2,
-              cex.names=1.5, ylim=yminmax*1.1)
-  legend("topright",legend = colnames(compartmentTable),fill=pairedCols)
-  text(x=xx, y=t(compartmentTable), label=t(compartmentTable), pos=3,cex=1.1,col="black")
-
-  par(mfrow=c(4,2))
-  # upregulated genes
-  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=lfcVal,direction="gt")
-
-  compartmentTableUp<-do.call(rbind,lapply(lapply(sigListUp, "[", ,"switch"),table))
-  colnames(compartmentTableUp)<-paste0(colnames(compartmentTableUp),"_up")
-
-
-  # downregulated genes
-  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal, lfc= -lfcVal, direction="lt")
-
-  compartmentTableDown<-do.call(rbind,lapply(lapply(sigListDown, "[", ,"switch"),table))
-  colnames(compartmentTableDown)<-paste0(colnames(compartmentTableDown),"_down")
-
-  compartmentTable<-cbind(compartmentTableUp,compartmentTableDown)
-
-  yminmax=c(0,max(compartmentTable[,grep("AA|BB",colnames(compartmentTable))]))
-  Acomp<-compartmentTable[,grep("AA",colnames(compartmentTable))]
-  xx<-barplot(t(Acomp),beside=T,col=c("grey80","grey20"),
-              main="Number of up/down regulated in AA compartment",cex.axis=1.2,
-              cex.names=1.5, ylim=c(yminmax)*1.2)
-  legend("top", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"))
-  text(x=xx, y=t(Acomp), label=t(Acomp), pos=3,cex=1.3,col="black")
-
-  xx<-barplot(t(Acomp/rowSums(Acomp)),beside=F,col=c("grey80","grey20"),
-              main="Fraction of up/down regulated in AA compartment",cex.axis=1.2,
-              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-  legend("bottomright", legend=gsub("AA_","",colnames(Acomp)), fill=c("grey80","grey20"),xpd=T)
-  text(x=xx, y=0.97, label=t(rowSums(Acomp)), pos=3,cex=1.3,col="black")
-
-
-  Bcomp<-compartmentTable[,grep("BB",colnames(compartmentTable))]
-  xx<-barplot(t(Bcomp),beside=T,col=c("grey80","grey20"),
-              main="Number of up/down regulated in BB compartment",cex.axis=1.2,
-              cex.names=1.5, ylim=c(yminmax)*1.2)
-  legend("top", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"))
-  text(x=xx, y=t(Bcomp), label=t(Bcomp), pos=3,cex=1.3,col="black")
-
-  xx<-barplot(t(Bcomp/rowSums(Bcomp)),beside=F,col=c("grey80","grey20"),
-              main="Fraction of up/down regulated in BB compartment",cex.axis=1.2,
-              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-  legend("bottomright", legend=gsub("BB_","",colnames(Bcomp)), fill=c("grey80","grey20"),xpd=T)
-  text(x=xx, y=0.97, label=t(rowSums(Bcomp)), pos=3,cex=1.3,col="black")
-
-
-  yminmax=c(0,max(compartmentTable[,grep("AB|BA",colnames(compartmentTable))]))
-  ABcomp<-compartmentTable[,grep("AB",colnames(compartmentTable))]
-  xx<-barplot(t(ABcomp),beside=T,col=c("grey80","grey20"),
-              main="Number of up/down regulated in AB compartment",cex.axis=1.2,
-              cex.names=1.5, ylim=c(yminmax)*1.2)
-  legend("top", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"))
-  text(x=xx, y=t(ABcomp), label=t(ABcomp), pos=3,cex=1.3,col="black")
-
-  xx<-barplot(t(ABcomp/rowSums(ABcomp)),beside=F,col=c("grey80","grey20"),
-              main="Fraction of up/down regulated in AB compartment",cex.axis=1.2,
-              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-  legend("bottomright", legend=gsub("AB_","",colnames(ABcomp)), fill=c("grey80","grey20"),xpd=T)
-  text(x=xx, y=0.97, label=t(rowSums(ABcomp)), pos=3,cex=1.3,col="black")
-
-
-  BAcomp<-compartmentTable[,grep("BA",colnames(compartmentTable))]
-  xx<-barplot(t(BAcomp),beside=T,col=c("grey80","grey20"),
-              main="Number of up/down regulated in BA compartment",cex.axis=1.2,
-              cex.names=1.5, ylim=c(yminmax)*1.2)
-  legend("top", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"))
-  text(x=xx, y=t(BAcomp), label=t(BAcomp), pos=3,cex=1.3,col="black")
-
-  xx<-barplot(t(BAcomp/rowSums(BAcomp)),beside=F,col=c("grey80","grey20"),
-              main="Fraction of up/down regulated in BA compartment",cex.axis=1.2,
-              cex.names=1.5,space=0.8,ylim=c(0,1.1),bty='L')
-  legend("bottomright", legend=gsub("BA_","",colnames(BAcomp)), fill=c("grey80","grey20"),xpd=T)
-  text(x=xx, y=0.97, label=t(rowSums(BAcomp)), pos=3,cex=1.3,col="black")
-
-
-  dev.off()
-
-
-
 
 
 
@@ -944,180 +747,523 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   ## AB compartment by chromosome - switching between TEVonly and cs -----
   #################-
 
-  # genes that change significantly
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal,lfc=lfcVal,direction="both")
 
-  # count genes by category (chr & A/B)
-  dfl<-lapply(sigList, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
+  pcaSource="switch"
 
-  # add name of SMC protein
-  dfl<-do.call(rbind, mapply(cbind,dfl,"SMC"=names(dfl),SIMPLIFY=F))
-  dfl$seqnames<-gsub("chr","",dfl$seqnames)
-  ymax=max(dfl$n)
-  p1<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_manual(values=pairedCols) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") +
-    ggtitle("Significantly changed genes per chromosome by compartment")
+  ### switch first Eigenvector ------
+  dfl<-processCountsPerChr(listgr,namePCAcol="E1_switch")
 
+  p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"))
+  p1a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"))
 
-  dfl<-dfl[! (dfl$switch %in% c("AA","BB")),]
-  dfl$switch<-droplevels(dfl$switch)
-  ymax1=max(dfl$n)
-  p1a<-ggplot(dfl,aes(x=seqnames,y=n,group=switch)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=switch)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_manual(values=pairedCols[3:4]) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") +
-    ggtitle("Significantly changed genes per chromosome by compartment")
+  dfl<-processUpDownCountsPerChrPerCompartment(listgr, namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"))
 
-  p<-ggpubr::ggarrange(p1,p1a,ncol=1,nrow=3)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                  "ABcompSwitch_countsPerChr_ABBA_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p, device="pdf",width=19,height=29,units="cm")
+  p2<-plotUpDownByCompartment(dfl,namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"), compartment="AA")
+  p3<-plotUpDownByCompartment(dfl,namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"), compartment="BB")
+  p4<-plotUpDownByCompartment(dfl,namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"), compartment="AB")
+  p5<-plotUpDownByCompartment(dfl,namePCAcol="E1_switch", namePCA=paste(pcaSource, "E1"), compartment="BA")
+
+  p<-ggpubr::ggarrange(p1,p1a,p2,p3,p4,p5,ncol=1,nrow=2)
+  ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                     "ABcomp_", pcaSource, "-E1_countsPerChr_padj",
+                                     padjVal,"_lfc", lfcVal,".pdf"),
+                   device="pdf",width=10,height=5, units="cm")
 
 
-  # upregulated genes
-  sigListUp<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                    padj=padjVal,lfc=lfcVal,direction="gt")
-  # count genes by category (chr & A/B)
-  dflUp<-lapply(sigListUp, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
-  # add name of SMC protein
-  dflUp<-do.call(rbind, mapply(cbind,dflUp,"SMC"=names(dflUp),SIMPLIFY=F))
-  dflUp$seqnames<-gsub("chr","",dflUp$seqnames)
-  dflUp$expression<-"up"
+  ### switch second eigenvector ------
+  dfl<-processCountsPerChr(listgr,namePCAcol="E2_switch")
 
-  # downregulated genes
-  sigListDown<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                      padj=padjVal, lfc= -lfcVal, direction="lt")
-  dflDown<-lapply(sigListDown, function(x){x%>% dplyr::group_by(seqnames,switch,.drop=F) %>% tally()})
-  # add name of SMC protein
-  dflDown<-do.call(rbind, mapply(cbind,dflDown,"SMC"=names(dflDown),SIMPLIFY=F))
-  dflDown$seqnames<-gsub("chr","",dflDown$seqnames)
-  dflDown$expression<-"down"
+  p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"))
+  p1a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"))
 
-  dfl<-rbind(dflUp,dflDown)
-  dfl$expression<-factor(dfl$expression,levels=c("up","down"))
+  dfl<-processUpDownCountsPerChrPerCompartment(listgr, namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"))
+
+  p2<-plotUpDownByCompartment(dfl,namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"), compartment="AA")
+  p3<-plotUpDownByCompartment(dfl,namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"), compartment="BB")
+  p4<-plotUpDownByCompartment(dfl,namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"), compartment="AB")
+  p5<-plotUpDownByCompartment(dfl,namePCAcol="E2_switch", namePCA=paste(pcaSource, "E2"), compartment="BA")
+
+  p<-ggpubr::ggarrange(p1,p1a,p2,p3,p4,p5,ncol=1,nrow=2)
+  ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                     "ABcomp_",pcaSource,"-E2_countsPerChr_padj",
+                                     padjVal,"_lfc", lfcVal,".pdf"),
+                   device="pdf",width=10,height=5, units="cm")
 
 
-  yminmax=c(0,max(dfl$n))
-  p2<-ggplot(dfl[dfl$switch=="AA",],aes(x=seqnames,y=n,group=expression)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-    ggtitle("Up/down regulated genes in AA compartment")
-
-  p3<-ggplot(dfl[dfl$switch=="BB",],aes(x=seqnames,y=n,group=expression)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-    ggtitle("Up/down regulated genes in BB compartment")
-
-  yminmax=c(0,max(dfl$n[! (dfl$switch %in% c("AA","BB"))]))
-  p4<-ggplot(dfl[dfl$switch=="AB",],aes(x=seqnames,y=n,group=expression)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-    ggtitle("Up/down regulated genes in AB compartment")
-
-  p5<-ggplot(dfl[dfl$switch=="BA",],aes(x=seqnames,y=n,group=expression)) +
-    geom_bar(stat="identity", position=position_dodge(),aes(fill=expression)) +
-    facet_grid(cols=vars(SMC)) +
-    theme_minimal() + scale_fill_grey(start=0.8, end=0.2) +
-    theme(legend.title = element_text(size=10)) +
-    xlab("chr")+ylab("Number of genes") + ylim(yminmax) +
-    ggtitle("Up/down regulated genes in BA compartment")
-
-
-
-
-  p<-ggpubr::ggarrange(p2,p3,p4,p5,ncol=2,nrow=2)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                  "ABcompSwitch_updownByChr_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p, device="pdf",width=29,height=19,units="cm")
 
   ####
   ## AB comp LFC - switching between TEVonly and cs -----
   ####
 
+  localLFC=0
+  pcaSource="switch"
+  ### sample specific fist eigenvector------
+  sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E1_switch", padjVal=padjVal,
+                                  lfcVal=localLFC)
 
-  # upregulated
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal, lfc=lfcVal, direction="gt")
+  p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E1_switch", namePCA=paste(pcaSource,"E1"))
 
-  sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
-  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-  sigList<-do.call(rbind,sigList)
-  sigList<-sigList[!is.na(sigList$switch),]
-  sigTbl<-sigList
-  sigTbl$updown<-"up"
+  ggpubr::ggexport(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                  "ABcomp_",pcaSource,"-E1_LFC_padj",
+                                  padjVal,"_lfc", localLFC,".pdf"),
+                  plot=p1, device="pdf",width=10,height=5,units="cm")
 
-
-  # downregulated
-  sigList<-lapply(lapply(listgr,as.data.frame), getSignificantGenes,
-                  padj=padjVal, lfc= -lfcVal, direction="lt")
-
-  sigList<-lapply(sigList, "[", ,c("switch","log2FoldChange"))
-  for(g in names(sigList)){ sigList[[g]]$SMC<-g }
-  sigList<-do.call(rbind,sigList)
-  sigList<-sigList[!is.na(sigList$switch),]
-  sigList$updown<-"down"
-  sigTbl<-rbind(sigTbl,sigList)
-  sigTbl$switch<-as.factor(sigTbl$switch)
-  sigTbl$updown<-factor(sigTbl$updown, levels=c("up","down"))
+  # test significance of LFC
+  for(s in unique(sigTbl$SMC)){
+    print(s)
+    sigTblss<-sigTbl[sigTbl$SMC==s,]
+    resAOV<-aov(abs(log2FoldChange)~updown*E1_switch,data=sigTblss)
+    print(summary(resAOV))
+    #  TukeyHSD(resAOV)
+  }
 
 
-  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-  p1<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
-    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-                 outlier.size=0.4) +
-    facet_grid(cols=vars(SMC)) +
-    ggtitle("Log2 fold change by compartment") +
-    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-    theme(legend.title = element_text(size=10)) +
-    scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.7,end=0.3,guide="none")
+  ###  sample specific second eigenvector------
+  localLFC=0
+  sigTbl<-processLFCbyCompartment(listgr,namePCAcol="E2_switch", padjVal=padjVal,
+                                  lfcVal=localLFC)
+
+  p1<-plotLFCbyCompartment(sigTbl,namePCAcol="E2_switch", namePCA=paste(pcaSource,"E2"))
+
+  ggpubr::ggexport(filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                  "ABcomp_",pcaSource,"-E2_LFC_padj",
+                                  padjVal,"_lfc", localLFC,".pdf"),
+                  plot=p1, device="pdf",width=10,height=5,units="cm")
+}
 
 
-  sigTbl<-sigTbl[! (sigTbl$switch %in% c("AA","BB")),]
-  sigTbl$switch<-droplevels(sigTbl$switch)
-  yminmax=c(0,max(abs(sigTbl$log2FoldChange)))
-  p2<-ggplot(sigTbl,aes(x=switch,y=abs(log2FoldChange),col=updown,fill=updown)) +
-    geom_boxplot(notch=T, varwidth=T, position=position_dodge2(padding=0.2),
-                 outlier.shape=NA) +
-    facet_grid(cols=vars(SMC)) +
-    ggtitle("Log2 fold change by compartment") +
-    theme_minimal() + scale_fill_grey(start=0.8,end=0.3) +
-    theme(legend.title = element_text(size=10)) +
-    scale_y_continuous(limits = yminmax) +
-    scale_color_grey(start=0.7,end=0.3,guide="none")
+##################-
+# 366TPM in AB compartments of different HiCs -----
+#################-
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
+
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+  tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+  cov366<-coverage(tpm366,weight="score")
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.oriented_E1\\.vecs\\.bw")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.oriented_E2\\.vecs\\.bw")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
+  listdf<-NULL
+  for (grp in pcas$SMC){
+    #grp=useContrasts[1]
+    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
+    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+    pca1<-import.bw(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="tpm366")
+    pca2<-binnedAverage(pca2,cov366,varname="tpm366")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    df1$compartment<-NA
+    df2$compartment<-NA
+    df1$compartment<-ifelse(df1$score>0,"A","B")
+    df2$compartment<-ifelse(df2$score>0,"A","B")
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+
+  p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("366 TPM in different bins of pca"))
+
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "eigenValAll_366tpm.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+
+  corMethod="pearson"
+  tpmThresh=0
+  allBins<-nrow(df)
+  df<-df[df$tpm366>=tpmThresh,]
+  fracKept<-nrow(df)/allBins # 0.79 of bins
+  p<-ggplot(df,aes(x=score,y=log2(tpm366))) +
+    #geom_point(colour="#00007733") +
+    #geom_density2d_filled()+
+    #geom_hex(bins=100)+
+    geom_bin2d(bins=100)+
+    #stat_density_2d(aes(fill = ..level..), geom = "polygon") +
+    facet_grid(rows=vars(pca),cols=vars(SMC)) + geom_smooth(method="lm") +
+    stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
+    ggtitle(paste0(corMethod," correlation of PCA eigen value vs PMW366 TPM (for bins > ",
+                   formatC(tpmThresh,big.mark=",",format="G"),"tpm, ",
+                   round(100*fracKept,1),"% of bins)")) +
+    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
+                          "Cor_eigenValAll_366tpm",tpmThresh,".pdf"),
+         device="pdf",width=29,height=14, units="cm")
+}
 
 
 
-  p<-ggpubr::ggarrange(p1,p2,ncol=2,nrow=1)
-  ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
-                                  "ABcompSwitch_LFC_padj",
-                                  padjVal,"_lfc", lfcVal,".pdf"),
-                  plot=p, device="pdf",width=29,height=16,units="cm")
+##################-
+# sampleSpecific TPM in AB compartments of different HiCs -----
+#################-
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.oriented_E1\\.vecs\\.bw")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.oriented_E2\\.vecs\\.bw")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
+  listdf<-NULL
+  for (g in 1:nrow(pcas)){
+    grp<-pcas$SMC[g]
+    #grp=useContrasts[1]
+    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
+    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+
+    tpmFile<-paste0(outPath,"/tracks/PMW",pcas$strain[g],"_TPM_avr.bedgraph")
+    print(tpmFile)
+    tpm<-import(tpmFile,format="bedgraph")
+    covstrain<-coverage(tpm,weight="score")
+
+    pca1<-import.bw(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,covstrain,varname="tpm")
+    pca2<-binnedAverage(pca2,covstrain,varname="tpm")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    df1$compartment<-NA
+    df2$compartment<-NA
+    df1$compartment<-ifelse(df1$score>0,"A","B")
+    df2$compartment<-ifelse(df2$score>0,"A","B")
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+
+  p<-ggplot(df,aes(x=compartment,y=log2(tpm))) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("TPM in different bins of pca"))
+
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "eigenValAll_sameTPM.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+
+  corMethod="pearson"
+  tpmThresh=0
+  allBinNum<-df %>% dplyr::group_by(SMC) %>% dplyr::summarise(count=n())
+  allBinNum$autosomal<-df %>% dplyr::group_by(SMC) %>% filter(seqnames!="chrX") %>% dplyr::summarise(count=n())
+  df<-df[df$tpm>=tpmThresh,]
+  keptBinNum<-df %>% dplyr::group_by(SMC) %>% dplyr::summarise(count=n())
+  keptBinNum$percent<-round(100*keptBinNum$count/allBinNum$count,1)
+  p<-ggplot(df,aes(x=score,y=log2(tpm))) +
+    #geom_point(colour="#00007733") +
+    #geom_density2d_filled()+
+    #geom_hex(bins=100)+
+    geom_bin2d(bins=100)+
+    #stat_density_2d(aes(fill = ..level..), geom = "polygon") +
+    facet_grid(rows=vars(pca),cols=vars(SMC)) + geom_smooth(method="lm") +
+    stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
+    ggtitle(paste0(corMethod," correlation of PCA eigen value vs TPM (for bins > ",
+                   formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
+                   min(keptBinNum$percent),"% of bins)")) +
+    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
+                           "Cor_eigenValAll_sameTPM",tpmThresh,".pdf"),
+         device="pdf",width=29,height=14, units="cm")
+
+  keptBinNum<-df[df$seqnames!="chrX",]  %>% dplyr::group_by(SMC) %>% dplyr::summarise(countChrA=n()) %>%mutate(percentChrA=round(100*countChrA/allBinNum$autosomal$count,1))
+  p1<-ggplot(df[df$seqnames!="chrX",],aes(x=score,y=log2(tpm))) +
+    #geom_point(colour="#00007733") +
+    #geom_density2d_filled()+
+    #geom_hex(bins=100)+
+    geom_bin2d(bins=100)+
+    #stat_density_2d(aes(fill = ..level..), geom = "polygon") +
+    facet_grid(rows=vars(pca),cols=vars(SMC)) + geom_smooth(method="lm") +
+    stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
+    ggtitle(paste0(corMethod," correlation of autosomal PCA eigen value vs TPM (for bins > ",
+                   formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
+                   min(keptBinNum$percentChrA),"% of chrA bins)")) +
+    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+
+  ggsave(p1,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
+                           "Cor_eigenValAll_sameTPM",tpmThresh,"_chrA.pdf"),
+         device="pdf",width=29,height=14, units="cm")
 
 }
+
+
+
+
 
 ###########################-
 # compartments - digitized ----------------------------------------------------
 ###########################-
+
+######### 366TPM in digitized compartments of different HiCs -----
+
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
+
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+  tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+  cov366<-coverage(tpm366,weight="score")
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+  listdf<-NULL
+  for (grp in pcas$SMC){
+    #grp=useContrasts[1]
+    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
+    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    pca1<-GRanges(pca1)
+    pca2<-GRanges(pca2)
+    start(pca1)<-start(pca1)+1
+    start(pca2)<-start(pca2)+1
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="tpm366")
+    pca2<-binnedAverage(pca2,cov366,varname="tpm366")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+
+  p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("366 TPM in different bins of digitized pca"))
+
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                  "digitizedCompAll_366tpm.pdf"),
+  device="pdf",width=29,height=19, units="cm")
+
+  subdf<-df[df$SMC %in% c("TEVonly","dpy26"),]
+  subdf<-subdf[subdf$compartment %in% 1:50,]
+  p<-ggplot(subdf,aes(x=compartment,y=log2(tpm366),fill=SMC)) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(pca~.)+
+    ylim(c(-15,15)) + theme_bw()+
+    scale_fill_manual(values=c("white","grey70"))+
+    geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("366 TPM in different bins of digitized pca"))
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedCompDpy26_366tpm.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+
+}
+
+
+######### log baseMean in digitized compartments of different HiCs ------
+
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
+
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+  #tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+  #cov366<-coverage(tpm366,weight="score")
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+  listdf<-NULL
+
+  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                     contrastNames[["dpy26"]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+  salmon<-salmon[!is.na(salmon$chr),]
+  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+  baseMean<-coverage(salmongr,weight="baseMean")
+
+
+  for (grp in RNAseqAndHiCsubset){
+    #grp=useContrasts[1]
+
+    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    pca1<-GRanges(pca1)
+    pca2<-GRanges(pca2)
+    start(pca1)<-start(pca1)+1
+    start(pca2)<-start(pca2)+1
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="baseMean")
+    pca2<-binnedAverage(pca2,cov366,varname="baseMean")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+
+  p<-ggplot(df,aes(x=compartment,y=baseMean)) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("baseMean RNAseq in bins of different strain digitized pca"))
+
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedCompAll_baseMean.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+}
+
+######### lfc in digitized compartments of different HiCs------
+
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
+
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+  #tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+  #cov366<-coverage(tpm366,weight="score")
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+  listdf<-NULL
+  for (grp in RNAseqAndHiCsubset){
+    #grp=useContrasts[1]
+    salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+
+    salmon<-salmon[!is.na(salmon$chr),]
+    salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+
+    lfc<-coverage(salmongr,weight="log2FoldChange")
+
+    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    pca1<-GRanges(pca1)
+    pca2<-GRanges(pca2)
+    start(pca1)<-start(pca1)+1
+    start(pca2)<-start(pca2)+1
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="lfc")
+    pca2<-binnedAverage(pca2,cov366,varname="lfc")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+
+  p<-ggplot(df,aes(x=compartment,y=lfc)) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("Log2FC in different bins of digitized pca (lfc/pca same strain)"))
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedCompAll_lfcAll.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+}
+
+
+
+######### lfc in AB compartments of 366 HiC-----
 
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -1127,37 +1273,65 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                    E1=NA, E2=NA)
 
 
-
   E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_cis_E1\\.digitized\\.tsv")
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_cis_E2\\.digitized\\.tsv")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_cis_E1\\.digitized\\.tsv")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_cis_E2\\.digitized\\.tsv")))]
-  listgr<-NULL
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+  listdf<-NULL
+
+
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
-    salmon<-readRDS(file=paste0(outPath,"/rds/",fileNamePrefix,
-                                contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
-    pca2<-import.bw(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+    salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
 
     salmon<-salmon[!is.na(salmon$chr),]
     salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
 
-    salmongr<-sort(salmongr)
+    lfc<-coverage(salmongr,weight="log2FoldChange")
 
-    salmongr<-assignGRtoAB(salmongr,pca1,grName=grp,pcaName=paste0("E1"))
-    salmongr<-assignGRtoAB(salmongr,pca2,grName=grp,pcaName=paste0("E2"))
-    listgr[[grp]]<-salmongr
+    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC=="TEVonly"]))
+    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC=="TEVonly"]))
+
+    pca1<-GRanges(pca1)
+    pca2<-GRanges(pca2)
+    start(pca1)<-start(pca1)+1
+    start(pca2)<-start(pca2)+1
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="lfc")
+    pca2<-binnedAverage(pca2,cov366,varname="lfc")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
+
+    df<-rbind(df1,df2)
+    df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
   }
 
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
-
-
-
-
-
+  p<-ggplot(df,aes(x=compartment,y=lfc)) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("Log2FC of different strain in bins of TEVonly digitized pca"))
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedComp366_lfcAll.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+}
 # seqplots heatmaps and averages ---------------------------------------------
 
 #############################-

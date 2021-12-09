@@ -73,34 +73,52 @@ txi<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene,
  # txi2<-tximport(sampleTable$fileName,type="salmon",tx2gene=tx2gene,
  #                countsFromAbundance="lengthScaledTPM")
 
-idx366<-sampleTable$strain=="366"
-gene<-data.frame("TPM"=rowMeans(txi$abundance[,idx366]))
-gene$wormbaseID<-rownames(gene)
+makeAvrTPMbedgraph<-function(strainName, txi, idx, metadata){
+  gene<-data.frame("TPM"=rowMeans(txi$abundance[,idx]))
+  gene$wormbaseID<-rownames(gene)
 
-md<-data.frame(metadata)
-gene<-left_join(gene,md,by="wormbaseID")
+  md<-data.frame(metadata)
+  gene<-left_join(gene,md,by="wormbaseID")
 
-genegr<-GRanges(seqnames=gene$seqnames,IRanges(gene$start,gene$end),gene$strand)
-genegr$score<-gene$TPM
-genegr$name<-gene$wormbaseID
-seqinfo(genegr)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
-genegr<-sort(genegr)
-export.bed(genegr,con=paste0(outPath,"/tracks/PMW366_TPM_avr.bed"))
-export(genegr,con=paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedGraph")
+  genegr<-GRanges(seqnames=gene$seqnames,IRanges(gene$start,gene$end),gene$strand)
+  genegr$score<-gene$TPM
+  genegr$name<-gene$wormbaseID
+  seqinfo(genegr)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+  genegr<-sort(genegr)
+  export.bed(genegr,con=paste0(outPath,"/tracks/PMW",strainName,"_TPM_avr.bed"))
+  export(genegr,con=paste0(outPath,"/tracks/PMW",strainName,"_TPM_avr.bedgraph"),format="bedGraph")
+}
 
 
-idx382<-sampleTable$strain=="382"
-gene<-data.frame("TPM"=rowMeans(txi$abundance[,idx382]))
-gene$wormbaseID<-rownames(gene)
+options(tibble.width = Inf)
+options(tibble.print_max = Inf)
 
-md<-data.frame(metadata)
-gene<-left_join(gene,md,by="wormbaseID")
+tpmStrain="366"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
 
-genegr<-GRanges(seqnames=gene$seqnames,IRanges(gene$start,gene$end),gene$strand)
-genegr$score<-gene$TPM
-genegr$name<-gene$wormbaseID
-seqinfo(genegr)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
-genegr<-sort(genegr)
-export.bed(genegr,con=paste0(outPath,"/tracks/PMW382_TPM_avr.bed"))
-export(genegr,con=paste0(outPath,"/tracks/PMW382_TPM_avr.bedgraph"),format="bedGraph")
+tpmStrain="382"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
 
+tpmStrain="822"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="1mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
+
+tpmStrain="775"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
+
+tpmStrain="784"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
+
+tpmStrain="828"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
