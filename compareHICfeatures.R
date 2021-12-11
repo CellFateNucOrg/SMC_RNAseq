@@ -832,8 +832,9 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 }
 
 
+
 ##################-
-# 366TPM in AB compartments of different HiCs -----
+## 366 TPM in AB compartments of different HiCs -----
 #################-
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -887,7 +888,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
   p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
-    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(cols=vars(SMC),rows=vars(pca)) +
     ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different bins of pca"))
 
@@ -920,7 +921,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
 ##################-
-# sampleSpecific TPM in AB compartments of different HiCs -----
+## sampleSpecific TPM in AB compartments of different HiCs -----
 #################-
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -937,6 +938,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.oriented_E1\\.vecs\\.bw")))]
   pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.oriented_E2\\.vecs\\.bw")))]
   listdf<-NULL
+  g=1
   for (g in 1:nrow(pcas)){
     grp<-pcas$SMC[g]
     #grp=useContrasts[1]
@@ -1038,31 +1040,32 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 # compartments - digitized ----------------------------------------------------
 ###########################-
 
-######### 366TPM in digitized compartments of different HiCs -----
+## 366TPM in digitized compartments of different HiCs -----
 
+### Autosomes ------
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
 if(all(RNAseqAndHiCsubset %in% useContrasts)){
-  pcas<-data.frame(SMC=c("TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
-                   strain =c("366","822","382","775","784","828"),
+  pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("N2","366","822","382","775","784","828"),
                    E1=NA, E2=NA)
 
   tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
   cov366<-coverage(tpm366,weight="score")
 
   E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+                     pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+                     pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
   listdf<-NULL
   for (grp in pcas$SMC){
-    #grp=useContrasts[1]
+    #grp=pcas$SMC[1]
     # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
     #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
-    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
-    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
     pca1<-GRanges(pca1)
     pca2<-GRanges(pca2)
@@ -1080,11 +1083,11 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     df1$pca<-"E1"
     df2$pca<-"E2"
 
-    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
+    colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
 
     df<-rbind(df1,df2)
-    df$compartment<-factor(df$compartment)
+    #df$compartment<-factor(df$compartment)
     df$SMC<-grp
 
     listdf[[grp]]<-df
@@ -1092,32 +1095,118 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   df<-do.call(rbind,listdf)
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
+  df$bin<-factor(df$bin,levels=1:50)
 
-  p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
+
+  p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
     ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
-    ggtitle(paste0("366 TPM in different bins of digitized pca"))
+    ggtitle(paste0("366 TPM in different ausotomal bins of digitized pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
-                  "digitizedCompAll_366tpm.pdf"),
+                  "digitizedCompAll_chrA_366tpm.pdf"),
   device="pdf",width=29,height=19, units="cm")
 
-  subdf<-df[df$SMC %in% c("TEVonly","dpy26"),]
-  subdf<-subdf[subdf$compartment %in% 1:50,]
-  p<-ggplot(subdf,aes(x=compartment,y=log2(tpm366),fill=SMC)) +
-    geom_boxplot(outlier.shape=NA) + facet_grid(pca~.)+
-    ylim(c(-15,15)) + theme_bw()+
-    scale_fill_manual(values=c("white","grey70"))+
+  subdf<-df[df$SMC %in% c("wt","TEVonly"),]
+  subdf<-subdf[subdf$bin %in% 1:50,]
+  p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
+    geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
+    ylim(c(-12,12)) + theme_bw()+
+    #scale_fill_manual(values=c("white","grey70"))+
     geom_hline(yintercept=0,col="red")+
-    ggtitle(paste0("366 TPM in different bins of digitized pca"))
+    ggtitle(paste0("366 TPM in different autosomal bins of digitized pca")) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
-                           "digitizedCompDpy26_366tpm.pdf"),
-         device="pdf",width=29,height=19, units="cm")
+                           "digitizedCompControls_chrA_366tpm.pdf"),
+         device="pdf",width=10,height=12, units="cm")
 
 }
 
 
-######### log baseMean in digitized compartments of different HiCs ------
+### chrX -------
+RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
+
+if(all(RNAseqAndHiCsubset %in% useContrasts)){
+  pcas<-data.frame(SMC=c("wt","TEVonly","aux_sdc3BG","dpy26","kle2","scc1","coh1"),
+                   strain =c("N2","366","822","382","775","784","828"),
+                   E1=NA, E2=NA)
+
+  tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
+  cov366<-coverage(tpm366,weight="score")
+
+  E1files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_cis_X_noA_E1\\.digitized\\.rds")
+  E2files=list.files(paste0(outPath,"/otherData"),
+                     pattern="_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_cis_X_noA_E1\\.digitized\\.rds")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")))]
+  listdf<-NULL
+  for (grp in pcas$SMC){
+    #grp=pcas$SMC[1]
+    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
+    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+
+    pca1<-GRanges(pca1)
+    pca2<-GRanges(pca2)
+    start(pca1)<-start(pca1)+1
+    start(pca2)<-start(pca2)+1
+    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    pca1<-binnedAverage(pca1,cov366,varname="tpm366")
+    pca2<-binnedAverage(pca2,cov366,varname="tpm366")
+
+    df1<-data.frame(pca1)
+    df2<-data.frame(pca2)
+
+    df1$pca<-"E1"
+    df2$pca<-"E2"
+
+    colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
+    colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
+
+    df<-rbind(df1,df2)
+    #df$compartment<-factor(df$compartment)
+    df$SMC<-grp
+
+    listdf[[grp]]<-df
+  }
+
+  df<-do.call(rbind,listdf)
+  df$SMC<-factor(df$SMC,levels=pcas$SMC)
+  df$bin<-factor(df$bin,levels=1:50)
+
+
+  p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
+    geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
+    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("366 TPM in different chrX bins of digitized pca"))
+
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedCompAll_chrX_366tpm.pdf"),
+         device="pdf",width=29,height=19, units="cm")
+
+  subdf<-df[df$SMC %in% c("wt","TEVonly"),]
+  subdf<-subdf[subdf$bin %in% 1:50,]
+  p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
+    geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
+    ylim(c(-12,12)) + theme_bw()+
+    #scale_fill_manual(values=c("white","grey70"))+
+    geom_hline(yintercept=0,col="red")+
+    ggtitle(paste0("366 TPM in different chrX bins of digitized pca")) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          legend.position="none",axis.text.x=element_blank(),axis.ticks.x=element_blank())
+  ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                           "digitizedCompControls_chrX_366tpm.pdf"),
+         device="pdf",width=10,height=12, units="cm")
+
+}
+
+
+## log baseMean in digitized compartments of different HiCs ------
 
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -1130,11 +1219,11 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   #cov366<-coverage(tpm366,weight="score")
 
   E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+                     pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+                     pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
   listdf<-NULL
 
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
@@ -1149,8 +1238,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
 
-    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
-    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
+    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
     pca1<-GRanges(pca1)
     pca2<-GRanges(pca2)
@@ -1172,7 +1261,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
 
     df<-rbind(df1,df2)
-    df$compartment<-factor(df$compartment)
+    df$bin<-factor(df$bin,levels=1:50)
     df$SMC<-grp
 
     listdf[[grp]]<-df
@@ -1181,7 +1270,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   df<-do.call(rbind,listdf)
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
-  p<-ggplot(df,aes(x=compartment,y=baseMean)) +
+  p<-ggplot(df,aes(x=bin,y=baseMean)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
     ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("baseMean RNAseq in bins of different strain digitized pca"))
