@@ -357,7 +357,40 @@ file.remove(paste0(outPath,"/runTea.sh"))
 system(paste0("chmod +x ",outPath,"/runTea1.sh"))
 system(paste0(outPath,"/runTea1.sh"),wait=F)
 
-
+###### compile results in excel-----
+file.remove("allTEAresults.xlsx")
+categories=c("go","tissue","phe")
+for(grp in useContrasts){
+  go<-NULL
+  for(category in categories){
+    up<-read.delim(paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_up_",
+                          category,".tsv"))
+    if(nrow(up)>0){
+      up$SMC<-grp
+      up$category<-category
+      up$UpOrDownRegulated<-"up"
+      if(is.null(go)){
+        go<-up
+      } else {
+        go<-rbind(go,up)
+      }
+    }
+    down<-read.delim(paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_down_",
+                          category,".tsv"))
+    if(nrow(down)>0){
+      down$SMC<-grp
+      down$category<-category
+      down$UpOrDownRegulated<-"down"
+      if(is.null(go)){
+        go<-down
+      } else {
+        go<-rbind(go,down)
+      }
+    }
+  }
+  write.xlsx(go,file="allTEAresults.xlsx",sheetName=grp,
+          append=T,row.names=F)
+}
 
 
 ##########################-
