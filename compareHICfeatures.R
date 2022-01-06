@@ -240,7 +240,39 @@ plotLFCbyCompartment<-function(df,namePCAcol,namePCA){
   return(p)
 }
 
+#############################-
+##### subsitute for getREF function from seqplots thaht has an unfixed bug.
+##### Fix comes form  https://github.com/Przemol/seqplots/issues/58
+#' Get reference genome
+#'
+#' @param genome The filename of FASTA file or genome code for BSgenome
+#'
+#' @return \code{DNAStringSet}
+#'
+#' @export
+#'
+getREF <- function(genome) {
+  if( file.exists(file.path(Sys.getenv('root'), 'genomes', genome)) ) {
+    REF <- Biostrings::readDNAStringSet( file.path(Sys.getenv('root'), 'genomes', genome) )
+    names(REF) <- gsub(' .+', '', names(REF))
+  } else {
 
+    GENOMES <- BSgenome::installed.genomes(
+      splitNameParts=TRUE)$genome
+    if( length(GENOMES) )
+      names(GENOMES) <- gsub('^BSgenome.', '', BSgenome::installed.genomes())
+    if( !length(GENOMES) ) stop('No genomes installed!')
+
+    pkg <- paste0('BSgenome.', names(GENOMES[GENOMES %in% genome]))[[1]]
+    suppressPackageStartupMessages(
+      library(pkg, character.only = TRUE, quietly=TRUE)
+    )
+    REF <- get(pkg)
+  }
+  return(REF)
+}
+
+assignInNamespace("getREF",getREF,ns="seqplots")
 
 # why is pca1 just splitting the chromosome in two?
 # mm<-matrix(data=rep(0,100),nrow=10)
@@ -1061,30 +1093,14 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
   listdf<-NULL
   for (grp in pcas$SMC){
-    #grp=pcas$SMC[1]
-    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
-    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
     pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
     pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
-
-    pca1<-GRanges(pca1)
-    pca2<-GRanges(pca2)
-    start(pca1)<-start(pca1)+1
-    start(pca2)<-start(pca2)+1
-    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
 
     pca1<-binnedAverage(pca1,cov366,varname="tpm366")
     pca2<-binnedAverage(pca2,cov366,varname="tpm366")
 
     df1<-data.frame(pca1)
     df2<-data.frame(pca2)
-
-    df1$pca<-"E1"
-    df2$pca<-"E2"
-
-    colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
 
     df<-rbind(df1,df2)
     #df$compartment<-factor(df$compartment)
@@ -1143,30 +1159,14 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_cis_X_noA_E2\\.digitized\\.rds")))]
   listdf<-NULL
   for (grp in pcas$SMC){
-    #grp=pcas$SMC[1]
-    # salmon<-import.bed(file=paste0(outPath,"/rds/",fileNamePrefix,
-    #                             contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
     pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
     pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
-
-    pca1<-GRanges(pca1)
-    pca2<-GRanges(pca2)
-    start(pca1)<-start(pca1)+1
-    start(pca2)<-start(pca2)+1
-    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
 
     pca1<-binnedAverage(pca1,cov366,varname="tpm366")
     pca2<-binnedAverage(pca2,cov366,varname="tpm366")
 
     df1<-data.frame(pca1)
     df2<-data.frame(pca2)
-
-    df1$pca<-"E1"
-    df2$pca<-"E2"
-
-    colnames(df1)<-gsub("^E.?\\.d","bin",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","bin",colnames(df2))
 
     df<-rbind(df1,df2)
     #df$compartment<-factor(df$compartment)
@@ -1178,7 +1178,6 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   df<-do.call(rbind,listdf)
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
   df$bin<-factor(df$bin,levels=1:50)
-
 
   p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
@@ -1215,16 +1214,13 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                    strain =c("366","822","382","775","784","828"),
                    E1=NA, E2=NA)
 
-  #tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
-  #cov366<-coverage(tpm366,weight="score")
-
   E1files=list.files(paste0(outPath,"/otherData"),
                      pattern="_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")
   E2files=list.files(paste0(outPath,"/otherData"),
                      pattern="_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")
   pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_A_noX_E1\\.digitized\\.rds")))]
   pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_A_noX_E2\\.digitized\\.rds")))]
-  listdf<-NULL
+
 
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
                                      contrastNames[["dpy26"]],"_DESeq2_fullResults_p",padjVal,".rds")))
@@ -1234,31 +1230,17 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   baseMean<-coverage(salmongr,weight="baseMean")
 
-
+  listdf<-NULL
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
-
     pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
     pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
-
-    pca1<-GRanges(pca1)
-    pca2<-GRanges(pca2)
-    start(pca1)<-start(pca1)+1
-    start(pca2)<-start(pca2)+1
-    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
 
     pca1<-binnedAverage(pca1,cov366,varname="baseMean")
     pca2<-binnedAverage(pca2,cov366,varname="baseMean")
 
     df1<-data.frame(pca1)
     df2<-data.frame(pca2)
-
-    df1$pca<-"E1"
-    df2$pca<-"E2"
-
-    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
 
     df<-rbind(df1,df2)
     df$bin<-factor(df$bin,levels=1:50)
@@ -1289,15 +1271,12 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                    strain =c("366","822","382","775","784","828"),
                    E1=NA, E2=NA)
 
-  #tpm366<-import(paste0(outPath,"/tracks/PMW366_TPM_avr.bedgraph"),format="bedgraph")
-  #cov366<-coverage(tpm366,weight="score")
-
   E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.rds")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.rds")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.rds")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.rds")))]
   listdf<-NULL
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
@@ -1309,15 +1288,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
     lfc<-coverage(salmongr,weight="log2FoldChange")
 
-    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
-    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
-
-    pca1<-GRanges(pca1)
-    pca2<-GRanges(pca2)
-    start(pca1)<-start(pca1)+1
-    start(pca2)<-start(pca2)+1
-    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC==grp]))
+    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC==grp]))
 
     pca1<-binnedAverage(pca1,cov366,varname="lfc")
     pca2<-binnedAverage(pca2,cov366,varname="lfc")
@@ -1325,14 +1297,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     df1<-data.frame(pca1)
     df2<-data.frame(pca2)
 
-    df1$pca<-"E1"
-    df2$pca<-"E2"
-
-    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
-
     df<-rbind(df1,df2)
-    df$compartment<-factor(df$compartment)
+    df$pca<-factor(df$pca)
     df$SMC<-grp
 
     listdf[[grp]]<-df
@@ -1340,8 +1306,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   df<-do.call(rbind,listdf)
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
-
-  p<-ggplot(df,aes(x=compartment,y=lfc)) +
+  df$bin<-factor(df$bin,levels=1:50)
+  p<-ggplot(df,aes(x=bin,y=lfc)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
     ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("Log2FC in different bins of digitized pca (lfc/pca same strain)"))
@@ -1352,7 +1318,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
 
-######### lfc in AB compartments of 366 HiC-----
+######### lfc in digitized compartments of 366 HiC-----
 
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -1363,14 +1329,12 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
   E1files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")
+                     pattern="_merge_2000\\.saddle_trans_E1\\.digitized\\.rds")
   E2files=list.files(paste0(outPath,"/otherData"),
-                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")
-  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.tsv")))]
-  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.tsv")))]
+                     pattern="_merge_2000\\.saddle_trans_E2\\.digitized\\.rds")
+  pcas$E1<-E1files[match(pcas$strain,unlist(strsplit(E1files,"_merge_2000\\.saddle_trans_E1\\.digitized\\.rds")))]
+  pcas$E2<-E2files[match(pcas$strain,unlist(strsplit(E2files,"_merge_2000\\.saddle_trans_E2\\.digitized\\.rds")))]
   listdf<-NULL
-
-
   for (grp in RNAseqAndHiCsubset){
     #grp=useContrasts[1]
     salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
@@ -1381,15 +1345,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
     lfc<-coverage(salmongr,weight="log2FoldChange")
 
-    pca1<-read.delim(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC=="TEVonly"]))
-    pca2<-read.delim(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC=="TEVonly"]))
-
-    pca1<-GRanges(pca1)
-    pca2<-GRanges(pca2)
-    start(pca1)<-start(pca1)+1
-    start(pca2)<-start(pca2)+1
-    seqlevels(pca1)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-    seqlevels(pca2)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    pca1<-readRDS(paste0(outPath,"/otherData/",pcas$E1[pcas$SMC=="TEVonly"]))
+    pca2<-readRDS(paste0(outPath,"/otherData/",pcas$E2[pcas$SMC=="TEVonly"]))
 
     pca1<-binnedAverage(pca1,cov366,varname="lfc")
     pca2<-binnedAverage(pca2,cov366,varname="lfc")
@@ -1397,14 +1354,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     df1<-data.frame(pca1)
     df2<-data.frame(pca2)
 
-    df1$pca<-"E1"
-    df2$pca<-"E2"
-
-    colnames(df1)<-gsub("^E.?\\.d","compartment",colnames(df1))
-    colnames(df2)<-gsub("^E.?\\.d","compartment",colnames(df2))
-
     df<-rbind(df1,df2)
-    df$compartment<-factor(df$compartment)
+    df$pca<-factor(df$pca)
     df$SMC<-grp
 
     listdf[[grp]]<-df
@@ -1413,7 +1364,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   df<-do.call(rbind,listdf)
   df$SMC<-factor(df$SMC,levels=pcas$SMC)
 
-  p<-ggplot(df,aes(x=compartment,y=lfc)) +
+  p<-ggplot(df,aes(x=bin,y=lfc)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
     ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("Log2FC of different strain in bins of TEVonly digitized pca"))
@@ -1421,129 +1372,100 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
                            "digitizedComp366_lfcAll.pdf"),
          device="pdf",width=29,height=19, units="cm")
 }
+
+
+
 # seqplots heatmaps and averages ---------------------------------------------
 
-#############################-
-##### subsitute for getREF function from seqplots thaht has an unfixed bug.
-##### Fix comes form  https://github.com/Przemol/seqplots/issues/58
-#' Get reference genome
-#'
-#' @param genome The filename of FASTA file or genome code for BSgenome
-#'
-#' @return \code{DNAStringSet}
-#'
-#' @export
-#'
-getREF <- function(genome) {
-  if( file.exists(file.path(Sys.getenv('root'), 'genomes', genome)) ) {
-    REF <- Biostrings::readDNAStringSet( file.path(Sys.getenv('root'), 'genomes', genome) )
-    names(REF) <- gsub(' .+', '', names(REF))
-  } else {
 
-    GENOMES <- BSgenome::installed.genomes(
-      splitNameParts=TRUE)$genome
-    if( length(GENOMES) )
-      names(GENOMES) <- gsub('^BSgenome.', '', BSgenome::installed.genomes())
-    if( !length(GENOMES) ) stop('No genomes installed!')
-
-    pkg <- paste0('BSgenome.', names(GENOMES[GENOMES %in% genome]))[[1]]
-    suppressPackageStartupMessages(
-      library(pkg, character.only = TRUE, quietly=TRUE)
-    )
-    REF <- get(pkg)
-  }
-  return(REF)
-}
-
-assignInNamespace("getREF",getREF,ns="seqplots")
 #####################
 
 
-######################-
-# TADs ----
-######################-
-# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"), format="bedpe")
-# head(loops)
-# #extract the separate anchors
-# grl<-zipup(loops)
-# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
-
-# new SIP loops
-loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
-                 strand="+")
-anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
-                 strand="-")
-mcols(anchor1)<-loops[,c(8:15)]
-mcols(anchor2)<-loops[,c(8:15)]
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
-
-#make TADs
-tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-
-tads_in<-tads_in[width(tads_in)>100000]
-
-#tads<-reduce(tads)
-xtads<-tads_in[seqnames(tads_in)=="chrX"]
-atads<-tads_in[seqnames(tads_in)!="chrX"]
-
-flankSize<-200000
-
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-                  useContrasts,"_lfc.bw")
-names(smcRNAseq)<-useContrasts
-
-pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"tads-chrX_flank",
-                  flankSize/1000,"kb.pdf"), width=11,
-      height=9, paper="a4r")
-
-
-p<-getPlotSetArray(tracks=c(smcRNAseq),
-                   features=c(xtads),
-                   refgenome="ce11", bin=10000L, xmin=flankSize,
-                   xmax=flankSize, type="af",
-                   xanchored=median(width(xtads)))
-
-
-
-dd<-plotHeatmap(p,plotz=F)
-heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
-roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
-minVal<-min(heatmapQuantiles[1,])
-maxVal<-max(heatmapQuantiles[2,])
-#layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
-plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs",
-            error.estimates=ifelse(length(useContrasts>3),F,T))
-plotHeatmap(p,main="ChrX TADs", plotScale="no", sortrows=T,
-            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
-            indi=F, sort_mids=T,sort_by=c(T,F,F),
-            clspace=c("#00008B", "#FFFFE0","#8B0000"))
-
-
-# reduced tads
-p<-getPlotSetArray(tracks=c(smcRNAseq),
-                   features=c(reduce(xtads)),
-                   refgenome="ce11", bin=10000L, xmin=flankSize,
-                   xmax=flankSize, type="af",
-                   xanchored=median(width(xtads)))
-
-
-dd<-plotHeatmap(p,plotz=F)
-heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
-roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
-minVal<-min(heatmapQuantiles[1,])
-maxVal<-max(heatmapQuantiles[2,])
-#layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
-plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs (reduced)",error.estimates=F)
-plotHeatmap(p,main="ChrX TADs (reduced)", plotScale="no", sortrows=T,
-            clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
-            indi=F, sort_mids=T,sort_by=c(T,F,F),
-            clspace=c("#00008B", "#FFFFE0","#8B0000"))
-
-
-dev.off()
+# ######################-
+# # TADs ----
+# ######################-
+# # loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"), format="bedpe")
+# # head(loops)
+# # #extract the separate anchors
+# # grl<-zipup(loops)
+# # anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+# # anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+#
+# # new SIP loops
+# loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+# anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
+#                  strand="+")
+# anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
+#                  strand="-")
+# mcols(anchor1)<-loops[,c(8:15)]
+# mcols(anchor2)<-loops[,c(8:15)]
+# anchor1$loopNum<-paste0("loop",1:length(anchor1))
+# anchor2$loopNum<-paste0("loop",1:length(anchor2))
+#
+# #make TADs
+# tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+#
+# tads_in<-tads_in[width(tads_in)>100000]
+#
+# #tads<-reduce(tads)
+# xtads<-tads_in[seqnames(tads_in)=="chrX"]
+# atads<-tads_in[seqnames(tads_in)!="chrX"]
+#
+# flankSize<-200000
+#
+# smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+#                   useContrasts,"_lfc.bw")
+# names(smcRNAseq)<-useContrasts
+#
+# pdf(file=paste0(outPath,"/plots/",outputNamePrefix,"tads-chrX_flank",
+#                   flankSize/1000,"kb.pdf"), width=11,
+#       height=9, paper="a4r")
+#
+#
+# p<-getPlotSetArray(tracks=c(smcRNAseq),
+#                    features=c(xtads),
+#                    refgenome="ce11", bin=10000L, xmin=flankSize,
+#                    xmax=flankSize, type="af",
+#                    xanchored=median(width(xtads)))
+#
+#
+#
+# dd<-plotHeatmap(p,plotz=F)
+# heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+# roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+# minVal<-min(heatmapQuantiles[1,])
+# maxVal<-max(heatmapQuantiles[2,])
+# #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+# plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs",
+#             error.estimates=ifelse(length(useContrasts>3),F,T))
+# plotHeatmap(p,main="ChrX TADs", plotScale="no", sortrows=T,
+#             clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+#             indi=F, sort_mids=T,sort_by=c(T,F,F),
+#             clspace=c("#00008B", "#FFFFE0","#8B0000"))
+#
+#
+# # reduced tads
+# p<-getPlotSetArray(tracks=c(smcRNAseq),
+#                    features=c(reduce(xtads)),
+#                    refgenome="ce11", bin=10000L, xmin=flankSize,
+#                    xmax=flankSize, type="af",
+#                    xanchored=median(width(xtads)))
+#
+#
+# dd<-plotHeatmap(p,plotz=F)
+# heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.05,0.95),na.rm=T)
+# roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+# minVal<-min(heatmapQuantiles[1,])
+# maxVal<-max(heatmapQuantiles[2,])
+# #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+# plotAverage(p,ylim=c(-0.5,1),main="ChrX TADs (reduced)",error.estimates=F)
+# plotHeatmap(p,main="ChrX TADs (reduced)", plotScale="no", sortrows=T,
+#             clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+#             indi=F, sort_mids=T,sort_by=c(T,F,F),
+#             clspace=c("#00008B", "#FFFFE0","#8B0000"))
+#
+#
+# dev.off()
 
 
 
@@ -1594,195 +1516,163 @@ dev.off()
 # p1+p2
 
 
-# ## old loops
-# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
-#                            format="bedpe")
-# head(loops)
-# #extract the separate anchors
-# grl<-zipup(loops)
-# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
-
-
-### new SIP loops
-loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
-anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
-mcols(anchor1)<-loops[,c(8:15)]
-mcols(anchor2)<-loops[,c(8:15)]
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
-
-# anchors<-c(anchor1,anchor2)
-# #anchors<-reduce(anchors,min.gapwidth=0L)
-# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-
-#make TADs
-tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
-head(tads)
-sort(width(tads))
-tads<-reduce(tads)
-sort(width(tads))
-
-# find regions not in tads
-notads<-gaps(tads)
-sort(width(notads))
-
-
-plotList<-list()
-#grp=useContrasts[3]
-for (grp in useContrasts){
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-
-  salmongr<-sort(salmongr)
-
-  ol<-findOverlaps(salmongr,tads,type="within")
-  genesInTads<-salmongr[queryHits(ol)]
-
-  ol<-findOverlaps(salmongr,notads)
-  genesNotTads<-salmongr[queryHits(ol)]
-
-  genesInTads$TADs<-"inside"
-  genesNotTads$TADs<-"outside"
-  df<-data.frame(c(genesInTads,genesNotTads))
-  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
-
-  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
-    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-    facet_grid(.~seqnames) +ylim(c(-1,1))+
-    ggtitle(grp)
-}
-p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSinout_",
-                     padjVal,".pdf")),
-       width=9, height=11, paper="a4",plot=p,device="pdf")
-
-
-
-#separate anchors from inside tads
-tads_in<-reduce(GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1)))
-tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
-anchors<-reduce(sort(c(anchor1,anchor2)))
-#anchors<-resize(anchors,width=width(anchors)+20000,fix="center")
-ol<-findOverlaps(anchors,tads_in)
-anchors<-anchors[-queryHits(ol)]
-
-plotList<-list()
-#grp=useContrasts[3]
-for (grp in useContrasts){
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-
-  salmongr<-sort(salmongr)
-
-  ol<-findOverlaps(salmongr,tads_in,type="within")
-  insideTads<-salmongr[queryHits(ol)]
-
-  ol<-findOverlaps(salmongr,anchors)
-  atAnchors<-salmongr[queryHits(ol)]
-
-  insideTads$TADs<-"TAD"
-  atAnchors$TADs<-"Anchor"
-  df<-data.frame(c(insideTads,atAnchors))
-  df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
-
-  plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
-    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-    facet_grid(.~seqnames) +ylim(c(-1,1))+
-    ggtitle(grp)
-}
-p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
-                     padjVal,".pdf")),
-       width=9, height=11, paper="a4",plot=p,device="pdf")
-
-
-
-####################-
-## new SIP loops -----
-####################-
-
+# # ## old loops
+# # loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
+# #                            format="bedpe")
+# # head(loops)
+# # #extract the separate anchors
+# # grl<-zipup(loops)
+# # anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
+# # anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
+#
+#
+# ### new SIP loops
 # loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-# gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
-# gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
-# mcols(gr1)<-loops[,c(8:15)]
-# mcols(gr2)<-loops[,c(8:15)]
-# gr1$loopNum<-paste0("loop",1:length(gr1))
-# gr2$loopNum<-paste0("loop",1:length(gr2))
+# anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
+# anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
+# mcols(anchor1)<-loops[,c(8:15)]
+# mcols(anchor2)<-loops[,c(8:15)]
+# anchor1$loopNum<-paste0("loop",1:length(anchor1))
+# anchor2$loopNum<-paste0("loop",1:length(anchor2))
 #
-# anchors<-c(gr1,gr2)
-# #anchors<-reduce(anchors,min.gapwidth=0L)
-# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-#
-# smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-#                   useContrasts,"_lfc.bw")
-# names(smcRNAseq)<-useContrasts
-# for(grp in useContrasts){
-#   rnaSeq<-import.bw(smcRNAseq[[grp]])
-#   cov<-coverage(rnaSeq,weight="score")
-#   anchors<-binnedAverage(anchors,cov,grp)
-# }
+# # anchors<-c(anchor1,anchor2)
+# # #anchors<-reduce(anchors,min.gapwidth=0L)
+# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
 #
 #
-# pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
-#            width=11,height=8,paper="a4r")
-# winSize=10000
-# metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
+# #make TADs
+# tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
+# head(tads)
+# sort(width(tads))
+# tads<-reduce(tads)
+# sort(width(tads))
+#
+# # find regions not in tads
+# notads<-gaps(tads)
+# sort(width(notads))
+#
+#
 # plotList<-list()
-# for (colOI in metricsOI){
-#   df<-data.frame(anchors)
-#   colnames(df)<-c(colnames(df)[1:5],colnames(mcols(anchors)))
-#   df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
-#   plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
-#     ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
-#     ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
+# #grp=useContrasts[3]
+# for (grp in useContrasts){
+#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#
+#   salmongr<-sort(salmongr)
+#
+#   ol<-findOverlaps(salmongr,tads,type="within")
+#   genesInTads<-salmongr[queryHits(ol)]
+#
+#   ol<-findOverlaps(salmongr,notads)
+#   genesNotTads<-salmongr[queryHits(ol)]
+#
+#   genesInTads$TADs<-"inside"
+#   genesNotTads$TADs<-"outside"
+#   df<-data.frame(c(genesInTads,genesNotTads))
+#   df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
+#
+#   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     ggtitle(grp)
 # }
-# p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
-# print(p)
-# dev.off()
-
-
-
-###################-
-## binned signal around anchors
-###################-
-
-# new SIP loops
-loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1),
-             strand="+")
-anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1),
-             strand="-")
-mcols(anchor1)<-loops[,c(8:15)]
-mcols(anchor2)<-loops[,c(8:15)]
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
-
-anchors<-c(anchor1,anchor2)
-anchors<-reduce(anchors,min.gapwidth=0L)
-seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-xanchors<-anchors[seqnames(anchors)=="chrX"]
-
-smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-                  useContrasts,"_lfc.bw")
-names(smcRNAseq)<-useContrasts
-
-p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=10000,numWins=10)
-p<-p+ggtitle("Average RNAseq LFC around chrX SIP loop anchors")
-print(p)
-ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_nearSIPanchors.pdf"), p,
-       device="pdf",width=19,height=29,units="cm")
-
-
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSinout_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
+#
+#
+#
+# #separate anchors from inside tads
+# tads_in<-reduce(GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1)))
+# tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+# anchors<-reduce(sort(c(anchor1,anchor2)))
+# #anchors<-resize(anchors,width=width(anchors)+20000,fix="center")
+# ol<-findOverlaps(anchors,tads_in)
+# anchors<-anchors[-queryHits(ol)]
+#
+# plotList<-list()
+# #grp=useContrasts[3]
+# for (grp in useContrasts){
+#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#
+#   salmongr<-sort(salmongr)
+#
+#   ol<-findOverlaps(salmongr,tads_in,type="within")
+#   insideTads<-salmongr[queryHits(ol)]
+#
+#   ol<-findOverlaps(salmongr,anchors)
+#   atAnchors<-salmongr[queryHits(ol)]
+#
+#   insideTads$TADs<-"TAD"
+#   atAnchors$TADs<-"Anchor"
+#   df<-data.frame(c(insideTads,atAnchors))
+#   df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
+#
+#   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
+#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     ggtitle(grp)
+# }
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
+#
+#
+#
+# ####################-
+# ## new SIP loops -----
+# ####################-
+#
+# # loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
+# # gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
+# # gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
+# # mcols(gr1)<-loops[,c(8:15)]
+# # mcols(gr2)<-loops[,c(8:15)]
+# # gr1$loopNum<-paste0("loop",1:length(gr1))
+# # gr2$loopNum<-paste0("loop",1:length(gr2))
+# #
+# # anchors<-c(gr1,gr2)
+# # #anchors<-reduce(anchors,min.gapwidth=0L)
+# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+# #
+# # smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+# #                   useContrasts,"_lfc.bw")
+# # names(smcRNAseq)<-useContrasts
+# # for(grp in useContrasts){
+# #   rnaSeq<-import.bw(smcRNAseq[[grp]])
+# #   cov<-coverage(rnaSeq,weight="score")
+# #   anchors<-binnedAverage(anchors,cov,grp)
+# # }
+# #
+# #
+# # pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
+# #            width=11,height=8,paper="a4r")
+# # winSize=10000
+# # metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
+# # plotList<-list()
+# # for (colOI in metricsOI){
+# #   df<-data.frame(anchors)
+# #   colnames(df)<-c(colnames(df)[1:5],colnames(mcols(anchors)))
+# #   df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
+# #   plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
+# #     ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
+# #     ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
+# # }
+# # p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
+# # print(p)
+# # dev.off()
+#
+#
+#
 
 #########################-
 ## insulation score ----
@@ -1849,15 +1739,168 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 
 
 
+# ##########################-
+# ########### moustache loops------
+# ##########################-
+#
+# ### new Moustache loops
+# #mustacheBatch="PMW366"
+# mustacheBatch="PMW382"
+#
+# loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
+# grl<-zipup(loops)
+# anchor1<-do.call(c,lapply(grl,"[",1))
+# anchor2<-do.call(c,lapply(grl,"[",2))
+# mcols(anchor1)<-mcols(loops)
+# mcols(anchor2)<-mcols(loops)
+#
+# anchor1$loopNum<-paste0("loop",1:length(anchor1))
+# anchor2$loopNum<-paste0("loop",1:length(anchor2))
+#
+# # anchors<-c(anchor1,anchor2)
+# # #anchors<-reduce(anchors,min.gapwidth=0L)
+# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+#
+# #make TADs
+# tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
+# head(tads)
+# sort(width(tads))
+# tads<-reduce(tads)
+# sort(width(tads))
+#
+# # find regions not in tads
+# notads<-gaps(tads)
+# sort(width(notads))
+#
+#
+# plotList<-list()
+# #grp=useContrasts[3]
+# for (grp in useContrasts){
+#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#
+#   salmongr<-sort(salmongr)
+#
+#   ol<-findOverlaps(salmongr,tads,type="within")
+#   genesInTads<-salmongr[queryHits(ol)]
+#
+#   ol<-findOverlaps(salmongr,notads)
+#   genesNotTads<-salmongr[queryHits(ol)]
+#
+#   genesInTads$Loops<-"inside"
+#   genesNotTads$Loops<-"outside"
+#   df<-data.frame(c(genesInTads,genesNotTads))
+#   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+#
+#   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     ggtitle(grp)
+# }
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsInOut_",mustacheBatch,"Mustache_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
+#
+#
+#
+# #separate anchors from inside tads
+# tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+# # tads_in<-reduce(tads_in)
+# tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+# anchors<-sort(c(anchor1,anchor2))
+# anchors<-resize(anchors,width=20000,fix="center")
+# #anchors<-reduce(anchors)
+# #ol<-findOverlaps(anchors,tads_in)
+# #anchors<-anchors[-queryHits(ol)]
+#
+# width(anchors)
+# dataList<-list()
+# plotList<-list()
+# #grp=useContrasts[3]
+# for (grp in useContrasts){
+#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
+#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+#
+#   salmon<-salmon[!is.na(salmon$chr),]
+#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
+#
+#   salmongr<-sort(salmongr)
+#
+#   ol<-findOverlaps(salmongr,tads_in,type="within")
+#   insideTads<-salmongr[queryHits(ol)]
+#
+#   ol<-findOverlaps(salmongr,anchors)
+#   atAnchors<-salmongr[queryHits(ol)]
+#
+#   insideTads$Loops<-"inLoop"
+#   atAnchors$Loops<-"Anchor"
+#   df<-data.frame(c(insideTads,atAnchors))
+#   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
+#   df$SMC<-grp
+#
+#   dataList[[grp]]<-df
+#   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     ggtitle(grp)
+# }
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+#
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",mustacheBatch,"-Mostache_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
+#
+# ## focus on chrX loops
+# dataTbl<-do.call(rbind,dataList)
+# xchr<-dataTbl[dataTbl$seqnames=="chrX",]
+#
+# xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
+# p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+#   facet_grid(~SMC) +ylim(c(-1,1))+
+#   ggtitle(paste0("LFC at ",mustacheBatch," anchors Vs inside loops in chrX")) +
+#   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
+#   theme(axis.text.x=element_text(angle=45,hjust=1))+
+#   xlab(label=element_blank())
+#
+# xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
+# xchr$measure="Expression"
+# p2<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
+#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
+#   facet_wrap(.~measure) + ggtitle("Base mean counts") +
+#   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
+#   xlab(label=element_blank())
+#
+# p<-ggarrange(p2,p1,ncol=2,widths=c(1.3,8.7))
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchorsXchr_",mustacheBatch,"-Mostache_",
+#                      padjVal,".pdf")),
+#        width=11, height=5, paper="a4r",plot=p,device="pdf")
+#
+#
+#
+# ################-
+# ## compare anchors
+# ################-
+#
+# loops366<-import(paste0(outPath,"/otherData/PMW366_2k_mustache_filtered.bedpe"),format="bedpe")
+#
+# loops382<-import(paste0(outPath,"/otherData/PMW382_2k_mustache_filtered.bedpe"),format="bedpe")
+#
+#
+
 ##########################-
-########### moustache loops------
+## Manual clicked loops------
 ##########################-
 
-### new Moustache loops
-#mustacheBatch="PMW366"
-mustacheBatch="PMW382"
+### new clicked loops
+#clickedBatch="366"
+clickedBatch="382"
 
-loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
+loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
 grl<-zipup(loops)
 anchor1<-do.call(c,lapply(grl,"[",1))
 anchor2<-do.call(c,lapply(grl,"[",2))
@@ -1867,65 +1910,14 @@ mcols(anchor2)<-mcols(loops)
 anchor1$loopNum<-paste0("loop",1:length(anchor1))
 anchor2$loopNum<-paste0("loop",1:length(anchor2))
 
-# anchors<-c(anchor1,anchor2)
-# #anchors<-reduce(anchors,min.gapwidth=0L)
-# seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-#make TADs
-tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
-head(tads)
-sort(width(tads))
-tads<-reduce(tads)
-sort(width(tads))
-
-# find regions not in tads
-notads<-gaps(tads)
-sort(width(notads))
-
-
-plotList<-list()
-#grp=useContrasts[3]
-for (grp in useContrasts){
-  salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-                                     contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-
-  salmon<-salmon[!is.na(salmon$chr),]
-  salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-
-  salmongr<-sort(salmongr)
-
-  ol<-findOverlaps(salmongr,tads,type="within")
-  genesInTads<-salmongr[queryHits(ol)]
-
-  ol<-findOverlaps(salmongr,notads)
-  genesNotTads<-salmongr[queryHits(ol)]
-
-  genesInTads$Loops<-"inside"
-  genesNotTads$Loops<-"outside"
-  df<-data.frame(c(genesInTads,genesNotTads))
-  df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
-
-  plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-    facet_grid(.~seqnames) +ylim(c(-1,1))+
-    ggtitle(grp)
-}
-p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsInOut_",mustacheBatch,"Mustache_",
-                     padjVal,".pdf")),
-       width=9, height=11, paper="a4",plot=p,device="pdf")
-
-
-
 #separate anchors from inside tads
 tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
 # tads_in<-reduce(tads_in)
 tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
 anchors<-sort(c(anchor1,anchor2))
-anchors<-resize(anchors,width=20000,fix="center")
-#anchors<-reduce(anchors)
-#ol<-findOverlaps(anchors,tads_in)
-#anchors<-anchors[-queryHits(ol)]
+anchors<-resize(anchors,width=10000,fix="center")
+
+reduce(anchors)
 
 width(anchors)
 dataList<-list()
@@ -1960,7 +1952,7 @@ for (grp in useContrasts){
 }
 p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
 
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",mustacheBatch,"-Mostache_",
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",clickedBatch,"-Clicked_",
                      padjVal,".pdf")),
        width=9, height=11, paper="a4",plot=p,device="pdf")
 
@@ -1972,7 +1964,7 @@ xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
   facet_grid(~SMC) +ylim(c(-1,1))+
-  ggtitle(paste0("LFC at ",mustacheBatch," anchors Vs inside loops in chrX")) +
+  ggtitle(paste0("LFC at ",clickedBatch," anchors Vs inside loops in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
   theme(axis.text.x=element_text(angle=45,hjust=1))+
   xlab(label=element_blank())
@@ -1986,18 +1978,272 @@ p2<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
   xlab(label=element_blank())
 
 p<-ggarrange(p2,p1,ncol=2,widths=c(1.3,8.7))
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchorsXchr_",mustacheBatch,"-Mostache_",
+ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchorsXchr_",clickedBatch,"-Mostache_",
                      padjVal,".pdf")),
        width=11, height=5, paper="a4r",plot=p,device="pdf")
 
 
 
-################-
-## compare anchors
-################-
+###################-
+## binned signal around anchors
+###################-
 
-loops366<-import(paste0(outPath,"/otherData/PMW366_2k_mustache_filtered.bedpe"),format="bedpe")
+anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
+                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+                                   c("366","382"),"_full_size_correct.bed"),
+                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+### LFC --------
+contrastsToUse<-useContrasts[c(1,3,4,6,7,8,9)]
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  contrastsToUse,"_lfc.bw")
+names(smcRNAseq)<-contrastsToUse
 
-loops382<-import(paste0(outPath,"/otherData/PMW382_2k_mustache_filtered.bedpe"),format="bedpe")
+for(anch in 1:nrow(anchordf)){
+  anchors<-import(anchordf$file[anch])
+  anchorSource<-anchordf$source[anch]
+
+  anchors<-anchors[seqnames(anchors)=="chrX"]
+  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+  winSize=10000
+  anchors<-resize(anchors,width=winSize,fix="center")
+  seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+  xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+  p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=winSize,numWins=100000/winSize)
+  p<-p+ggtitle(paste0("Average RNAseq LFC around chrX ",anchorSource," loop anchors"))
+  print(p)
+  ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_",anchorSource,"anchors_win",
+                winSize/1000,"kb.pdf"), p,
+         device="pdf",width=19,height=29,units="cm")
+}
+
+### LFC unfiltered------
+if(dir.exists(paste0(outPath,"/tracks/p0.05_lfc0.5"))){
+  localFileNamePrefix="p0.05_lfc0.5/no775B3_"
+  contrastsToUse<-useContrasts[c(3,1,4,6,7,8,9)]
+  smcRNAseq<-paste0(outPath,"/tracks/",localFileNamePrefix,
+                    contrastsToUse,"_wt_lfc.bw")
+  names(smcRNAseq)<-contrastsToUse
+
+  for(anch in 1:nrow(anchordf)){
+    anchors<-import(anchordf$file[anch])
+    anchorSource<-anchordf$source[anch]
+
+    anchors<-anchors[seqnames(anchors)=="chrX"]
+    seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    winSize=10000
+    anchors<-resize(anchors,width=winSize,fix="center")
+    seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+    xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+    p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=winSize,numWins=100000/winSize)
+    p<-p+ggtitle(paste0("Average RNAseq LFC around chrX ",anchorSource," loop anchors"))
+    print(p)
+    ggsave(paste0(outPath, "/plots/",outputNamePrefix,"binnedRNAseq_",anchorSource,"anchors_win",
+                  winSize/1000,"kb_LFCunfiltered.pdf"), p,
+           device="pdf",width=19,height=29,units="cm")
+  }
+}
+
+
+### TPM -------
+anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
+                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+                                   c("366","382"),"_full_size_correct.bed"),
+                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+
+contrastsToUse<-c("366","382","775","784","828","822")
+smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
+names(smcRNAseq)<-paste0("PMW",contrastsToUse)
+
+for(anch in 1:nrow(anchordf)){
+  anchors<-import(anchordf$file[anch])
+  anchorSource<-anchordf$source[anch]
+
+  anchors<-anchors[seqnames(anchors)=="chrX"]
+  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+  winSize=10000
+  anchors<-resize(anchors,width=winSize,fix="center")
+  seqlevels(anchors)<-seqlevels(Celegans)
+
+  xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+  p<-avrSignalBins(xanchors, bwFiles=smcRNAseq, winSize=winSize,
+                   numWins=100000/winSize, logScore=T)
+  p<-p+ggtitle(paste0("Average RNAseq TPM around chrX ",anchorSource," loop anchors"))
+  print(p)
+  ggsave(paste0(outPath, "/plots/",outputNamePrefix,"RNAseqTPM_",anchorSource,"anchors_win",
+                winSize/1000,"kb.pdf"), p,
+         device="pdf",width=19,height=29,units="cm")
+}
+
+
+
+###############-
+## seqplots around anchors-------
+###############-
+
+flankSize<-100000
+
+anchordf<-data.frame(source=c("366","382","eigen382"),
+                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+                                   c("366","382"),"_full_size_correct.bed"),
+                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+
+### LFC ------
+contrastsToUse<-useContrasts[c(3,1,4,6,7,8,9)]
+smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
+                  contrastsToUse,"_lfc.bw")
+names(smcRNAseq)<-contrastsToUse
+
+
+for(anch in 1:nrow(anchordf)){
+  anchors<-import(anchordf$file[anch])
+  anchorSource<-anchordf$source[anch]
+
+  anchors<-anchors[seqnames(anchors)=="chrX"]
+  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+  seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+  xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
+                  flankSize/1000,"kb_LFC.pdf"), width=11,
+      height=9, paper="a4r")
+
+
+  p<-getPlotSetArray(tracks=c(smcRNAseq),
+                     features=c(xanchors),
+                     refgenome="ce11", bin=flankSize/100, xmin=flankSize,
+                     xmax=flankSize, type="af", rm0=T, ignore_strand=T,
+                     xanchored=median(width(xanchors)))
+
+
+
+  dd<-plotHeatmap(p,plotz=F)
+  heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
+  roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+  minVal<-min(heatmapQuantiles[1,])
+  maxVal<-max(heatmapQuantiles[2,])
+  #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+  plotAverage(p,ylim=c(-0.5,1),main="ChrX anchors",
+              error.estimates=ifelse(length(useContrasts>3),F,T))
+  plotHeatmap(p,main="ChrX anchors", plotScale="linear", sortrows=T,
+              clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal, ln.v=F,
+              indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
+              clspace=c("#00008B", "#FFFFE0","#8B0000"))
+  dev.off()
+}
+
+
+
+### LFC unfiltered------
+if(dir.exists(paste0(outPath,"/tracks/p0.05_lfc0.5"))){
+  localFileNamePrefix="p0.05_lfc0.5/no775B3_"
+  contrastsToUse<-useContrasts[c(3,1,4,6,7,8,9)]
+  smcRNAseq<-paste0(outPath,"/tracks/",localFileNamePrefix,
+                    contrastsToUse,"_wt_lfc.bw")
+  names(smcRNAseq)<-contrastsToUse
+
+  for(anch in 1:nrow(anchordf)){
+    anchors<-import(anchordf$file[anch])
+    anchorSource<-anchordf$source[anch]
+
+    anchors<-anchors[seqnames(anchors)=="chrX"]
+    seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+    seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+    seqlevels(anchors)<-seqlevels(Celegans)#[1:6]
+
+    xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+    pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
+                    flankSize/1000,"kb_LFCunfilt.pdf"), width=11,
+        height=9, paper="a4r")
+
+    p<-getPlotSetArray(tracks=c(smcRNAseq),
+                       features=c(xanchors),
+                       refgenome="ce11", bin=flankSize/100, xmin=flankSize,
+                       xmax=flankSize, type="af", rm0=T, ignore_strand=T,
+                       xanchored=median(width(xanchors)))
+
+    dd<-plotHeatmap(p,plotz=F)
+    heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
+    roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+    minVal<-min(heatmapQuantiles[1,])
+    maxVal<-max(heatmapQuantiles[2,])
+    #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+    plotAverage(p,ylim=c(-0.5,1),main="ChrX anchors",
+                error.estimates=ifelse(length(useContrasts>3),F,T))
+    plotHeatmap(p,main="ChrX anchors", plotScale="linear", sortrows=T,
+                clusters=1L,autoscale=F,zmin=minVal, zmax=maxVal,
+                ln.v=F,
+                indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
+                clspace=c("#00008B", "#FFFFE0","#8B0000"))
+    dev.off()
+  }
+}
+
+
+# ### TPM ------
+anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
+                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+                                   c("366","382"),"_full_size_correct.bed"),
+                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+
+contrastsToUse<-c("366","382","775","784","828","822")
+smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
+names(smcRNAseq)<-paste0("PMW",contrastsToUse)
+
+for(anch in 1:nrow(anchordf)){
+  anchors<-import(anchordf$file[anch])
+  anchorSource<-anchordf$source[anch]
+
+  anchors<-anchors[seqnames(anchors)=="chrX"]
+  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+
+  seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+
+  xanchors<-anchors[seqnames(anchors)=="chrX"]
+
+  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
+                  flankSize/1000,"kb_TPM.pdf"), width=11,
+      height=9, paper="a4r")
+
+
+  p<-getPlotSetArray(tracks=c(smcRNAseq),
+                     features=c(xanchors),
+                     refgenome="ce11", bin=flankSize/10, xmin=flankSize,
+                     xmax=flankSize, type="af", rm0=T, ignore_strand=T,
+                     xanchored=median(width(xanchors)))
+
+  dd<-plotHeatmap(p,plotz=F)
+  heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
+  roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+  minVal<-min(heatmapQuantiles[1,])
+  maxVal<-max(heatmapQuantiles[2,])
+  #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+  plotAverage(p,main="ChrX anchors", plotScale="log2",
+              error.estimates=ifelse(length(useContrasts>3),F,T))
+  plotHeatmap(p,main="ChrX anchors", plotScale="log2", sortrows=T,
+              clusters=1L,autoscale=F,
+              zmin=minVal, zmax=maxVal,
+              ln.v=F,
+              indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
+              clspace=c("#00008B", "#FFFFE0","#8B0000"))
+  dev.off()
+}
+
 
 

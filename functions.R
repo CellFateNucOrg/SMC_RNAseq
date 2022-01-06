@@ -416,13 +416,17 @@ summaryByChr<-function(resLFC,padj,lfc) {
 #' @param bwFiles List of bwFiles whose signal you want to average
 #' @winSize Size of the windows on which to avrage (in bp)
 #' @numWins Number of windows either side of the motif to look at
+#' @logScore Whether to log the score column or use as is
 #' @return ggplot2 object
 #' @export
-avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
+avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10,logScore=F){
   avrbins<-list()
   for (b in 1:length(bwFiles)){
     gr<-GenomicRanges::resize(motif_gr,width=winSize,fix="center")
     bwdata<-rtracklayer::import.bw(bwFiles[[b]])
+    if(logScore==T){
+      bwdata$score<-log2(bwdata$score+1)
+    }
     cov<-GenomicRanges::coverage(bwdata,weight="score")
     gr<-GenomicRanges::binnedAverage(gr,cov,paste0(names(bwFiles)[b],"__win",0))
     #gr$numGenes<-countOverlaps(gr,bwdata)
@@ -454,7 +458,8 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
   allavrbins<-do.call(rbind,avrbins)
   allavrbins$window<-factor(allavrbins$window,levels=c(-numWins:numWins)*winSize/1000)
   p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) +
-    ggplot2::facet_grid(SMC~.,space="free_y",shrink=T)+
+    ggplot2::geom_smooth(method="loess")+
+    ggplot2::facet_grid(SMC~.,shrink=T)+
     ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
     ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
     ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
@@ -474,3 +479,5 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10){
   #   ggplot2::geom_jitter()
   return(p)
 }
+
+

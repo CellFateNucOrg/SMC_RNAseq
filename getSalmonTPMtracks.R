@@ -87,6 +87,12 @@ makeAvrTPMbedgraph<-function(strainName, txi, idx, metadata){
   genegr<-sort(genegr)
   export.bed(genegr,con=paste0(outPath,"/tracks/PMW",strainName,"_TPM_avr.bed"))
   export(genegr,con=paste0(outPath,"/tracks/PMW",strainName,"_TPM_avr.bedgraph"),format="bedGraph")
+
+  bins <- tileGenome(seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans), tilewidth=10,
+                     cut.last.tile.in.chrom=TRUE)
+  cov<-coverage(genegr,weight="score")
+  ba<-binnedAverage(bins,numvar=cov,varname="score")
+  export(ba,con=paste0(outPath,"/tracks/PMW",strainName,"_TPM_avr.bw"),format="bigwig")
 }
 
 
@@ -120,5 +126,15 @@ makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
 
 tpmStrain="828"
 idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
+
+tpmStrain="844"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="0mM"
+sampleTable[idx,]  # for visual inspection
+makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
+
+tpmStrain="821"
+idx<-sampleTable$strain==tpmStrain & sampleTable$auxin=="1mM"
 sampleTable[idx,]  # for visual inspection
 makeAvrTPMbedgraph(strainName=tpmStrain, txi=txi, idx=idx, metadata=metadata)
