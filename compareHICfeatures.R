@@ -1900,6 +1900,8 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 #clickedBatch="366"
 clickedBatch="382"
 
+ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
+
 loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
 grl<-zipup(loops)
 anchor1<-do.call(c,lapply(grl,"[",1))
@@ -1914,11 +1916,18 @@ anchor2$loopNum<-paste0("loop",1:length(anchor2))
 tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
 # tads_in<-reduce(tads_in)
 tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+
+ol<-findOverlaps(ceTiles,tads_in)
+tenkbInTads<-ceTiles[unique(queryHits(ol))]
+
 anchors<-sort(c(anchor1,anchor2))
 anchors<-resize(anchors,width=10000,fix="center")
-
 reduce(anchors)
 
+ol<-findOverlaps(tenkbInTads,anchors)
+tenkbInTads<-tenkbInTads[-queryHits(ol)]
+
+width(tenkbInTads)
 width(anchors)
 dataList<-list()
 plotList<-list()
@@ -1932,7 +1941,7 @@ for (grp in useContrasts){
 
   salmongr<-sort(salmongr)
 
-  ol<-findOverlaps(salmongr,tads_in,type="within")
+  ol<-findOverlaps(salmongr,tenkbInTads)
   insideTads<-salmongr[queryHits(ol)]
 
   ol<-findOverlaps(salmongr,anchors)
@@ -2195,7 +2204,7 @@ if(dir.exists(paste0(outPath,"/tracks/p0.05_lfc0.5"))){
 }
 
 
-# ### TPM ------
+#### TPM ------
 anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
                      file=c(paste0(outPath,"/otherData/all_anchors_loops_",
                                    c("366","382"),"_full_size_correct.bed"),
@@ -2244,6 +2253,7 @@ for(anch in 1:nrow(anchordf)){
               clspace=c("#00008B", "#FFFFE0","#8B0000"))
   dev.off()
 }
+
 
 
 

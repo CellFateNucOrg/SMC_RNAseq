@@ -177,3 +177,85 @@ for (grp in useContrasts){
 
 
 
+
+############# plot length vs basal expression
+chrSubset="autosomes"
+localPadj=0.05
+localLFC=0
+grp=useContrasts[1]
+listTbls<-list()
+for(grp in useContrasts[c(3,6,7,8,9)]){
+  salmon<-data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  sig<-getSignificantGenes(salmon, padj=localPadj, lfc=localLFC,
+                                        namePadjCol="padj",
+                                        nameLfcCol="log2FoldChange",
+                                        direction="both",
+                                        chr=chrSubset, nameChrCol="chr")
+  sig$geneLength<-sig$end-sig$start
+  sig$upVdown<-factor(ifelse(sig$log2FoldChange>0,"up","down"))
+  sig$SMC<-grp
+  listTbls[[grp]]<-sig
+}
+
+
+allSig<-do.call(rbind,listTbls)
+allSig$SMC<-factor(allSig$SMC,levels=useContrasts[c(1,3,4,6,7,8,9)])
+p1<-ggplot(allSig,aes(x=log2(geneLength),y=log2(baseMean),color=log2FoldChange)) +
+    geom_point(size=0.4) +
+    scale_color_gradient2(low=muted("#ff000055"),mid="#ffffff22",
+                          high=muted("#0000ff55"), na.value="#ffffff22",
+                          limits=c(-0.5,0.5),oob=scales::squish,name="Log2FC")+
+    facet_grid(rows=vars(SMC)) +theme_bw()+
+  ggtitle(paste0("Significantly changed genes on ",chrSubset," LFC>",localLFC))+
+  theme(legend.position = "bottom")
+
+
+
+uniqGenes<-allSig %>% distinct(wormbaseID,geneLength)
+
+allSig$lengthBin<-cut(allSig$geneLength,quantile(uniqGenes$geneLength,seq(0,1,0.1)),
+                      dig.lab=0,ordered_result=T,right=T,include.lowest=T)
+
+
+labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$lengthBin) ))),
+                 upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$lengthBin) ))))
+
+levels(allSig$lengthBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
+#allSig[is.na(allSig$lengthBin),]
+p2<-ggplot(allSig, aes(x=lengthBin,fill=upVdown)) + geom_bar(position="fill") +
+  facet_grid(rows=vars(SMC)) + theme_bw() +
+  scale_fill_manual(values=c(muted("red"),muted("blue")),name="Log2FC") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
+  ylab("Fraction of genes") +
+  ggtitle(paste0("Proportion up vs down by gene length"))
+#+
+#  geom_text(aes(label = ..count.., y=..count..),  stat = "count",
+#            position = position_fill(vjust = .5),col="white",angle=90)
+
+#p2
+
+p<-ggarrange(p1,p2,ncol=2,widths=c(3,1.5))
+ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"geneLengthBaseMean&LFC_",
+                       chrSubset,"_padj",localPadj,"_lfc", localLFC,".pdf"), plot=p,
+       width=8, height=11,device="pdf")
+
+
+
+### binned expression
+allSig$expressionBin<-cut(allSig$baseMean,quantile(allSig$baseMean,seq(0,1,0.1)),
+                      dig.lab=0,ordered_result=T,right=T,include.lowest=T)
+
+allSig %>% dplyr::group_by(SMC,expressionBin,upVdown) %>% dplyr::summarise(count=n())
+
+labs<-data.frame(lower = factor( as.numeric(sub("(\\(|\\[)(.+),.*", "\\2", levels(allSig$expressionBin) ))),
+                 upper = factor( as.numeric(sub("[^,]*,([^]]*)\\]", "\\1", levels(allSig$expressionBin) ))))
+
+levels(allSig$expressionBin)<-paste(levels(labs$lower), levels(labs$upper),sep="-")
+#allSig[is.na(allSig$expressionBin),]
+p3<-ggplot(allSig, aes(x=expressionBin,fill=upVdown)) + geom_bar(position="fill") +
+  facet_grid(rows=vars(SMC)) + theme_bw() +
+  scale_fill_manual(values=c(muted("red"),muted("blue")),name="Log2FC") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),legend.position = "bottom") +
+  ylab("Fraction of genes") +
+  ggtitle(paste0("Proportion up vs down by gene length"))
+p3
