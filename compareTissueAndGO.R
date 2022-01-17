@@ -11,9 +11,20 @@ library(dplyr)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareTissueAndGO"
+print(scriptName)
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
+
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0(dirname(fileNamePrefix),"/",
+                                           scriptName)))
+
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 
 
@@ -23,8 +34,8 @@ metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
 ## need to process by dropping excel file into http://www.wormcat.com
 ## since r function does not seem to work.
 
-if(!dir.exists(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/wormcat/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/wormcat/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/wormcat/",dirname(fileNamePrefix)),
              recursive=T)
 }
 
@@ -36,8 +47,8 @@ if(!file.exists(wormcatData)){
 #read.csv(wormcatData)
 # ## all genes
 # sigTables<-list()
-# for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+# for (grp in useContrasts){
+#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 #
 #   sigTables[[paste0(grp,"_all")]]<-as.data.frame(
 #     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -50,8 +61,8 @@ if(!file.exists(wormcatData)){
 
 
 
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   ### upregulated genes
   sigTable<-data.frame(Wormbase.ID=getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -71,7 +82,7 @@ for(grp in groupsOI){
                 zip_files=FALSE)
 
   ### down regulated genes
-  sigTable<-data.frame(Wormbase.ID=getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
+  sigTable<-data.frame(Wormbase.ID=getSignificantGenes(salmon, padj=padjVal, lfc= -lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
@@ -86,8 +97,6 @@ for(grp in groupsOI){
                 input_type="Wormbase.ID", rm_dir=FALSE,
                 zip_files=FALSE)
 }
-
-
 
 
 
@@ -118,16 +127,16 @@ problemIDs<-c(177376, 190779, 188651, 13217889, 3565958, 13183957, 189501, 18587
 
 
 
-if(!dir.exists(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/wormtissue/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/tissue/wormtissue/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/tissue/wormtissue/",dirname(fileNamePrefix)),
              recursive=T)
 }
 
 
 ## upregulated genes
 sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -140,7 +149,7 @@ sigGenes<-lapply(sigTables, "[", ,"entrezID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for(grp in groupsOI){
+for(grp in useContrasts){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
   write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_upGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
@@ -149,8 +158,8 @@ for(grp in groupsOI){
 
 ## downregulated genes
 sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -163,7 +172,7 @@ sigGenes<-lapply(sigTables, "[", ,"entrezID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for(grp in groupsOI){
+for(grp in useContrasts){
   subset<-sigGenes[[grp]][sigGenes[[grp]] %in% tissueScores$entrez & !( sigGenes[[grp]] %in% problemIDs) ]
   print(paste(grp,length(subset),"genes"))
   write.table(subset, file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_ENTREZ.txt"), quote=F, row.names=F,col.names=F)
@@ -175,8 +184,8 @@ for(grp in groupsOI){
 
 ## upregulated genes
 sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -189,16 +198,19 @@ sigGenes<-lapply(sigTables, "[", ,"sequenceID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for(grp in groupsOI){
+for(grp in useContrasts){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
-  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_upGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
+  write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",
+                        fileNamePrefix,grp,
+                        "_upGenes_sequenceID.txt"),
+              quote=F, row.names=F,col.names=F)
 }
 
 
 ## downregulated genes
 sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
   salmon<-salmon[salmon$entrezID %in% tissueScores$entrez,]
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -211,7 +223,7 @@ sigGenes<-lapply(sigTables, "[", ,"sequenceID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for(grp in groupsOI){
+for(grp in useContrasts){
   print(paste(grp,length(sigGenes[[grp]]),"genes"))
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/wormtissue/",fileNamePrefix,grp,"_downGenes_sequenceID.txt"), quote=F, row.names=F,col.names=F)
 }
@@ -223,8 +235,8 @@ for(grp in groupsOI){
 ########-
 # https://www.micropublication.org/media/2018/03/microPublication.biology-10.17912-W25Q2N.pdf
 
-if(!dir.exists(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"))) {
-  dir.create(paste0(outPath,"/tissue/tea/p",padjVal,"_lfc",lfcVal,"/"),
+if(!dir.exists(paste0(outPath,"/tissue/tea/",dirname(fileNamePrefix)))) {
+  dir.create(paste0(outPath,"/tissue/tea/",dirname(fileNamePrefix)),
              recursive=T)
 }
 
@@ -252,8 +264,8 @@ if(!file.exists(pheDict)){
 }
 # ## significantly changed genes
 # sigTables<-list()
-# for (grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+# for (grp in useContrasts){
+#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 #
 #   sigTables[[paste0(grp)]]<-as.data.frame(
 #     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -271,11 +283,11 @@ condaActivate<-gsub("conda$","activate",conda_binary(conda = "auto"))
 sink(file=paste0(outPath,"/runTea.sh"),append=FALSE, type="output")
 cat("#! /bin/bash\n")
 cat(paste0("source ",condaActivate, " tea\n"))
-cat(paste0("cd ./tissue/tea/p",padjVal,"_lfc",lfcVal,"\n"))
+cat(paste0("cd ./tissue/tea/",dirname(fileNamePrefix),"\n"))
 #cat("cd ./tissue/tea\n")
 sink()
 # #file.create(paste0(outPath,"/runTea.sh"),overwrite=T)
-# for (grp in groupsOI){
+# for (grp in useContrasts){
 #   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",grp,"_allGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
 #   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
 #   cat(paste0("tea -q 0.05 -s ",grp,"_allGenes_WBID.txt ", grp,"_all_tissue tissue\n"))
@@ -286,8 +298,8 @@ sink()
 
 ## upregulated genes
 sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
@@ -300,8 +312,8 @@ sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-partialPrefix=gsub(paste0("p",padjVal,"_lfc",lfcVal,"/"),"",fileNamePrefix)
-for(grp in groupsOI){
+partialPrefix=basename(fileNamePrefix)
+for(grp in useContrasts){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_upGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
   cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_upGenes_WBID.txt ", partialPrefix,grp,"_up_tissue tissue\n"))
@@ -313,8 +325,8 @@ for(grp in groupsOI){
 
 ## downregulated genes
 sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
@@ -327,7 +339,7 @@ sigGenes<-lapply(sigTables, "[", ,"wormbaseID")
 lapply(sigGenes,length)
 sigGenes<-lapply(sigGenes,na.omit)
 
-for(grp in groupsOI){
+for(grp in useContrasts){
   write.table(sigGenes[[grp]], file=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_downGenes_WBID.txt"), quote=F, row.names=F,col.names=F)
   sink(file=paste0(outPath,"/runTea.sh"),append=TRUE, type="output")
   cat(paste0("tea -d ../../../",anaDict," -q 0.05 -s ",partialPrefix,grp,"_downGenes_WBID.txt ", partialPrefix, grp,"_down_tissue tissue\n"))
@@ -345,7 +357,40 @@ file.remove(paste0(outPath,"/runTea.sh"))
 system(paste0("chmod +x ",outPath,"/runTea1.sh"))
 system(paste0(outPath,"/runTea1.sh"),wait=F)
 
-
+###### compile results in excel-----
+file.remove("allTEAresults.xlsx")
+categories=c("go","tissue","phe")
+for(grp in useContrasts){
+  go<-NULL
+  for(category in categories){
+    up<-read.delim(paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_up_",
+                          category,".tsv"))
+    if(nrow(up)>0){
+      up$SMC<-grp
+      up$category<-category
+      up$UpOrDownRegulated<-"up"
+      if(is.null(go)){
+        go<-up
+      } else {
+        go<-rbind(go,up)
+      }
+    }
+    down<-read.delim(paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_down_",
+                          category,".tsv"))
+    if(nrow(down)>0){
+      down$SMC<-grp
+      down$category<-category
+      down$UpOrDownRegulated<-"down"
+      if(is.null(go)){
+        go<-down
+      } else {
+        go<-rbind(go,down)
+      }
+    }
+  }
+  write.xlsx(go,file="allTEAresults.xlsx",sheetName=grp,
+          append=T,row.names=F)
+}
 
 
 ##########################-
@@ -354,23 +399,31 @@ system(paste0(outPath,"/runTea1.sh"),wait=F)
 broad<-read.csv(file=paste0(outPath,"/publicData/broadVregExpn_Gerstein2014.csv"),
         stringsAsFactors=T)
 
-  sigTables<-list()
-for(grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+sigTables<-list()
+bgCounts<-list()
+for(grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   sigTables[[paste0(grp)]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+                        getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="both",
                         chr="all", nameChrCol="chr"))
   sigTables[[paste0(grp)]]$SMC<-grp
+  bgCounts[[paste0(grp)]]<-as.data.frame(salmon)
+  bgCounts[[paste0(grp)]]$SMC<-grp
 }
 sigGenes<-lapply(sigTables, "[", ,c("wormbaseID","sequenceID", "baseMean",
                                     "log2FoldChange","padj","SMC"))
+bgCounts<-lapply(bgCounts,"[", ,c("wormbaseID","sequenceID", "baseMean",
+                         "log2FoldChange","padj","SMC"))
 lapply(sigGenes,dim)
+lapply(bgCounts,dim)
 #sigGenes<-lapply(sigGenes,na.omit)
 sig<-do.call(rbind,sigGenes)
+bgCounts<-do.call(rbind,bgCounts)
+
 row.names(sig)<-NULL
 sig<-inner_join(sig,broad,by="sequenceID")
 sig$upVdown<-NA
@@ -378,27 +431,42 @@ sig$upVdown[sig$log2FoldChange>0]<-"up"
 sig$upVdown[sig$log2FoldChange<0]<-"down"
 sig$upVdown<-factor(sig$upVdown,levels=c("up","down"))
 
+row.names(bgCounts)<-NULL
+bgCounts<-inner_join(bgCounts,broad,by="sequenceID")
+bgCounts$upVdown<-NA
+bgCounts$upVdown[bgCounts$log2FoldChange>0]<-"up"
+bgCounts$upVdown[bgCounts$log2FoldChange<0]<-"down"
+bgCounts$upVdown<-factor(bgCounts$upVdown,levels=c("up","down"))
+
+
 p1<-ggplot2::ggplot(sig, aes(x=category, y=abs(log2FoldChange), fill=upVdown))+
   geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
   facet_wrap(~SMC)+ ylim(c(0,4))+theme_classic()+
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90))+
+  ggtitle("LFC of genes up/down regulated by domain type")
 
 
-p2<-ggplot2::ggplot(sig, aes(x=category, y=-log10(padj), fill=upVdown))+
-  geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
-  facet_wrap(~SMC)+ ylim(c(0,4))+theme_classic()+
-  theme(axis.text.x = element_text(angle = 90))
-
-
-p3<-ggplot2::ggplot(sig, aes(x=category, y=log2(baseMean), fill=upVdown))+
+p2<-ggplot2::ggplot(sig, aes(x=category, y=log2(baseMean), fill=upVdown))+
   geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
   facet_wrap(~SMC)+theme_classic()+
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90))+
+  ggtitle("Mean expression of genes up/down regulated by domain type")
 
 
-p<-ggpubr::ggarrange(p1,p3,p2,ncol=1,nrow=3)
-ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"broadExpn_",
-                                paste(groupsOI, collapse="_"),"_padj",
+df<-sig %>% dplyr::group_by(SMC,category,upVdown) %>% dplyr::summarize(count=n())
+dfbg<-bgCounts %>% dplyr::group_by(SMC,category) %>% dplyr::summarize(count=n())
+df1<-left_join(dfbg,df,by=c("SMC","category"),suffix=c("_total",""))
+df1$fraction<-df1$count/df1$count_total
+p3<-ggplot2::ggplot(df1, aes(x=category, y=fraction, fill=upVdown))+
+  geom_bar(stat="identity",position=position_dodge())+
+  facet_wrap(~SMC)+theme_classic()+
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylab("Fraction of genes") +
+  ggtitle("Fraction of genes up/down regulated by domain type")
+
+p<-ggpubr::ggarrange(p1,p2,p3,ncol=1,nrow=3)
+ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"broadExpn_",
+                                paste(useContrasts, collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
 

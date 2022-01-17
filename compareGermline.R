@@ -2,13 +2,24 @@ library(ggplot2)
 library(EnhancedVolcano)
 library(eulerr)
 library(lattice)
+library(fgsea)
+library(clusterProfiler)
 
 source("functions.R")
 source("./variableSettings.R")
+scriptName <- "compareGermline"
+print(scriptName)
+
 if(filterData){
-  fileNamePrefix=filterPrefix
+  fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
+makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
+                                    paste0(dirname(fileNamePrefix),"/",
+                                           scriptName)))
 
 eulerLabelsType<-c("counts")
 
@@ -31,9 +42,8 @@ if(filterData){
 }
 
 
-for (grp in groupsOI){
-  #grp="dpy26cs"
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
   if(filterData){
     # remove filtered genes
@@ -49,9 +59,9 @@ for (grp in groupsOI){
 
 
   germsoma<-list(salmon=salmonSig$wormbaseID, germline=reinke$wormbaseID)
-  names(germsoma)<-c(prettyGeneName(grp),"germline")
+  names(germsoma)<-c(grp,"germline")
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,"venn_", grp,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"venn_", grp,
                   "VsGermline_padj", padjVal, "_lfc", lfcVal,".pdf"),
                   width=5,height=10,paper="a4")
   fit<-euler(germsoma)
@@ -66,7 +76,7 @@ for (grp in groupsOI){
   germsoma<-list(salmon=salmonSig$wormbaseID,
           germlineL4=boeck$wormbaseID[boeck$germline=="germlineL4"],
           somaL4=boeck$wormbaseID[boeck$germline=="somaL4"])
-  names(germsoma)<-c(prettyGeneName(grp),"germlineL4","somaL4")
+  names(germsoma)<-c(grp,"germlineL4","somaL4")
   txtLabels<-list()
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[2])]<-round(100*length(intersect(germsoma[[1]],germsoma[[2]]))/length(germsoma[[1]]),1)
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[3])]<-round(100*length(intersect(germsoma[[1]],germsoma[[3]]))/length(germsoma[[1]]),1)
@@ -82,7 +92,7 @@ for (grp in groupsOI){
   germsoma<-list(salmon=salmonSig$wormbaseID,
           gonadYA=boeck$wormbaseID[boeck$germline=="gonadYA"],
           somaYA=boeck$wormbaseID[boeck$germline=="somaYA"])
-  names(germsoma)<-c(prettyGeneName(grp),"gonadYA","somaYA")
+  names(germsoma)<-c(grp,"gonadYA","somaYA")
   txtLabels<-list()
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[2])]<-round(100*length(intersect(germsoma[[1]],germsoma[[2]]))/length(germsoma[[1]]),1)
   txtLabels[paste0("% ",names(germsoma)[1]," in ",names(germsoma)[3])]<-round(100*length(intersect(germsoma[[1]],germsoma[[3]]))/length(germsoma[[1]]),1)
@@ -96,7 +106,7 @@ for (grp in groupsOI){
   dev.off()
 
   #p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-  # ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,"venn_",
+  # ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"venn_",
   #                                 grp,"VsGermline_padj",
   #                                 padjVal,"_lfc", lfcVal,".pdf"),
   #                 plot=p, device="pdf",width=29,height=11,units="cm")
@@ -108,10 +118,10 @@ for (grp in groupsOI){
 
 ## upregulated genes -----
 sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
+  sigTables[[grp]]<-as.data.frame(
     getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
@@ -123,7 +133,7 @@ sigGenes<-lapply(sigTables, "[[" ,"wormbaseID")
 prettySampleNames<-names(sigGenes)
 sigGenes[["germline"]]<-reinke$wormbaseID
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                 "venn_UpVsGermline_padj",
                 padjVal,"_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -142,7 +152,7 @@ lapply(eulerPlotList,print)
 dev.off()
 
 # p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+# ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
 #                                 "venn_UpVsGermline_padj",
 #                                 padjVal,"_lfc", lfcVal,".pdf"),
 #                 plot=p, device="pdf",width=29,height=11,units="cm")
@@ -175,11 +185,11 @@ if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
 
 ## downregulated genes-----
 sigTables<-list()
-for (grp in groupsOI){
-  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults_p",padjVal,".rds"))
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
 
-  sigTables[[prettyGeneName(grp)]]<-as.data.frame(
-    getSignificantGenes(salmon, padj=padjVal, lfc=lfcVal,
+  sigTables[[grp]]<-as.data.frame(
+    getSignificantGenes(salmon, padj=padjVal, lfc=-lfcVal,
                         namePadjCol="padj",
                         nameLfcCol="log2FoldChange",
                         direction="lt",
@@ -190,7 +200,7 @@ sigGenes<-lapply(sigTables, "[[","wormbaseID")
 prettySampleNames<-names(sigGenes)
 sigGenes[["germline"]]<-reinke$wormbaseID
 
-pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                 "venn_DownVsGermline_padj",
                 padjVal,"_lfc", lfcVal,".pdf"),
     width=5,height=10,paper="a4")
@@ -211,7 +221,7 @@ lapply(eulerPlotList,print)
 dev.off()
 
 #p<-ggpubr::ggarrange(p1,p2,p3,ncol=3,nrow=1)
-#ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
+#ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,
 #                                "venn_DownVsGermline_padj",
 #                                padjVal,"_lfc", lfcVal,".pdf"),
 #                plot=p, device="pdf",width=29,height=11,units="cm")
@@ -241,7 +251,7 @@ if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
             main=list(label=paste0("kle-2 and scc-1 genes down: lfc>", lfcVal,
                                    ", padj<",padjVal,"\n",totalSums), fontsize=8))
 
-  pdf(file=paste0(outPath, "/plots/",fileNamePrefix,
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,
                   "venn_kle2scc1setsVsGermline_padj",
                   padjVal,"_lfc", lfcVal,".pdf"),
       width=5,height=10,paper="a4")
@@ -251,8 +261,95 @@ if(all(c("kle-2cs","scc-1cs") %in% prettySampleNames)){
   print(p14)
   dev.off()
 }
-# p<-ggpubr::ggarrange(p11,p12,p13,p14,ncol=2,nrow=2)
-# ggplot2::ggsave(filename=paste0(outPath, "/plots/",fileNamePrefix,
-#                                 "venn_kle2scc1setsVsGermline_padj",
-#                                 padjVal,"_lfc", lfcVal,".pdf"),
-#                 plot=p, device="pdf",width=21,height=19,units="cm")
+
+
+
+#####################################################-
+## GSEA germline-soma data-----
+#####################################################-
+
+boeck<-read.csv(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
+                stringsAsFactors=F)
+reinke<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
+                 stringsAsFactors=F)
+
+if(filterData){
+  # remove filtered genes
+  idx<-boeck$wormbaseID %in% toFilter
+  boeck<-boeck[!idx,]
+
+  idx<-reinke$wormbaseID %in% toFilter
+  reinke<-reinke[!idx,]
+}
+
+boeckLst<-split(boeck$wormbaseID,boeck$germline)
+names(boeckLst)<-paste0("Boeck2016_",names(boeckLst))
+
+reinkeLst<-split(reinke$wormbaseID,reinke$exclusive.category)
+names(reinkeLst)<-paste0("Reinke2004_",gsub(" ",".",names(reinkeLst)))
+
+germline<-c(boeckLst,reinkeLst)
+
+gseaTbl<-list()
+leadEdgeTbl<-NULL
+for (grp in useContrasts){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds"))
+
+  if(filterData){
+    # remove filtered genes
+    idx<-salmon$wormbaseID %in% toFilter
+    salmon<-salmon[!idx,]
+  }
+  # making ranks (ranks go from high to low)
+  ranks <- salmon$log2FoldChange
+  names(ranks) <- salmon$wormbaseID
+  head(ranks)
+
+  fgseaRes <- fgsea(germline, ranks, minSize=5, maxSize = 5000)
+
+  head(fgseaRes[order(padj), ])
+  fgseaRes[padj<=0.05,]
+  gseaTbl[[grp]]<-plotGseaTable(germline, ranks, fgseaRes,gseaParam=0.1,render=F,
+                                colwidths = c(5, 3, 0.8, 0, 1.2))
+  #barplot(sort(ranks, decreasing = T))
+  gseaList<-list()
+  for (pathName in unlist(fgseaRes[padj<0.05,"pathway"])) {
+    gseaList[[pathName]]<-plotEnrichment(germline[[pathName]], ranks) +
+      labs(title=paste0(grp," enrichment in ",pathName)) +
+      geom_vline(xintercept=sum(sort(ranks)>0), colour="grey40")+
+      annotate("text", x=length(ranks)*0.75, y=fgseaRes[pathway==pathName,ES]*0.9,
+               label= paste(paste(paste(c("padj","NES","size"),
+                                        fgseaRes[pathway==pathName,c(round(padj,3),round(NES,1),size)],
+                                        sep=":"),collapse=", ")))
+    leadEdge<-unlist(fgseaRes[fgseaRes$pathway==pathName,"leadingEdge"])
+    leadEdge<-data.frame(wormbaseID=leadEdge)
+    #row.names(leadEdge)<-NULL
+    leadEdge<-left_join(leadEdge,as.data.frame(salmon), by="wormbaseID")
+    leadEdge$group<-grp
+    leadEdge$pathway<-pathName
+    if(is.null(leadEdgeTbl)){
+      leadEdgeTbl<-leadEdge
+    } else {
+      leadEdgeTbl<-rbind(leadEdgeTbl,leadEdge)
+    }
+    #print(paste0(grp," in ",pathName,":  ",paste(sort(leadEdge$publicID),collapse=",")))
+    #print(leadEdge)
+  }
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gsea_", grp,
+                  "VsGermlineDatasets.pdf"),
+      width=5,height=10,paper="a4")
+  #p<-ggpubr::ggarrange(plotlist=gseaList,nrow=2,ncol=1)
+  p<-gridExtra::marrangeGrob(grobs=gseaList, nrow=3, ncol=1)
+  print(p)
+  dev.off()
+}
+
+if(length(gseaList)>0){
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,"gseaAll_GermlineDatasets.pdf"),
+      width=16,height=11)
+  p<-gridExtra::marrangeGrob(grobs=gseaTbl, ncol=3, nrow=1,padding=unit(0.01,"line"))
+  print(p)
+  dev.off()
+
+  write.table(leadEdgeTbl,file=paste0(outPath,"/txt/",outputNamePrefix,"gseaLeadEdgeGenes.tsv"),sep="\t")
+}

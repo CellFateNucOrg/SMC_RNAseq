@@ -7,19 +7,31 @@ library(dplyr)
 
 source("functions.R")
 source("./variableSettings.R")
+
+scriptName <- "compareGeneLists"
+print(scriptName)
+
+#chosenSubset=names(contrastNames) # for all complex contrasts
+chosenSubset=useContrasts #for most biologicall interesting contrasts
+
 if(filterData){
   fileNamePrefix<-filterPrefix
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
+} else {
+  outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
-
+makeDirs(outPath,dirNameList=paste0(c("plots/"),
+                                    paste0(dirname(fileNamePrefix),"/",
+                                           scriptName)))
 
 
 ######################-
 # Make combined table ----------------------------------------------
 ######################-
 geneTable<-NULL
-for (grp in groupsOI){
-  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, grp,
+for (grp in chosenSubset){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                                        "_DESeq2_fullResults_p",padjVal,".rds")))
   colnames(salmon)[colnames(salmon)=="baseMean"]<-paste0(grp,"_baseMean")
   colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
@@ -90,7 +102,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 
@@ -142,7 +154,7 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"checkpoint.pdf"),height=19,width=19,units="cm",device="pdf")
 
 
 
@@ -195,8 +207,136 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
 
 p<-ggarrange(p1,p2,nrow=2)
 
-ggsave(paste0(outPath,"/plots/",fileNamePrefix,"_smc.pdf"),height=19,width=29,units="cm",device="pdf")
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"smc.pdf"),height=19,width=29,units="cm",device="pdf")
 
+
+#######################-
+## Classic dosage compensation genes-------
+#######################-
+
+pubDC1<-readRDS(paste0(outPath,"/publicData/published_DCgr.rds"))
+#add her-1
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+her1<-metadata[grep("her-1",metadata$publicID),]
+pubDC1<-c(her1,pubDC1)
+
+if(filterData){
+  # remove filtered genes
+  idx<-pubDC1$wormbaseID %in% toFilter
+  pubDC1<-pubDC1[!idx,]
+}
+
+
+pubDC<-join(data.frame(pubDC1),geneTable,by="wormbaseID")
+pubDC$publicID<-ifelse(pubDC$publicID!="",pubDC$publicID,pubDC$sequenceID)
+pubDC$publicID<-factor(pubDC$publicID,levels=unique(pubDC$publicID))
+
+
+lfcCols<-grep("_lfc",names(pubDC))
+df<-cbind(pubDC[c("publicID")],pubDC[,lfcCols])
+df <-df %>% gather(key="sample",value="Log2FoldChange",2:dim(df)[2])
+df$sample<-gsub("_lfc","",df$sample)
+colnames(df)[1]<-"gene"
+#roleLab<-rle(df$role[df$sample==df$sample[1]])
+#labPos<-cumsum(c(0,roleLab$lengths[-length(roleLab$lengths)]))+(roleLab$lengths/2)
+
+p1<-ggplot(df,aes(x=gene,y=Log2FoldChange)) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Dosage compensated genes - log2 fold change") +
+  geom_hline(yintercept=c(-0.5,0.5),linetype="dashed", color="grey60") #+
+#annotate("text", x=c(labPos), y = - 1, label =roleLab$values, size=2)
+
+
+padjCols<-grep("_padj",names(pubDC))
+
+df<-cbind(pubDC$publicID,pubDC[,padjCols])
+
+df <-df %>% gather(key="sample",value="padj",2:dim(df)[2])
+df$sample<-gsub("_padj","",df$sample)
+colnames(df)[1]<-"gene"
+
+p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() + ylab("-log10(P adjusted)") +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Dosage compensated genes - adjusted p value") +
+  geom_hline(yintercept=-log(0.05,base=10),linetype="dashed", color="grey60")
+
+p<-ggarrange(p1,p2,nrow=2)
+
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"pubDC.pdf"),height=19,width=29,units="cm",device="pdf")
+
+
+
+#######################-
+## chromatin complexes-------
+#######################-
+
+chrom<-read_excel(paste0(outPath,"/publicData/chromatinComplexes.xlsx"))
+
+metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
+
+chrom<-left_join(chrom,data.frame(metadata),by="publicID")
+
+if(filterData){
+  # remove filtered genes
+  idx<-chrom$wormbaseID %in% toFilter
+  chrom<-chrom[!idx,]
+}
+
+
+chrom<-left_join(chrom,geneTable,by="wormbaseID")
+chrom[,grep("\\.y$",colnames(chrom))]<-NULL
+colnames(chrom)<-gsub("\\.x$","",colnames(chrom))
+
+#chrom$publicID<-ifelse(chrom$publicID!="",chrom$publicID,chrom$sequenceID)
+chrom$publicID<-factor(chrom$publicID,levels=chrom$publicID)
+
+
+lfcCols<-grep("_lfc",names(chrom))
+df<-cbind(chrom[c("publicID","complex")],chrom[,lfcCols])
+df <-df %>% gather(key="sample",value="Log2FoldChange",3:dim(df)[2])
+df$sample<-gsub("_lfc","",df$sample)
+colnames(df)[1]<-"gene"
+#roleLab<-rle(df$role[df$sample==df$sample[1]])
+#labPos<-cumsum(c(0,roleLab$lengths[-length(roleLab$lengths)]))+(roleLab$lengths/2)
+
+df$complex<-factor(df$complex,levels=unique(df$complex))
+#dfann<-df %>% dplyr::group_by(complex) %>%
+#  dplyr::summarise(count=n()/7) %>%
+#  mutate(start=cumsum(c(1,count[-length(count)])),end=cumsum(count)) %>%
+#  mutate(startGene=df$gene[start],endGene=df$gene[end])
+
+
+
+p1<-ggplot(df,aes(x=gene,y=Log2FoldChange)) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Chromatin complexes - log2 fold change") +
+  geom_hline(yintercept=c(-0.5,0.5),linetype="dashed", color="grey60") #+
+#annotate("text", x=c(labPos), y = - 1, label =roleLab$values, size=2)
+
+padjCols<-grep("_padj",names(chrom))
+
+df<-cbind(chrom$publicID,chrom[,padjCols])
+
+df <-df %>% gather(key="sample",value="padj",2:dim(df)[2])
+df$sample<-gsub("_padj","",df$sample)
+colnames(df)[1]<-"gene"
+
+p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
+  geom_bar(aes(fill=sample), stat="identity",position="dodge") +
+  theme_minimal() + ylab("-log10(P adjusted)") +
+  theme(axis.text.x = element_text(angle = 60, hjust=1)) +
+  ggtitle("Chromatin complexes - adjusted p value") +
+  geom_hline(yintercept=-log(0.05,base=10),linetype="dashed", color="grey60")
+
+p<-ggarrange(p1,p2,nrow=2)
+
+ggsave(paste0(outPath,"/plots/",outputNamePrefix,"chromatinComplexes.pdf"),height=19,width=29,units="cm",device="pdf")
 
 
 ######################-

@@ -10,3 +10,4 @@ brc-2
 mre-11
 atm-1
 chk-2
+rnr-2

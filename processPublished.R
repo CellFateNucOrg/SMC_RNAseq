@@ -20,6 +20,8 @@ library(ggplot2)
 library(DESeq2)
 library(rtracklayer)
 library(BSgenome.Celegans.UCSC.ce11)
+library(readxl)
+library(dplyr)
 
 source("./variableSettings.R")
 source("./functions.R")
@@ -180,7 +182,7 @@ JansDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_DCgr.rds
 JansNDC<-as.data.frame(readRDS(file=paste0(outPath,"/publicData/Jans2009_NDCgr.rds")))
 
 localPadj=0.05
-localLFC=0.25
+localLFC=0.5
 kramerdpy27dc<-getSignificantGenes(kramer, padj=localPadj, lfc=localLFC,
                                    namePadjCol="dpy27_RNAi_L3_padj",
                                    nameLfcCol="dpy27_RNAi_L3_log2_fold_change",
@@ -354,24 +356,27 @@ if(! file.exists(paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))){
 
   localPadj=0.05
   localLFC=1
-  hsUP<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsUP<-getSignificantGenes(garrigues, padj=localPadj, lfc=localLFC,
                             namePadjCol="P-adj",
                             nameLfcCol="log2(FC)", direction="gt")
-  hsUP
+  dim(hsUP)
   saveRDS(hsUP,file=paste0(outPath,"/publicData/hsUp_garrigues2019.rds"))
 
-  hsDOWN<-getSignificantGenes(garrigues, padj=localLFC, lfc=localPadj,
+  hsDOWN<-getSignificantGenes(garrigues, padj=localPadj, lfc= -localLFC,
                               namePadjCol="P-adj",
                               nameLfcCol="log2(FC)", direction="lt")
-  hsDOWN
+  dim(hsDOWN)
   saveRDS(hsDOWN,file=paste0(outPath,"/publicData/hsDown_garrigues2019.rds"))
 
   file.remove(paste0(outPath,"/publicData/",garriguesFileName))
 }
 
 
-
-
+################################ germline soma genes ########################
+if(!file.exists(paste0(outPath,"/publicData/germlineData.RDS"))){
+  germlineData<-list()
+  saveRDS(germlineData,paste0(outPath,"/publicData/germlineData.RDS"))
+}
 ###############################-
 ## get germline-soma genes from Boeck-Waterston_GR2016-----
 ###############################-
@@ -470,7 +475,12 @@ if(!file.exists(paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"))) 
                                  rep("germlineL4",nrow(nonsoma))))
   write.csv(glvSoma,paste0(outPath,"/publicData/germlineSomaGenes_Boeck2016.csv"),
             row.names=F)
-
+  germlineData<-readRDS(paste0(outPath,"/publicData/germlineData.RDS"))
+  germlineData[["gonadYA_Boeck2016"]]<-germline$wormbaseID
+  germlineData[["somaYA_Boeck2016"]]<-nongl$wormbaseID
+  germlineData[["somaL4_Boeck2016"]]<-soma$wormbaseID
+  germlineData[["germlineL4_Boeck2016"]]<-nonsoma$wormbaseID
+  saveRDS(germlineData,paste0(outPath,"/publicData/germlineData.RDS"))
   file.remove(paste0("publicData/",tcFile))
 }
 
@@ -491,7 +501,7 @@ if(remakeFiles){
 
 if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
   #link2="http://dev.biologists.org/highwire/filestream/1201187/field_highwire_adjunct_files/0/Data_S1.zip"
-  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1621957576&Signature=5MsXCUgOHCvppBgB6sSCQHzX1r9bREb6jEF4hO8OzwXsiNbOaGc20tFHeqEMOdTUQIvhSUYucZnQUiNshVeQp4rd6KsEAMPNVdBH8MmORDgJN20Ng6imKBCBum0JNovPGXLJKgi6n5N4m8nFfF5bzcgSuU2bNB7Iq5YJr9FT0GwhxfjrXRaQnG4fDpAeQuXIXS2XCx2TgHhRFIsMTAOHnUrme7yNwwaNpRa5fF5jiAk7ImdCf-GCR4OI0-eE8QK-Z~EFqjhq1gSF7JgX0dAzfr51Yvq8Dgm5IYqmo~nKG6TfO356urCbgMX1xKD7~pb6LmZVN6NO54L4vNMBUAHHRg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
+  link2="https://cob.silverchair-cdn.com/cob/content_public/journal/dev/131/2/10.1242_dev.00914/5/dev00914-sup-data_s1.zip?Expires=1632688021&Signature=XWm42IDBQhktZa-HFkbXCUf9tsRusTi~1T0MCyfi3smx69Yl7BcM078~4ObJOKugz6Ojxb5aNlwT94Mf09p-5A7FvUnT0vCAf8xJGZ3Byst1eIIBR4v4M6Smb487D0dh2DbZCsWmogyh6XZNTOss0bOrFcxJ~NUg9fmVR59yYLBUiHuMiEbfHyVd3ACy7bRlcwiXRSsyI4NaWDHaPluFgqgMlFEsibvFhT3aKG3BWs2IbUTearqfls5o2mwxP0GFY5ZAaR973-K7qtNY7U2vKH-cdoO2Aec~OJOKh42VlUaE1F5T8pJ5H2mkT6ZXOK3BPTO7Gmz33vmGzta4nduogg__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
   download.file(link2,paste0("publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
   system(paste0("unzip ",outPath,"/publicData/",glFile,".zip -d ",outPath,"/publicData/",glFile))
@@ -511,7 +521,17 @@ if (!file.exists(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"))) {
 
   write.csv(glData,paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
             row.names=F)
-
+  glData<-read.csv(paste0(outPath,"/publicData/germlineGenes_Reinke2004.csv"),
+                   header=T)
+  #unique(glData$exclusive.category)
+  germlineData<-readRDS(file=paste0(outPath,"/publicData/germlineData.RDS"))
+  germlineData[["hermIntrinsic_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm intrinsic"]
+  germlineData[["sharedIntrinsic_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared intrinsic"]
+  germlineData[["sharedOocyte_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared oocyte"]
+  germlineData[["hermOocyte_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm oocyte"]
+  germlineData[["sharedSperm_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="shared sperm"]
+  germlineData[["hermSperm_Reinke2004"]]<-glData$wormbaseID[glData$exclusive.category=="herm sperm"]
+  saveRDS(germlineData,file=paste0(outPath,"/publicData/germlineData.RDS"))
   file.remove(paste0(outPath,"/publicData/",glFile,"/Fig1\ I\ wt\ vs\ glp4\ enriched\ genes.txt"))
   file.remove(paste0(outPath,"/publicData/",glFile,".zip"))
   system(paste0("rm -rf ",outPath,"/publicData/",glFile))
@@ -576,8 +596,25 @@ dev.off()
 
 
 
+######################### aging #############################################
+if(!file.exists(paste0(outPath,"/publicData/agingTCdata.RDS"))){
+  agingTCdata<-list()
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
+}
+if(!file.exists(paste0(outPath,"/publicData/agingRegData.RDS"))){
+  agingRegData<-list()
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+}
+# aging genes:
+# LOF of daf-2 (insulin receptor) increases lifespan
+# LOF of age-1 (PI3K) increases lifespan
+# LOF of daf-16 (TF repressed by age-1) decreases lifespan
+# LOF of elt-3 causes a decrease in lifespan
+# elt-1 activates elt-3. elt-5 and elt-6 repress elt-3
+# LOF of elt-5&elt-6 cause increase in lifespan
+
 #######################-
-## Aging microarrays (Stuart Kim lab)------
+## Aging microarrays Budovskaya (2008) (Stuart Kim lab)------
 #######################-
 # https://www.cell.com/fulltext/S0092-8674%2808%2900707-1
 
@@ -603,19 +640,357 @@ if(remakeFiles){
 if(!file.exists(paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"))){
   download.file(ageRegulatedURL,paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
   ageReg<-readxl::read_excel(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
-  colnames(ageReg)<-c("sequenceID") #1244 but only 1003 overlap with ws275 gene names
+  colnames(ageReg)<-c("sequenceID") #1244 but only 1011 overlap with ws275 gene names
+  idx<-ageReg$sequenceID %in% metadata$sequenceID
+  ageReg<-ageReg[idx,]
+  ageReg<-left_join(ageReg,as.data.frame(metadata),by=c("sequenceID"))
+
+  download.file(agingMAurl,paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
+  tcMA<-readxl::read_excel(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"),skip=4)
+  colnames(tcMA)[1]<-"sequenceID"
+  idx<-tcMA$sequenceID %in% metadata$sequenceID
+  tcMA<-tcMA[idx,]
+  ageReg<-left_join(ageReg,tcMA,by=c("sequenceID"))
   write.csv(ageReg,paste0(outPath,"/publicData/AgeRegulated_Budovskaya2008.csv"),
             row.names=F,quote=F)
+  tcMA<-left_join(tcMA,as.data.frame(metadata),by=c("sequenceID"))
+  write.csv(tcMA,paste0(outPath,"/publicData/AgingTC_Budovskaya2008.csv"),
+            row.names=F,quote=F)
+  agingTCdata<-readRDS(paste0(outPath,"/publicData/agingTCdata.RDS"))
+  agingTCdata[["day11up_Budovskaya2008"]]<-ageReg$wormbaseID[ageReg$day11_avg>0]
+  agingTCdata[["day11down_Budovskaya2008"]]<-ageReg$wormbaseID[ageReg$day11_avg<0]
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
+  file.remove(paste0(outPath,"/publicData/mmc5_Budovskaya.xls"))
+  file.remove(paste0(outPath,"/publicData/mmc4_Budovskaya.xls"))
 }
+
 # Document S6. Table S5: age-1 Microarray Data
 age1MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/b1a6e947-10b7-438b-8a3a-690c71964854/mmc6.xls"
+if(remakeFiles & file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))){
+  file.remove(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))
+}
+if(!file.exists(paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"))){
+  download.file(age1MAurl,paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+  # there is some in the file. need to open manually and save as xlsx
+  age1MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"),skip=9)
+  # keep only final summary columns
+  age1MA<-age1MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(age1MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  #idx<-age1MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #age1MA<-age1MA[idx,]
+  age1MA<-inner_join(age1MA,as.data.frame(metadata),by="sequenceID")
+  # should be 758 age-1 genes, i have 782: ("ratio" seems to be log ratio!? as there are -ve numbers)
+  # this is the age-1(hx542) allele
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["age1up_Budovskaya2008"]]<-age1MA$wormbaseID[age1MA$pval<0.0001 & age1MA$ratio>0.5]
+  agingRegData[["age1down_Budovskaya2008"]]<-age1MA$wormbaseID[age1MA$pval<0.0001 & age1MA$ratio< -0.5]
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+  write.table(age1MA,paste0(outPath,"/publicData/age1MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
+  file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xls"))
+  file.remove(paste0(outPath,"/publicData/mmc6_Budovskaya.xlsx"))
+}
+
 
 # Document S7. Table S6: daf-16(m26) Microarray Data
 daf16MAurl<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/e172c477-a9c6-4c52-bb8f-fa5211ad4cee/mmc7.xls"
+if(!file.exists(paste0(outPath,"/publicData/daf16MA_Budovskaya2008.csv"))){
+  download.file(daf16MAurl,paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+  daf16MA<-readxl::read_excel(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"),skip=9)
+  # keep only final summary columns
+  daf16MA<-daf16MA[,c(1,2,19,20,21,22,23)]
+  # rename columns
+  colnames(daf16MA)<-c("sequenceID","description","ratio","std","df","tval","pval")
+  daf16MA<-inner_join(daf16MA,as.data.frame(metadata),by="sequenceID")
+  #idx<-daf16MA$sequenceID %in% metadata$sequenceID #18556 genes down to 14645
+  #daf16MA<-daf16MA[idx,]
+  ## should have 886 genes, i have 929:
+  # this is the daf-16(m26 allele)
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["daf16up_Budovskaya2008"]]<-daf16MA$wormbaseID[daf16MA$pval<0.0001 & daf16MA$ratio>0.5]
+  agingRegData[["daf16down_Budovskaya2008"]]<-daf16MA$wormbaseID[daf16MA$pval<0.0001 & daf16MA$ratio< -0.5]
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+  write.table(daf16MA,paste0(outPath,"/publicData/daf16MA_Budovskaya2008.tsv"),
+            row.names=F,quote=F,sep="\t")
+  file.remove(paste0(outPath,"/publicData/mmc7_Budovskaya.xls"))
+}
 
-#Document S8. Table S7: Potential elt-3 GATA Targets
-elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/acd1863d-1265-46da-b42b-f90d720ab245/mmc8.pdf"
 
+
+#Lund (2002) paper:
+#  https://pubmed.ncbi.nlm.nih.gov/12372248/
+# aging timecourse data hard to extract
+
+
+
+#######################-
+## Aging microarrays Murphy(2003)------
+#######################-
+
+#Murphy (2003) paper
+#https://www.nature.com/articles/nature01789#MOESM1
+# daf-2,  daf-2/daf-16 MA
+# I want classI genes upregulated by daf-2 (RNAi) and downregulated by daf-16 RNAi (=pro longevity)
+murphyURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fnature01789/MediaObjects/41586_2003_BFnature01789_MOESM2_ESM.xls"
+
+if(!file.exists(paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"))){
+  download.file(murphyURL,paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+  ageClassI<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=1,skip=1,col_names=c("sequenceID","description"))
+  ageClassII<-readxl::read_excel(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"),
+                                sheet=2,skip=1,col_names=c("sequenceID","description"))
+  ageClassI$sequenceID<-gsub("\\*+","",ageClassI$sequenceID)
+  ageClassII$sequenceID<-gsub("\\*+","",ageClassII$sequenceID)
+  ageClassI<-inner_join(ageClassI,as.data.frame(metadata),by="sequenceID")
+  ageClassII<-inner_join(ageClassII,as.data.frame(metadata),by="sequenceID")
+  ageClassI<-ageClassI[!duplicated(ageClassI$wormbaseID),]
+  ageClassII<-ageClassII[!duplicated(ageClassII$wormbaseID),]
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["classIdaf2updaf16down_Murphy2003"]]<-ageClassI$wormbaseID
+  agingRegData[["classIIdaf16updaf2down_Murphy2003"]]<-ageClassII$wormbaseID
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+  write.table(ageClassI,paste0(outPath,"/publicData/agingClassI_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageClassII,paste0(outPath,"/publicData/agingClassII_Murphy2003.csv"),
+              row.names=F,quote=T,sep=";")
+  file.remove(paste0(outPath,"/publicData/41586_2003_BFnature01789_MOESM2_ESM.xls"))
+}
+
+
+
+#######################-
+## Aging txptome Tarkhov(2019)------
+#######################-
+# A universal transcriptomic signature of age reveals the temporal scaling of Caenorhabditis elegans aging trajectories
+# Andrei E. Tarkhov, Ramani Alla, Srinivas Ayyadevara, Mikhail Pyatnitskiy, Leonid I. Menshikov, Robert J. Shmookler Reis & Peter O. Fedichev
+# Scientific Reports volume 9, Article number: 7368 (2019)
+# https://www.nature.com/articles/s41598-019-43075-z#Abs1
+downSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM6_ESM.csv"
+upSignatrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM7_ESM.csv"
+ageBiomrkrURL<-"https://static-content.springer.com/esm/art%3A10.1038%2Fs41598-019-43075-z/MediaObjects/41598_2019_43075_MOESM8_ESM.csv"
+
+if(!file.exists(paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"))){
+  download.file(downSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  download.file(upSignatrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  download.file(ageBiomrkrURL,paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+  # there is some in the file. need to open manually and save as xlsx
+  downSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"),
+                        sep=",",header=T,skip=1)
+  downSignatr$X<-NULL
+  colnames(downSignatr)<-c("wormbaseID","description","p.value")
+  upSignatr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"),
+                      sep=",",header=T,skip=1)
+  upSignatr$X<-NULL
+  colnames(upSignatr)<-c("wormbaseID","description","p.value")
+  ageBiomrkr<-read.csv(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"),
+                       sep=",",header=T,skip=1)
+  ageBiomrkr$X<-NULL
+  colnames(ageBiomrkr)<-c("wormbaseID","description","Coefficient")
+
+  downSignatr<-inner_join(downSignatr,as.data.frame(metadata),by="wormbaseID") #67
+  upSignatr<-inner_join(upSignatr,as.data.frame(metadata),by="wormbaseID") #260
+  ageBiomrkr<-inner_join(ageBiomrkr,as.data.frame(metadata),by="wormbaseID") #71
+
+  write.table(downSignatr,paste0(outPath,"/publicData/agingDownSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(upSignatr,paste0(outPath,"/publicData/agingUpSignature_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  write.table(ageBiomrkr,paste0(outPath,"/publicData/agingBiomarkers_Tarkhov2019.csv"),
+              row.names=F,quote=T,sep=";")
+  agingTCdata<-readRDS(paste0(outPath,"/publicData/agingTCdata.RDS"))
+  agingTCdata[["agingDownSignature_Tarkhov2019"]]<-downSignatr$wormbaseID
+  agingTCdata[["agingUpSignature_Tarkhov2019"]]<-upSignatr$wormbaseID
+  agingTCdata[["agingBiomarkers_Tarkhov2019"]]<-ageBiomrkr$wormbaseID
+  saveRDS(agingTCdata,paste0(outPath,"/publicData/agingTCdata.RDS"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM6_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM7_ESM.csv"))
+  file.remove(paste0(outPath,"/publicData/41598_2019_43075_MOESM8_ESM.csv"))
+}
+
+
+######################3-
+## Aging Riedel (2013) (Murphy lab) -----
+######################-
+#https://www.nature.com/articles/ncb2720
+#DAF-16 employs the chromatin remodeller SWI/SNF to promote stress resistance and longevity
+# Christian G. Riedel, Robert H. Dowen, Guinevere F. Lourenco, Natalia V. Kirienko, Thomas Heimbucher, Jason A. West, Sarah K. Bowman, Robert E. Kingston, Andrew Dillin, John M. Asara & Gary Ruvkun
+# Nature Cell Biology volume 15, pages 491–501 (2013)
+# data not available in supplementary material... need to do alignment and deseq2
+
+# daf-2
+# daf-2/daf-16
+# got table of metadata from SRA run selector:
+df<-read.delim(paste0(outPath,"/publicData/SraRunTable_Riedel2013_SRP017908.txt"))
+#df<-df[,c("Run","SRA_Study","Sample_Name")]
+df$replicate<-stringr::str_sub(df$Sample_Name,stringr::str_locate(df$Sample_Name,"r.?$"))
+df$Sample_Name<-gsub("_d1a_mRNA_r.?$","",df$Sample_Name)
+df1<-df[,c("Run","SRA_Study","Sample_Name","replicate","strain")]
+colnames(df1)<-c("SRRnumber","dataset","bioType","replicate","strain")
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Riedel2013_SRP017908.tsv"),row.names=F,quote=F,sep="\t")
+
+#after DESeq2 run:
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+
+# daf2:
+daf2<-readRDS(paste0(outPath,"/publicData/Riedel2013_strain_daf2_vs_N2_DESeq2_fullResults_p0.05.rds"))
+daf2<-daf2[!is.na(daf2$padj),]
+daf2<-daf2[daf2$padj<0.05,] #6453
+saveRDS(daf2,paste0(outPath,"/publicData/Riedel2013_strain_daf2_vs_N2_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf2up_Riedel2013"]]<-daf2$wormbaseID[daf2$log2FoldChange>1] #1957
+agingRegData[["daf2down_Riedel2013"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1] #330
+
+#daf16:
+daf16_daf2BG<-readRDS(paste0(outPath,"/publicData/Riedel2013_daf16_daf2BG_DESeq2_fullResults_p0.05.rds"))
+daf16_daf2BG<-daf16_daf2BG[!is.na(daf16_daf2BG$padj),]
+daf16_daf2BG<-daf16_daf2BG[daf16_daf2BG$padj<0.05,] #2759
+saveRDS(daf16_daf2BG,paste0(outPath,"/publicData/Riedel2013_daf16_daf2BG_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf16up-daf2BG_Riedel2013"]]<-daf16_daf2BG$wormbaseID[daf16_daf2BG$log2FoldChange>1] #354
+agingRegData[["daf16down-daf2BG_Riedel2013"]]<-daf16_daf2BG$wormbaseID[daf16_daf2BG$log2FoldChange< -1] #826
+
+#swsn1:
+swsn1_daf2BG<-readRDS(paste0(outPath,"/publicData/Riedel2013_swsn1_daf2BG_DESeq2_fullResults_p0.05.rds"))
+swsn1_daf2BG<-swsn1_daf2BG[!is.na(swsn1_daf2BG$padj),]
+swsn1_daf2BG<-swsn1_daf2BG[swsn1_daf2BG$padj<0.05,] #3141
+saveRDS(swsn1_daf2BG,paste0(outPath,"/publicData/Riedel2013_swsn1_daf2BG_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["swsn1up-daf2BG_Riedel2013"]]<-swsn1_daf2BG$wormbaseID[swsn1_daf2BG$log2FoldChange>1] #437
+agingRegData[["swsn1down-daf2BG_Riedel2013"]]<-swsn1_daf2BG$wormbaseID[swsn1_daf2BG$log2FoldChange< -1] #966
+
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+
+
+######################3-
+## Aging Zarse (2012) (Ristow lab) ------
+######################-
+# Cell Metabolism
+# Volume 15, Issue 4, 4 April 2012, Pages 451-465
+# Impaired Insulin/IGF1 Signaling Extends Life Span by Promoting Mitochondrial L-Proline Catabolism to Induce a Transient ROS Signal
+# KimZarse12SebastianSchmeisser13MarcoGroth4SteffenPriebe5GregorBeuster1DoreenKuhlow16ReinhardGuthke5MatthiasPlatzer4C. RonaldKahn2MichaelRistow16
+# https://www.sciencedirect.com/science/article/pii/S1550413112000940?via%3Dihub#app2
+
+#daf-2 (e1370)
+df<-read.csv(paste0(outPath,"/publicData/SraRunTable_Zarse2012_GSE36041.txt"))
+df<-df[df$Organism=="Caenorhabditis elegans",]
+df$replicate<-stringr::str_sub(df$Library.Name,stringr::str_locate(df$Library.Name,".$"))
+df$Genotype<-gsub("wild type","wt",df$Genotype)
+df$Genotype<-gsub("daf-2\\(e1370\\)","daf-2",df$Genotype)
+df1<-df %>% dplyr::group_by(SRA.Study,Genotype,replicate) %>% dplyr::summarise(SRRnum=paste(Run,collapse=";"))
+colnames(df1)<-c("dataset","bioType","replicate","SRRnumber")
+df1<-df1[c(4,1,2,3)]
+write.table(df1,file=paste0(outPath,"/publicData/SRR_Zarse2012_GSE36041.tsv"),row.names=F,quote=F,sep="\t")
+
+#after DESeq2 run:
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+daf2<-readRDS(paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_fullResults_p0.05.rds"))
+daf2<-daf2[!is.na(daf2$padj),]
+daf2<-daf2[daf2$padj<0.05,]
+saveRDS(daf2,paste0(outPath,"/publicData/Zarse2012_strain_daf2_vs_wt_DESeq2_fullResults_p0.05.rds"))
+agingRegData[["daf2up_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange>1.5] #2375
+agingRegData[["daf2down_Zarse2012"]]<-daf2$wormbaseID[daf2$log2FoldChange< -1.5] #231
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+
+
+
+######################-
+## Aging Heestand (2013) (Antebi lab) ------
+######################-
+# Dietary Restriction Induced Longevity Is Mediated by Nuclear Receptor NHR-62 in Caenorhabditis elegans
+# Bree N. Heestand, Yidong Shen, Wei Liu, Daniel B. Magner, Nadia Storm, Caroline Meharg, Bianca Habermann, Adam Antebi
+# Published: July 25, 2013
+# https://doi.org/10.1371/journal.pgen.1003651
+
+eat2URL<-"https://doi.org/10.1371/journal.pgen.1003651.s012"
+eat2File<-paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx")
+if(remakeFiles){
+  file.remove(paste0(outPath,"/publicData/eat2down_Heestand2012.csv"))
+}
+
+if(!file.exists(paste0(outPath,"/publicData/eat2_Heestand2012.csv"))){
+  download.file(eat2URL,destfile= eat2File)
+  eat2<-read_excel(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+  eat2<-eat2[,c("Gene ID","eat-2 vs N2 fold-change (log2)","eat-2 vs N2 (padj)")]
+  colnames(eat2)<-c("sequenceID","eat2_lfc","eat2_padj")
+  eat2<-left_join(eat2,data.frame(metadata),by=c("sequenceID"))
+  write.csv(eat2,paste0(outPath,"/publicData/eat2_Heestand2012.csv"),
+            quote=F,row.names=F)
+  eat2up<-getSignificantGenes(eat2,padj=0.05,lfc=2,namePadjCol="eat2_padj",
+                              nameLfcCol="eat2_lfc",direction="gt",
+                              chr="all") #361
+  eat2down<-getSignificantGenes(eat2,padj=0.05,lfc= -2,
+                                namePadjCol="eat2_padj",
+                                nameLfcCol="eat2_lfc",direction="lt",
+                                chr="all") #537
+  agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+  agingRegData[["eat2up_Heestand2013"]]<-eat2up$wormbaseID
+  agingRegData[["eat2down_Heestand2013"]]<-eat2down$wormbaseID
+  saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+  file.remove(paste0(outPath,"/publicData/journal.pgen.1003651.s012.xlsx"))
+}
+
+
+######################-
+## Aging Ayyadevara (2009) (Shmookler Reis lab) ------
+######################-
+# Caenorhabditis elegans PI3K mutants reveal novel genes underlying exceptional stress resistance and lifespan
+# Srinivas Ayyadevara, Çagdaþ Tazearslan, Puneet Bharill, Ramani Alla, Eric Siegel, Robert J. Shmookler Reis,
+# First published: 17 November 2009
+#https://onlinelibrary.wiley.com/doi/10.1111/j.1474-9726.2009.00524.x
+#age-1
+#### needed to convert pdf to text and process manually supplementary table 1&2. Note that the pdf files seem to be misannotated if go according to numbers of genes in each group.
+# Table S2 has the contrast of two strong age-1 alleles (mg44 and m333) vs an
+# isogenic backcroseed N2 (N2DRM)
+
+df<-read.delim(paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.txt"),
+               header=F) # 133 genes
+names(df)<-c("sequenceID")
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+df<-df[!is.na(df$wormbaseID),] # lose 22
+#write.csv(df,paste0(outPath,"/publicData/age1vN2up_Ayyadevara2009_suplTbl2.csv"),
+#          quote=F,row.names=F) #111 genes
+agingRegData<-readRDS(paste0(outPath,"/publicData/agingRegData.RDS"))
+agingRegData[["age1up_Ayyadevara2009"]]<-df$wormbaseID
+
+df<-read.delim(paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.txt"),
+               header=F) # 206 genes
+names(df)<-c("sequenceID")
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+df<-df[!is.na(df$wormbaseID),] # lose 33
+#write.csv(df,paste0(outPath,"/publicData/age1vN2down_Ayyadevara2009_suplTbl2.csv"),
+#          quote=F,row.names=F) #173 genes
+agingRegData[["age1down_Ayyadevara2009"]]<-df$wormbaseID
+
+# Table S1 has the contrast of two strong age-1 alleles (mg44 and m333) vs a
+# weaker age-1 allele (hx546)
+
+df<-read.delim(paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.txt"),
+               header=F) # 23 genes
+names(df)<-c("sequenceID")
+dim(df)
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+sum(is.na(df$wormbaseID))
+df<-df[!is.na(df$wormbaseID),] # lose 4
+dim(df)
+#write.csv(df,paste0(outPath,"/publicData/age1strongVweakUp_Ayyadevara2009_suplTbl1.csv"),
+#          quote=F,row.names=F) #19 genes
+agingRegData[["age1strongVweakUp_Ayyadevara2009"]]<-df$wormbaseID
+
+df<-read.delim(paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.txt"),
+               header=F) # 253 genes
+names(df)<-c("sequenceID")
+dim(df)
+df<-dplyr::left_join(df,data.frame(metadata),by=c("sequenceID"))
+sum(is.na(df$wormbaseID))
+df<-df[!is.na(df$wormbaseID),] # lose 52
+dim(df)
+#write.csv(df,paste0(outPath,"/publicData/age1strongVweakDown_Ayyadevara2009_suplTbl1.csv"),
+#          quote=F,row.names=F) #201 genes
+agingRegData[["age1strongVweakDown_Ayyadevara2009"]]<-df$wormbaseID
+saveRDS(agingRegData,paste0(outPath,"/publicData/agingRegData.RDS"))
+
+
+#McElwee (2003) paper
+# McElwee, J., Bubb, K., and Thomas, J.H. (2003). Transcriptional outputs of the Caenorhabditis elegans forkhead protein DAF-16. Aging Cell 2, 111–121.
+# https://www.deepdyve.com/lp/wiley/transcriptional-outputs-of-the-caenorhabditis-elegans-forkhead-protein-T0bliMYws0
 
 
 ######################-
@@ -627,7 +1002,7 @@ elt3targetURL<-"https://www.cell.com/cms/10.1016/j.cell.2008.05.044/attachment/a
 
 
 #####################-
-## Borad expression vs regulated Gerstein et al. (2014) (modEncode)------
+## Broad expression vs regulated Gerstein et al. (2014) (modEncode)------
 #####################-
 #https://www.encodeproject.org/comparative/transcriptome/
 wormGeneURL<-"http://cmptxn.gersteinlab.org/worm_gene.xlsx"
@@ -680,7 +1055,7 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   ce10toCe11<-"ce10Toce11.over.chain"
   download.file(ce10toCe11url,paste0(outPath,"/publicData/",ce10toCe11,".gz"))
   system(paste0("gunzip ",outPath,"/publicData/",ce10toCe11,".gz"))
-  file.remove(paste0(outPath,"/publicData/",ce10toCe11,".gz"))
+  #file.remove(paste0(outPath,"/publicData/",ce10toCe11,".gz"))
 
   chrAstates<-readxl::read_excel(paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"),sheet="L3 autosome states",col_names=c("chr","start","end","state"))
   chrXstates<-readxl::read_excel(paste0(outPath,"/publicData/pnas.1608162113.sd01.xlsx"),sheet="L3 chr X states",col_names=c("chr","start","end","state"))
@@ -756,3 +1131,10 @@ tissueEnrichURL<-"https://doi.org/10.1371/journal.pgen.1007559.s017"
 ### Tissue specific - Table S9
 tissueSpecificURL<-"https://doi.org/10.1371/journal.pgen.1007559.s018"
 
+
+
+
+#########################-
+## chromatin complexes -----
+#########################-
+#list obtained from some review... ?

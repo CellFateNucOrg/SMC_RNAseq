@@ -8,7 +8,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(cowplot)
 library(magick)
-source("variableSettings.R")
+source("./variableSettings.R")
 #fileNamePrefix="preFiltOsc2x_"
 if(filterData){
   fileNamePrefix<-filterPrefix
@@ -18,7 +18,7 @@ if(filterData){
 # GO enrichment - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r GOterm, echo=F}
-for(grp in groupsOI){
+for(grp in names(contrastNames)){
   grpPathUp=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_up_go.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp) + 
@@ -41,7 +41,7 @@ for(grp in groupsOI){
 # Tissue enrichment - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r tissue, echo=F}
-for(grp in groupsOI){
+for(grp in names(contrastNames)){
   grpPathUp=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_up_tissue.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp) +
@@ -50,7 +50,8 @@ for(grp in groupsOI){
     plot(fig_svg)
   }
   
-  grpPathDown=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_down_tissue.svg")
+  grpPathDown=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,
+                     "_down_tissue.svg")
   if(file.exists(grpPathDown)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathDown) +
       cowplot::draw_label(paste0(grp," down"), colour = "#80404080",
@@ -64,8 +65,9 @@ for(grp in groupsOI){
 # Phenotype enrichment - `r paste0("p",padjVal," lfc",lfcVal)`
 
 ```{r phenotype, echo=F}
-for(grp in groupsOI){
-  grpPathUp=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_up_phe.svg")
+for(grp in names(contrastNames)){
+  grpPathUp=paste0(outPath,"/tissue/tea/",fileNamePrefix, grp,
+                   "_up_phe.svg")
   if(file.exists(grpPathUp)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathUp) + 
       cowplot::draw_label(paste0(grp," up"), colour = "#80404080",
@@ -73,7 +75,8 @@ for(grp in groupsOI){
     plot(fig_svg)
   }
   
-  grpPathDown=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,"_down_phe.svg")
+  grpPathDown=paste0(outPath,"/tissue/tea/",fileNamePrefix,grp,
+                     "_down_phe.svg")
   if(file.exists(grpPathDown)){
     fig_svg<-cowplot::ggdraw() + cowplot::draw_image(grpPathDown) + 
       cowplot::draw_label(paste0(grp," down"), colour = "#80404080",

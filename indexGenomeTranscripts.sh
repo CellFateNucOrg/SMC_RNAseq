@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --partition=all
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=1
+##SBATCH --array=1
 
 #module add vital-it
 #module add UHTS/Aligner/STAR/2.6.0c;
@@ -25,7 +25,7 @@ nThreads=$SLURM_CPUS_PER_TASK
 # prepare directories
 ############
 
-mRNAonly=true
+mRNAonly=false
 genomeVer=WS275
 GENOME_DIR=${HOME}/genomeVer/${genomeVer}
 mkdir -p ${GENOME_DIR}/sequence
@@ -63,7 +63,7 @@ source $CONDA_ACTIVATE RNAseq
 #echo "indexing genome..."
 STAR --runMode genomeGenerate --genomeDir ${GENOME_DIR}/sequence --genomeFastaFiles ${genomeFile} --sjdbGTFfile ${annotFile} --runThreadN $nThreads --genomeSAindexNbases 12 
 
-
+#############
 # index for Salmon
 #############
 
@@ -116,6 +116,7 @@ tnIndex=${GENOME_DIR}/sequence/${genomeVer}_transposon_index
 
 if [[ "${mRNAonly}" == "false" ]]
 then
+source $CONDA_ACTIVATE RNAseq
 ###############
 ## Index repeats
 ###############
@@ -161,10 +162,10 @@ genomeFile=${GENOME_DIR}/sequence/c_elegans.PRJNA13758.${genomeVer}.genomic.fa
 # So will do star alignment to normal transcript index.
 # will also try bwa alignment
 # index genome
-if [[ ! -f "${genomeFile}.bwt" ]]
-then
-  echo "indexing genome for bwa..."
-  bwa index $genomeFile 
-fi
+#if [[ ! -f "${genomeFile}.bwt" ]]
+#then
+#  echo "indexing genome for bwa..."
+#  bwa index $genomeFile 
+#fi
 
 fi
