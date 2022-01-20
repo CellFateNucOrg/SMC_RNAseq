@@ -9,7 +9,6 @@ library(ggpubr)
 library(genomation)
 library(seqplots)
 library(RColorBrewer)
-library(ggpubr)
 
 source("functions.R")
 source("./variableSettings.R")
