@@ -983,3 +983,67 @@ if(length(contrastNames)>length(useContrasts)){
   }
 }
 
+
+##########-
+# compare to Kranz et al(2013) kle-2 RNAseq  -------------
+##########-
+
+kranzkle2<-read.csv(file=paste0(outPath,"/publicData/kranz2013_kle2RNAseq.csv"),
+          header=T)
+
+geneTable<-kranzkle2[,c("wormbaseID","chromosome","log2FoldChange")]
+names(geneTable)<-c("wormbaseID","chr","kranz-kle2_lfc")
+geneTable$chr<-gsub("CHROMOSOME_","chr",geneTable$chr)
+
+#geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.001,na.rm=T)*1.1
+maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999,na.rm=T)*1.1
+corMethod="spearman"
+
+if(plotPDFs==T){
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_kranz-kle2.pdf"),
+      width=5, height=5, paper="a4")
+}
+
+for (i in c(1,3,4,6,7,8,9)){
+  grp1<-"kranz-kle2"
+  grp2<-useContrasts[i]
+
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_allGenes_",grp1,"_",
+                    grp2,".png"), width=5, height=5, units="in", res=150)
+  }
+  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
+                  geneTable[,paste0(grp2,"_lfc")],method=corMethod,
+                  use="pairwise.complete.obs"),2)
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
+  #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=grp1,
+       ylab=grp2, xlim=c(minScale,maxScale),
+       ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+  abline(bestFitLine,col="red")
+  title(main=paste0("All genes ",grp1," vs ",
+                    grp2," (R=",Rval,")"),
+        sub=paste0(nrow(geneTable)," genes, method: ",corMethod))
+  if(plotPDFs==F){
+    dev.off()
+  }
+}
