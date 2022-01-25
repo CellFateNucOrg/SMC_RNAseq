@@ -1929,7 +1929,7 @@ tenkbInTads<-tenkbInTads[-queryHits(ol)]
 width(tenkbInTads)
 width(anchors)
 dataList<-list()
-plotList<-list()
+#plotList<-list()
 #grp=useContrasts[3]
 for (grp in useContrasts){
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
@@ -1953,16 +1953,16 @@ for (grp in useContrasts){
   df$SMC<-grp
 
   dataList[[grp]]<-df
-  plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-    facet_grid(.~seqnames) +ylim(c(-1,1))+
-    ggtitle(grp)
+  # plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  #   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  #   facet_grid(.~seqnames) +ylim(c(-1,1))+
+  #   ggtitle(grp)
 }
-p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",clickedBatch,"-Clicked_",
-                     padjVal,".pdf")),
-       width=9, height=11, paper="a4",plot=p,device="pdf")
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+#
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",clickedBatch,"-Clicked_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
 
 ## focus on chrX loops
 dataTbl<-do.call(rbind,dataList)
@@ -2203,56 +2203,53 @@ if(dir.exists(paste0(outPath,"/tracks/p0.05_lfc0.5"))){
 }
 
 
-#### TPM ------
-anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
-                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
-                                   c("366","382"),"_full_size_correct.bed"),
-                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
-
-contrastsToUse<-c("366","382","775","784","828","822")
-smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
-names(smcRNAseq)<-paste0("PMW",contrastsToUse)
-
-for(anch in 1:nrow(anchordf)){
-  anchors<-import(anchordf$file[anch])
-  anchorSource<-anchordf$source[anch]
-
-  anchors<-anchors[seqnames(anchors)=="chrX"]
-  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
-
-  seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-  xanchors<-anchors[seqnames(anchors)=="chrX"]
-
-  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
-                  flankSize/1000,"kb_TPM.pdf"), width=11,
-      height=9, paper="a4r")
-
-
-  p<-getPlotSetArray(tracks=c(smcRNAseq),
-                     features=c(xanchors),
-                     refgenome="ce11", bin=flankSize/10, xmin=flankSize,
-                     xmax=flankSize, type="af", rm0=T, ignore_strand=T,
-                     xanchored=median(width(xanchors)))
-
-  dd<-plotHeatmap(p,plotz=F)
-  heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
-  roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
-  minVal<-min(heatmapQuantiles[1,])
-  maxVal<-max(heatmapQuantiles[2,])
-  #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
-  plotAverage(p,main="ChrX anchors", plotScale="log2",
-              error.estimates=ifelse(length(useContrasts>3),F,T))
-  plotHeatmap(p,main="ChrX anchors", plotScale="log2", sortrows=T,
-              clusters=1L,autoscale=F,
-              zmin=minVal, zmax=maxVal,
-              ln.v=F,
-              indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
-              clspace=c("#00008B", "#FFFFE0","#8B0000"))
-  dev.off()
-}
-
-
-
+# #### TPM ------
+# anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
+#                      file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+#                                    c("366","382"),"_full_size_correct.bed"),
+#                             paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+#
+# contrastsToUse<-c("366","382","775","784","828","822")
+# smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
+# names(smcRNAseq)<-paste0("PMW",contrastsToUse)
+#
+# for(anch in 1:nrow(anchordf)[1]){
+#   anchors<-import(anchordf$file[anch])
+#   anchorSource<-anchordf$source[anch]
+#
+#   anchors<-anchors[seqnames(anchors)=="chrX"]
+#   seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+#   seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+#
+#   seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+#
+#   xanchors<-anchors[seqnames(anchors)=="chrX"]
+#
+#   pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
+#                   flankSize/1000,"kb_TPM.pdf"), width=11,
+#       height=9, paper="a4r")
+#
+#
+#   p<-getPlotSetArray(tracks=c(smcRNAseq),
+#                      features=c(xanchors),
+#                      refgenome="ce11", bin=flankSize/10, xmin=flankSize,
+#                      xmax=flankSize, type="af", rm0=T, ignore_strand=T,
+#                      xanchored=median(width(xanchors)))
+#
+#   dd<-plotHeatmap(p,plotz=F)
+#   heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
+#   roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+#   minVal<-min(heatmapQuantiles[1,])
+#   maxVal<-max(heatmapQuantiles[2,])
+#   #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+#   plotAverage(p,main="ChrX anchors", plotScale="log2",
+#               error.estimates=ifelse(length(useContrasts>3),F,T))
+#   plotHeatmap(p,main="ChrX anchors", plotScale="log2", sortrows=T,
+#               clusters=1L,autoscale=F,
+#               zmin=minVal, zmax=maxVal,
+#               ln.v=F,
+#               indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
+#               clspace=c("#00008B", "#FFFFE0","#8B0000"))
+#   dev.off()
+# }
 
