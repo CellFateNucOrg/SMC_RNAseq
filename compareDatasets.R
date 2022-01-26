@@ -1012,7 +1012,7 @@ lfcCols<-grep("_lfc$",names(geneTable))
 minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.001,na.rm=T)*1.1
 maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999,na.rm=T)*1.1
 corMethod="spearman"
-plotPDFs=T
+#plotPDFs=F
 if(plotPDFs==T){
   pdf(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_kranz-kle2.pdf"),
       width=5, height=5, paper="a4")
@@ -1028,7 +1028,7 @@ for (i in c(1,3,4,6,7,8,9)){
   }
   Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
                   geneTable[,paste0(grp2,"_lfc")],method=corMethod,
-                  use="pairwise.complete.obs"),2)
+                  use="pairwise.complete.obs"),3)
   #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
   #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
   #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
@@ -1046,4 +1046,7 @@ for (i in c(1,3,4,6,7,8,9)){
   if(plotPDFs==F){
     dev.off()
   }
+}
+if(plotPDFs==T){
+  dev.off()
 }
