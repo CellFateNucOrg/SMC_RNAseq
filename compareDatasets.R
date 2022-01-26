@@ -1012,7 +1012,7 @@ lfcCols<-grep("_lfc$",names(geneTable))
 minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.001,na.rm=T)*1.1
 maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999,na.rm=T)*1.1
 corMethod="spearman"
-
+plotPDFs=T
 if(plotPDFs==T){
   pdf(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_kranz-kle2.pdf"),
       width=5, height=5, paper="a4")
