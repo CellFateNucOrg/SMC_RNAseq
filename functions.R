@@ -134,21 +134,62 @@ assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
   pcaScore<-ol %>% group_by(queryHits)%>% dplyr::summarise(pcaScore=mean(subjectScore,na.rm=T))
 
   mcols(gr)[,paste0(pcaName,"_score")]<-NA
-  mcols(gr)[,paste0(pcaName,"_compartment")]<-NA
   mcols(gr)[,paste0(pcaName,"_score")][pcaScore$queryHits]<-pcaScore$pcaScore
-  mcols(gr)[,paste0(pcaName,"_compartment")]<-as.factor(ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0,"A","B"))
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0.05,"A","border")
+  Bidx<-mcols(gr)[,paste0(pcaName,"_score")]< -0.05
+  mcols(gr)[Bidx,paste0(pcaName,"_compartment")]<-"B"
+  mcols(gr)[,paste0(pcaName,"_compartment")]<-factor(mcols(gr)[,paste0(pcaName,"_compartment")],levels=c("A","B","border"))
   idx<-is.na(mcols(gr)[,paste0(pcaName,"_score")])
   print(paste0(sum(idx)," genes have no overlapping PCA bin"))
   gr<-gr[! idx ]
-  forBG<-gr
-  forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,-1)
-  if(!(is.null(grName) | is.null(pcaName))){
-    export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
-                            "__Compartments_",pcaName, ".bedGraph"),
-           format="bedGraph")
-  }
+  #forBG<-gr
+  #forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,0)
+  #forBG$score[mcols(gr)[,paste0(pcaName,"_compartment")]=="B"]<-"B"
+  #if(!(is.null(grName) | is.null(pcaName))){
+  #  export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
+  #                          "__Compartments_",pcaName, ".bedGraph"),
+  #         format="bedGraph")
+  #}
   return(gr)
 }
+
+
+#' #' Assign GRanges to A/B compartment
+#' #'
+#' #' Function takes in a genomic ranges object which you wish to assign,
+#' #' and a genomic ranges for an eigen vector giving the compartments,
+#' #' and then adds pcaScore and compartment (A or B) columns to the
+#' #' metadata of the GRanges object. If strings for the names of the gr
+#' #' and pca are given a bedgraph will be produced with the AB
+#' #' assignments of all the genes.
+#' #' @param gr Genomic ranges object which you wish to assign to A/B compartments
+#' #' @param pcagr Genomic ranges for eigen vector giving the A/B compartments
+#' #' @param grName Name of the data in the gr object. Used to output a bedgraph of AB assignments
+#' #' @param pcaName Name of the data in the pcagr object. Used to output a bedgraph of AB assignments
+#' #' @return The gr genomic ranges that was input with additional metadata columns of pcaScore and compartment
+#' assignGRtoAB<-function(gr, pcagr,grName=NULL,pcaName=NULL,
+#'                        outPath="."){
+#'   ol<-as.data.frame(findOverlaps(gr,pcagr,ignore.strand=T))
+#'   ol$subjectScore<-pcagr$score[ol$subjectHits]
+#'   ol$queryHits<-ol$queryHits
+#'   pcaScore<-ol %>% group_by(queryHits)%>% dplyr::summarise(pcaScore=mean(subjectScore,na.rm=T))
+#'
+#'   mcols(gr)[,paste0(pcaName,"_score")]<-NA
+#'   mcols(gr)[,paste0(pcaName,"_compartment")]<-NA
+#'   mcols(gr)[,paste0(pcaName,"_score")][pcaScore$queryHits]<-pcaScore$pcaScore
+#'   mcols(gr)[,paste0(pcaName,"_compartment")]<-as.factor(ifelse(mcols(gr)[,paste0(pcaName,"_score")]>0,"A","B"))
+#'   idx<-is.na(mcols(gr)[,paste0(pcaName,"_score")])
+#'   print(paste0(sum(idx)," genes have no overlapping PCA bin"))
+#'   gr<-gr[! idx ]
+#'   forBG<-gr
+#'   forBG$score<-ifelse(mcols(gr)[,paste0(pcaName,"_compartment")]=="A",1,-1)
+#'   if(!(is.null(grName) | is.null(pcaName))){
+#'     export(forBG,con=paste0(outPath,"/tracks/",grName,"_",
+#'                             "__Compartments_",pcaName, ".bedGraph"),
+#'            format="bedGraph")
+#'   }
+#'   return(gr)
+#' }
 
 
 
@@ -460,7 +501,7 @@ avrSignalBins<-function(motif_gr, bwFiles, winSize=10000,numWins=10,logScore=F){
   p<-ggplot2::ggplot(allavrbins,ggplot2::aes(x=window,y=value,col=SMC)) +
     ggplot2::geom_smooth(method="loess")+
     ggplot2::facet_grid(SMC~.,shrink=T)+
-    ggplot2::ylim(quantile(allavrbins$value,c(0.01,0.99)))+
+    ggplot2::coord_cartesian(ylim=quantile(allavrbins$value,c(0.01,0.99)))+
     ggplot2::geom_boxplot(outlier.shape=NA,col="black",notch=T) +
     ggplot2::geom_jitter(size=0.5,alpha=0.4) + ggplot2::xlab("Window (kb)") +
     ggplot2::theme_bw()+

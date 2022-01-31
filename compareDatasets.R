@@ -385,7 +385,7 @@ for (grp in useContrasts){
 #
 # yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 # p1<-ggplot(sigPerChr,aes(x=chr,y=log2FoldChange,fill=SMC))+
-#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA)+ ylim(yminmax) +
+#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA)+ coord_cartesian(ylim=yminmax) +
 #   ggtitle("LFC of significantly changed genes by chromosome") +
 #   theme_minimal() + scale_fill_brewer(palette="Dark2")
 
@@ -418,7 +418,7 @@ rownames(sigTbl)<-NULL
 yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 p2<-ggplot(sigTbl,aes(x=chr,y=abs(log2FoldChange),fill=SMC)) +
   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-  facet_grid(cols=vars(updown)) + ylim(yminmax) +
+  facet_grid(cols=vars(updown)) + coord_cartesian(ylim=yminmax) +
   ggtitle("Absolute LFC of significantly changed genes by chromosome") +
   theme_minimal() + scale_fill_brewer(palette="Dark2")
 
@@ -447,7 +447,7 @@ countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>%
 yminmax=c(0,max(countbychr$count))
 p4<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge()) +
-  facet_grid(cols=vars(updown))+ ylim(yminmax) +
+  facet_grid(cols=vars(updown))+ coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed genes by chromosome") +
   theme_minimal()  + scale_fill_brewer(palette="Dark2")
 
@@ -466,7 +466,7 @@ countbytype<-sigTbl %>% filter(chr!="chrX") %>% group_by(updown,SMC) %>%
 yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
 p6<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
-  ylim(yminmax) +
+  coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed autosomal genes") +
   theme_minimal() +xlab(NULL) +
   scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
@@ -479,7 +479,7 @@ countbytype<-sigTbl %>% filter(chr=="chrX") %>% group_by(updown,SMC) %>%
 yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
 p6a<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
-  ylim(yminmax) +
+  coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed chrX genes") +
   theme_minimal() +xlab(NULL) +
   scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
