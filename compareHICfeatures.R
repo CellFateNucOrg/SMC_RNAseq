@@ -877,7 +877,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
 ##################-
-## 366 TPM in AB compartments of different HiCs -----
+# 366 TPM in AB compartments of different HiCs -----
 #################-
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -932,14 +932,15 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(cols=vars(SMC),rows=vars(pca)) +
-    coord_cartesian(ylim=c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    #coord_cartesian(ylim=c(-15,15)) +
+    theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different bins of pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "eigenValAll_366tpm.pdf"),
          device="pdf",width=29,height=19, units="cm")
 
-  corMethod="pearson"
+  corMethod="spearman"
   tpmThresh=0
   allBins<-nrow(df)
   df<-df[df$tpm366>=tpmThresh,]
@@ -954,8 +955,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of PCA eigen value vs PMW366 TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, ",
-                   round(100*fracKept,1),"% of bins)")) +
-    coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
+                   round(100*fracKept,1),"% of bins)")) #+
+    #coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                           "Cor_eigenValAll_366tpm",tpmThresh,".pdf"),
          device="pdf",width=29,height=14, units="cm")
@@ -1025,14 +1026,15 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=compartment,y=log2(tpm))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    coord_cartesian(ylim=c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    #coord_cartesian(ylim=c(-15,15)) +
+    theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("TPM in different bins of pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "eigenValAll_sameTPM.pdf"),
          device="pdf",width=29,height=19, units="cm")
 
-  corMethod="pearson"
+  corMethod="spearman"
   tpmThresh=0
   allBinNum<-df %>% dplyr::group_by(SMC) %>% dplyr::summarise(count=n())
   allBinNum$autosomal<-df %>% dplyr::group_by(SMC) %>% filter(seqnames!="chrX") %>% dplyr::summarise(count=n())
@@ -1049,8 +1051,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of PCA eigen value vs TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
-                   min(keptBinNum$percent),"% of bins)")) +
-    coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
+                   min(keptBinNum$percent),"% of bins)")) #+
+    #coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                            "Cor_eigenValAll_sameTPM",tpmThresh,".pdf"),
          device="pdf",width=29,height=14, units="cm")
@@ -1066,8 +1068,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of autosomal PCA eigen value vs TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
-                   min(keptBinNum$percentChrA),"% of chrA bins)")) +
-    coord_cartesian(ylim=c(-20,20),xlim=c(-1.5,1.5))
+                   min(keptBinNum$percentChrA),"% of chrA bins)")) #+
+    #coord_cartesian(ylim=c(-20,20),xlim=c(-1.5,1.5))
 
   ggsave(p1,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                            "Cor_eigenValAll_sameTPM",tpmThresh,"_chrA.pdf"),
@@ -1138,7 +1140,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   subdf<-subdf[subdf$bin %in% 1:50,]
   p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
     geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-    coord_cartesian(ylim=c(-12,12)) + theme_bw()+
+    coord_cartesian(ylim=c(-14,14)) + theme_bw()+
     #scale_fill_manual(values=c("white","grey70"))+
     geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different autosomal bins of digitized pca")) +
