@@ -7,7 +7,7 @@
 #SBATCH --time=0-12:00:00
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=2-9,11-83%12
+#SBATCH --array=1#2-9,11-83%12
 
 #module add vital-it
 #module add UHTS/Quality_control/fastqc/0.11.7;
@@ -235,9 +235,9 @@ if [[ "${mRNAonly}" == "false" ]]
 
     samtools index ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Aligned.sortedByCoord.out.bam
 
-    ${WIGtoBW_DIR}/wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.UniqueMultiple.str1.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_UniqueMultiple.bw
+    wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.UniqueMultiple.str1.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_UniqueMultiple.bw
 #    ${WIGtoBW_DIR}/wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.UniqueMultiple.str2.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_UniqueMultiple_R.bw
-    ${WIGtoBW_DIR}/wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.Unique.str1.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Unique.bw
+    wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.Unique.str1.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Unique.bw
 #    ${WIGtoBW_DIR}/wigToBigWig ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Signal.Unique.str2.out.wig $chromSizesFile ${WORK_DIR}/bamSTARrpts/rpts_${baseName}_Unique_R.bw
 
     if [ -e "${WORK_DIR}/bamSTARrpts/rpts_${baseName}_UniqueMultiple.bw" ]; then
