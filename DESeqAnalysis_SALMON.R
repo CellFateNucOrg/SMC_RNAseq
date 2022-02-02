@@ -1044,7 +1044,7 @@ for(grp in names(contrastNames)) {
       xlab("log2 fold change threshold")+ylab("Percent significant genes") +
       geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
                 vjust=0,size=3,lineheight=0.9)+
-      ylim(0,1.2*max(thresholds$percentSignificant))
+      coord_cartesian(ylim=0,1.2*max(thresholds$percentSignificant))
 
    ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
                           "_thresholds_percentSig_p",padjVal,".png"), plot=p1,
@@ -1056,7 +1056,7 @@ for(grp in names(contrastNames)) {
    #    xlab("log2 fold change threshold")+ylab("Percent significant genes") +
    #    geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSigGt10)),
    #              vjust=0,size=3,lineheight=0.9)+
-   #    ylim(0,1.2*max(thresholds$percentSigGt10))
+   #    coord_cartesian(ylim=0,1.2*max(thresholds$percentSigGt10))
    #
    # ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
    #                        "_thresholds_percentSigGt10_p",padjVal,".png"), plot=p2,
@@ -1204,7 +1204,7 @@ write.table(ss1,file=paste0(outPath,"/txt/",fileNamePrefix,"ecdf_lfcThresholds_p
 
 p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
    geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
-   theme_classic() + xlim(c(0,1.5)) +
+   theme_classic() + coord_cartesian(xlim=c(0,1.5)) +
    xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
 #p
 
@@ -1296,7 +1296,7 @@ if(plotPDFs==T){
 #
 # p<-ggplot(dd1, aes(x=abs(log2FoldChange),y=ecd,color=SMC,linetype=XvA)) +
 #    geom_line(size=0.9)+ facet_wrap(vars(upVdown),nrow=2)+
-#    theme_classic() + xlim(c(0,1.5)) +
+#    theme_classic() + coord_cartesian(xlim=c(0,1.5)) +
 #    xlab("Absolute log2 fold change")+ylab("Fraction significant genes rejected")
 # #p
 #

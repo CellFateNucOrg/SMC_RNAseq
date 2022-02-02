@@ -9,7 +9,6 @@ library(ggpubr)
 library(genomation)
 library(seqplots)
 library(RColorBrewer)
-library(ggpubr)
 
 source("functions.R")
 source("./variableSettings.R")
@@ -435,7 +434,7 @@ pcaSource="366"
 
 ### 366 first Eigenvector ------
 dfl<-processCountsPerChr(listgr,namePCAcol="E1_compartment")
-
+dfl<-dfl[dfl$seqnames!="X",]
 p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
 p1a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"))
 
@@ -443,17 +442,24 @@ dfl<-processUpDownCountsPerChrPerCompartment(listgr, namePCAcol="E1_compartment"
 
 p2<-plotUpDownByCompartment(dfl,namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"), compartment="A")
 p3<-plotUpDownByCompartment(dfl,namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"), compartment="B")
+p4<-plotUpDownByCompartment(dfl,namePCAcol="E1_compartment", namePCA=paste(pcaSource, "E1"), compartment="border")
 
-
-p<-ggpubr::ggarrange(p1,p1a,p2,p3,ncol=1,nrow=2)
+p<-ggpubr::ggarrange(p1,p1a,nrow=2)
 ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                                    "ABcomp_", pcaSource, "-E1_countsPerChr_padj",
+                                   padjVal,"_lfc", lfcVal,".pdf"),
+                 device="pdf",width=10,height=5, units="cm")
+
+p<-ggpubr::ggarrange(p2,p3,p4,nrow=3)
+ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                   "ABcomp_", pcaSource, "-E1_updownCountsPerChr_padj",
                                    padjVal,"_lfc", lfcVal,".pdf"),
                  device="pdf",width=10,height=5, units="cm")
 
 
 ### 366 second eigenvector ------
 dfl<-processCountsPerChr(listgr,namePCAcol="E2_compartment")
+dfl<-dfl[dfl$seqnames!="X",]
 
 p1<-plotCountsPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
 p1a<-plotFractionPerChrPerCompartment(dfl, namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"))
@@ -462,14 +468,19 @@ dfl<-processUpDownCountsPerChrPerCompartment(listgr, namePCAcol="E2_compartment"
 
 p2<-plotUpDownByCompartment(dfl,namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"), compartment="A")
 p3<-plotUpDownByCompartment(dfl,namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"), compartment="B")
+p4<-plotUpDownByCompartment(dfl,namePCAcol="E2_compartment", namePCA=paste(pcaSource, "E2"), compartment="border")
 
-p<-ggpubr::ggarrange(p1,p1a,p2,p3,ncol=1,nrow=2)
+p<-ggpubr::ggarrange(p1,p1a,nrow=2)
 ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                                    "ABcomp_",pcaSource,"-E2_countsPerChr_padj",
                                    padjVal,"_lfc", lfcVal,".pdf"),
                  device="pdf",width=10,height=5, units="cm")
 
-
+p<-ggpubr::ggarrange(p2,p3,p4,nrow=3)
+ggpubr::ggexport(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
+                                   "ABcomp_",pcaSource,"-E2_updownCountsPerChr_padj",
+                                   padjVal,"_lfc", lfcVal,".pdf"),
+                 device="pdf",width=10,height=5, units="cm")
 
 ####-
 ## AB comp LFC-----
@@ -866,7 +877,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
 ##################-
-## 366 TPM in AB compartments of different HiCs -----
+# 366 TPM in AB compartments of different HiCs -----
 #################-
 RNAseqAndHiCsubset=c("aux_sdc3BG","dpy26","kle2","scc1","coh1")
 
@@ -921,14 +932,15 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=compartment,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(cols=vars(SMC),rows=vars(pca)) +
-    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    #coord_cartesian(ylim=c(-15,15)) +
+    theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different bins of pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "eigenValAll_366tpm.pdf"),
          device="pdf",width=29,height=19, units="cm")
 
-  corMethod="pearson"
+  corMethod="spearman"
   tpmThresh=0
   allBins<-nrow(df)
   df<-df[df$tpm366>=tpmThresh,]
@@ -943,8 +955,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of PCA eigen value vs PMW366 TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, ",
-                   round(100*fracKept,1),"% of bins)")) +
-    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+                   round(100*fracKept,1),"% of bins)")) #+
+    #coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                           "Cor_eigenValAll_366tpm",tpmThresh,".pdf"),
          device="pdf",width=29,height=14, units="cm")
@@ -1014,14 +1026,15 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=compartment,y=log2(tpm))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    #coord_cartesian(ylim=c(-15,15)) +
+    theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("TPM in different bins of pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "eigenValAll_sameTPM.pdf"),
          device="pdf",width=29,height=19, units="cm")
 
-  corMethod="pearson"
+  corMethod="spearman"
   tpmThresh=0
   allBinNum<-df %>% dplyr::group_by(SMC) %>% dplyr::summarise(count=n())
   allBinNum$autosomal<-df %>% dplyr::group_by(SMC) %>% filter(seqnames!="chrX") %>% dplyr::summarise(count=n())
@@ -1038,8 +1051,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of PCA eigen value vs TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
-                   min(keptBinNum$percent),"% of bins)")) +
-    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+                   min(keptBinNum$percent),"% of bins)")) #+
+    #coord_cartesian(ylim=c(-20,20), xlim=c(-1.5,1.5))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                            "Cor_eigenValAll_sameTPM",tpmThresh,".pdf"),
          device="pdf",width=29,height=14, units="cm")
@@ -1055,8 +1068,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
     stat_cor(label.x = -1.5, label.y = 18, size=3,method=corMethod) +
     ggtitle(paste0(corMethod," correlation of autosomal PCA eigen value vs TPM (for bins > ",
                    formatC(tpmThresh,big.mark=",",format="G"),"tpm, >",
-                   min(keptBinNum$percentChrA),"% of chrA bins)")) +
-    ylim(c(-20,20)) +xlim(c(-1.5,1.5))
+                   min(keptBinNum$percentChrA),"% of chrA bins)")) #+
+    #coord_cartesian(ylim=c(-20,20),xlim=c(-1.5,1.5))
 
   ggsave(p1,filename=paste0(outPath, "/plots/",outputNamePrefix,corMethod,
                            "Cor_eigenValAll_sameTPM",tpmThresh,"_chrA.pdf"),
@@ -1116,7 +1129,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    coord_cartesian(ylim=c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different ausotomal bins of digitized pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
@@ -1127,7 +1140,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   subdf<-subdf[subdf$bin %in% 1:50,]
   p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
     geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-    ylim(c(-12,12)) + theme_bw()+
+    coord_cartesian(ylim=c(-14,14)) + theme_bw()+
     #scale_fill_manual(values=c("white","grey70"))+
     geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different autosomal bins of digitized pca")) +
@@ -1181,7 +1194,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=bin,y=log2(tpm366))) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
+    coord_cartesian(ylim=c(-15,15)) + theme_bw()+ geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different chrX bins of digitized pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
@@ -1192,7 +1205,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   subdf<-subdf[subdf$bin %in% 1:50,]
   p<-ggplot(subdf,aes(x=bin,y=log2(tpm366),fill=bin)) +
     geom_boxplot(outlier.shape=NA,size=0.1,fill="lightblue") + facet_grid(SMC~pca)+
-    ylim(c(-12,12)) + theme_bw()+
+    coord_cartesian(ylim=c(-12,12)) + theme_bw()+
     #scale_fill_manual(values=c("white","grey70"))+
     geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("366 TPM in different chrX bins of digitized pca")) +
@@ -1254,7 +1267,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=bin,y=baseMean)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    coord_cartesian(ylim=c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("baseMean RNAseq in bins of different strain digitized pca"))
 
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
@@ -1309,7 +1322,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
   df$bin<-factor(df$bin,levels=1:50)
   p<-ggplot(df,aes(x=bin,y=lfc)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    coord_cartesian(ylim=c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("Log2FC in different bins of digitized pca (lfc/pca same strain)"))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "digitizedCompAll_lfcAll.pdf"),
@@ -1366,7 +1379,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
   p<-ggplot(df,aes(x=bin,y=lfc)) +
     geom_boxplot(outlier.shape=NA) + facet_grid(SMC~pca) +
-    ylim(c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
+    coord_cartesian(ylim=c(0,60)) + theme_bw()+ #geom_hline(yintercept=0,col="red")+
     ggtitle(paste0("Log2FC of different strain in bins of TEVonly digitized pca"))
   ggsave(p,filename=paste0(outPath, "/plots/",outputNamePrefix,
                            "digitizedComp366_lfcAll.pdf"),
@@ -1576,7 +1589,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 #
 #   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
 #     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
 #     ggtitle(grp)
 # }
 # p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
@@ -1618,7 +1631,7 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 #
 #   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
 #     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
 #     ggtitle(grp)
 # }
 # p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
@@ -1722,7 +1735,7 @@ insTbls$XvA<-ifelse(insTbls$seqnames=="chrX","chrX","Autosomes")
 
 
 p1<-ggplot(insTbls,aes(x=N2_L3,y=log2FoldChange)) +
-  geom_point(size=1,color="#44444455") + ylim(c(-5,5))+
+  geom_point(size=1,color="#44444455") + coord_cartesian(ylim=c(-5,5))+
   facet_grid(SMC~XvA) +ggtitle(paste0(insWin," L3 insulation score Vs LFC"))
 p1
 ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsL3InsulationScore.png"),
@@ -1730,7 +1743,7 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsL3InsulationScore.png"),
 
 
 p2<-ggplot(insTbls,aes(x=N2_emb,y=log2FoldChange)) +
-  geom_point(size=1,color="#44444455") + ylim(c(-5,5))+
+  geom_point(size=1,color="#44444455") + coord_cartesian(ylim=c(-5,5))+
   facet_grid(SMC~XvA) +ggtitle(paste0(insWin," Emb insulation score Vs LFC"))
 p2
 ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png"),
@@ -1797,7 +1810,7 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 #
 #   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
 #     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
 #     ggtitle(grp)
 # }
 # p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
@@ -1845,7 +1858,7 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 #   dataList[[grp]]<-df
 #   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
 #     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +ylim(c(-1,1))+
+#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
 #     ggtitle(grp)
 # }
 # p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
@@ -1861,7 +1874,7 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 # xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 # p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
 #   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#   facet_grid(~SMC) +ylim(c(-1,1))+
+#   facet_grid(~SMC) +coord_cartesian(ylim=c(-1,1))+
 #   ggtitle(paste0("LFC at ",mustacheBatch," anchors Vs inside loops in chrX")) +
 #   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
 #   theme(axis.text.x=element_text(angle=45,hjust=1))+
@@ -1930,7 +1943,7 @@ tenkbInTads<-tenkbInTads[-queryHits(ol)]
 width(tenkbInTads)
 width(anchors)
 dataList<-list()
-plotList<-list()
+#plotList<-list()
 #grp=useContrasts[3]
 for (grp in useContrasts){
   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
@@ -1954,16 +1967,16 @@ for (grp in useContrasts){
   df$SMC<-grp
 
   dataList[[grp]]<-df
-  plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-    geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-    facet_grid(.~seqnames) +ylim(c(-1,1))+
-    ggtitle(grp)
+  # plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
+  #   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
+  #   facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
+  #   ggtitle(grp)
 }
-p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-
-ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",clickedBatch,"-Clicked_",
-                     padjVal,".pdf")),
-       width=9, height=11, paper="a4",plot=p,device="pdf")
+# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
+#
+# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",clickedBatch,"-Clicked_",
+#                      padjVal,".pdf")),
+#        width=9, height=11, paper="a4",plot=p,device="pdf")
 
 ## focus on chrX loops
 dataTbl<-do.call(rbind,dataList)
@@ -1972,7 +1985,7 @@ xchr<-dataTbl[dataTbl$seqnames=="chrX",]
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-  facet_grid(~SMC) +ylim(c(-1,1))+
+  facet_grid(~SMC) +coord_cartesian(ylim=c(-1,1))+
   ggtitle(paste0("LFC at ",clickedBatch," anchors Vs inside loops in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
   theme(axis.text.x=element_text(angle=45,hjust=1))+
@@ -2204,56 +2217,53 @@ if(dir.exists(paste0(outPath,"/tracks/p0.05_lfc0.5"))){
 }
 
 
-#### TPM ------
-anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
-                     file=c(paste0(outPath,"/otherData/all_anchors_loops_",
-                                   c("366","382"),"_full_size_correct.bed"),
-                            paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
-
-contrastsToUse<-c("366","382","775","784","828","822")
-smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
-names(smcRNAseq)<-paste0("PMW",contrastsToUse)
-
-for(anch in 1:nrow(anchordf)){
-  anchors<-import(anchordf$file[anch])
-  anchorSource<-anchordf$source[anch]
-
-  anchors<-anchors[seqnames(anchors)=="chrX"]
-  seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
-  seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
-
-  seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-
-  xanchors<-anchors[seqnames(anchors)=="chrX"]
-
-  pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
-                  flankSize/1000,"kb_TPM.pdf"), width=11,
-      height=9, paper="a4r")
-
-
-  p<-getPlotSetArray(tracks=c(smcRNAseq),
-                     features=c(xanchors),
-                     refgenome="ce11", bin=flankSize/10, xmin=flankSize,
-                     xmax=flankSize, type="af", rm0=T, ignore_strand=T,
-                     xanchored=median(width(xanchors)))
-
-  dd<-plotHeatmap(p,plotz=F)
-  heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
-  roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
-  minVal<-min(heatmapQuantiles[1,])
-  maxVal<-max(heatmapQuantiles[2,])
-  #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
-  plotAverage(p,main="ChrX anchors", plotScale="log2",
-              error.estimates=ifelse(length(useContrasts>3),F,T))
-  plotHeatmap(p,main="ChrX anchors", plotScale="log2", sortrows=T,
-              clusters=1L,autoscale=F,
-              zmin=minVal, zmax=maxVal,
-              ln.v=F,
-              indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
-              clspace=c("#00008B", "#FFFFE0","#8B0000"))
-  dev.off()
-}
-
-
-
+# #### TPM ------
+# anchordf<-data.frame(source=c("clicked366","clicked382","eigen382"),
+#                      file=c(paste0(outPath,"/otherData/all_anchors_loops_",
+#                                    c("366","382"),"_full_size_correct.bed"),
+#                             paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed")))
+#
+# contrastsToUse<-c("366","382","775","784","828","822")
+# smcRNAseq<-paste0(outPath,"/tracks/PMW",contrastsToUse,"_TPM_avr.bw")
+# names(smcRNAseq)<-paste0("PMW",contrastsToUse)
+#
+# for(anch in 1:nrow(anchordf)[1]){
+#   anchors<-import(anchordf$file[anch])
+#   anchorSource<-anchordf$source[anch]
+#
+#   anchors<-anchors[seqnames(anchors)=="chrX"]
+#   seqlevels(anchors)<-seqlevels(BSgenome.Celegans.UCSC.ce11::Celegans)
+#   seqinfo(anchors)<-seqinfo(BSgenome.Celegans.UCSC.ce11::Celegans)
+#
+#   seqlevels(anchors)<-seqlevels(Celegans)[1:6]
+#
+#   xanchors<-anchors[seqnames(anchors)=="chrX"]
+#
+#   pdf(file=paste0(outPath,"/plots/",outputNamePrefix,anchorSource,"anchors_flank",
+#                   flankSize/1000,"kb_TPM.pdf"), width=11,
+#       height=9, paper="a4r")
+#
+#
+#   p<-getPlotSetArray(tracks=c(smcRNAseq),
+#                      features=c(xanchors),
+#                      refgenome="ce11", bin=flankSize/10, xmin=flankSize,
+#                      xmax=flankSize, type="af", rm0=T, ignore_strand=T,
+#                      xanchored=median(width(xanchors)))
+#
+#   dd<-plotHeatmap(p,plotz=F)
+#   heatmapQuantiles<-sapply(dd$HLST,quantile,c(0.01,0.99),na.rm=T)
+#   roworder<-rev(order(lapply(dd$HLST,rowSums,na.rm=T)$X1))
+#   minVal<-min(heatmapQuantiles[1,])
+#   maxVal<-max(heatmapQuantiles[2,])
+#   #layout(matrix(c(1), nrow = 2, ncol = 1, byrow = TRUE))
+#   plotAverage(p,main="ChrX anchors", plotScale="log2",
+#               error.estimates=ifelse(length(useContrasts>3),F,T))
+#   plotHeatmap(p,main="ChrX anchors", plotScale="log2", sortrows=T,
+#               clusters=1L,autoscale=F,
+#               zmin=minVal, zmax=maxVal,
+#               ln.v=F,
+#               indi=F, sort_mids=T,sort_by=c(T,rep(F,length(smcRNAseq)-1)),
+#               clspace=c("#00008B", "#FFFFE0","#8B0000"))
+#   dev.off()
+# }
 
