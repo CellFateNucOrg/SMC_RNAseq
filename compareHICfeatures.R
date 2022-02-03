@@ -1483,209 +1483,8 @@ if(all(RNAseqAndHiCsubset %in% useContrasts)){
 
 
 
-####
-## loops-----
-####
-
-# smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-#                   useContrasts,"_lfc.bw")
-#
-# loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
-#                            format="bedpe")
-# head(loops)
-# #extract the separate anchors
-# grl<-zipup(loops)
-# anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-# anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
-#
-#
-#
-# anchors<-reduce(sort(c(anchor1,anchor2)))
-# olap_gr<-anchors
-# target_size<-max(width(anchors))
-# window_size<-target_size/2
-# target_size=round(target_size/window_size)*window_size
-# olap_gr<-resize(olap_gr,width=target_size,fix="center")
-# bw_gr <- ssvFetchBigwig(smcRNAseq[3], olap_gr, win_size = 100,
-#                        unique_names=useContrasts[3],win_method="summary")
-# bw_gr$chr<-factor(gsub("chr","",as.vector(seqnames(bw_gr))))
-# ssvSignalHeatmap(bw_gr,fill_limits=c(-1,1),
-#                 perform_clustering="no",cluster_="chr",
-#                 within_order_strategy="sort")
-#
-# library(ComplexHeatmap)
-# library(seqsetvis)
-#
-# grpbw<-import.bw(smcRNAseq[3])
-# bwsig<-viewGRangesWinSummary_dt(grpbw,olap_gr,n_tiles=100)
-# mat<-matrix(bwsig$y,ncol=100,byrow=T)
-# col_fun = circlize::colorRamp2(c(-1, 0, 1), c("green", "white", "red"))
-#
-# p1<-Heatmap(mat,cluster_columns=F,cluster_rows=F,
-#             row_split=bwsig$seqnames[seq(1,dim(bwsig)[1],100)],
-#             show_row_dend = F)#, col=col_fun(c(seq(-1,1,1))),na_col="grey")
-# p1
-#
-# p1+p2
 
 
-# # ## old loops
-# # loops<-rtracklayer::import(paste0(outPath,"/otherData/N2.allValidPairs.hic.5-10kbLoops.bedpe"),
-# #                            format="bedpe")
-# # head(loops)
-# # #extract the separate anchors
-# # grl<-zipup(loops)
-# # anchor1<-unlist(grl)[seq(1,2*length(grl),2)]
-# # anchor2<-unlist(grl)[seq(2,2*length(grl),2)]
-#
-#
-# ### new SIP loops
-# loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-# anchor1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
-# anchor2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
-# mcols(anchor1)<-loops[,c(8:15)]
-# mcols(anchor2)<-loops[,c(8:15)]
-# anchor1$loopNum<-paste0("loop",1:length(anchor1))
-# anchor2$loopNum<-paste0("loop",1:length(anchor2))
-#
-# # anchors<-c(anchor1,anchor2)
-# # #anchors<-reduce(anchors,min.gapwidth=0L)
-# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-#
-#
-# #make TADs
-# tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
-# head(tads)
-# sort(width(tads))
-# tads<-reduce(tads)
-# sort(width(tads))
-#
-# # find regions not in tads
-# notads<-gaps(tads)
-# sort(width(notads))
-#
-#
-# plotList<-list()
-# #grp=useContrasts[3]
-# for (grp in useContrasts){
-#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#
-#   salmongr<-sort(salmongr)
-#
-#   ol<-findOverlaps(salmongr,tads,type="within")
-#   genesInTads<-salmongr[queryHits(ol)]
-#
-#   ol<-findOverlaps(salmongr,notads)
-#   genesNotTads<-salmongr[queryHits(ol)]
-#
-#   genesInTads$TADs<-"inside"
-#   genesNotTads$TADs<-"outside"
-#   df<-data.frame(c(genesInTads,genesNotTads))
-#   df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
-#
-#   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
-#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
-#     ggtitle(grp)
-# }
-# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSinout_",
-#                      padjVal,".pdf")),
-#        width=9, height=11, paper="a4",plot=p,device="pdf")
-#
-#
-#
-# #separate anchors from inside tads
-# tads_in<-reduce(GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1)))
-# tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
-# anchors<-reduce(sort(c(anchor1,anchor2)))
-# #anchors<-resize(anchors,width=width(anchors)+20000,fix="center")
-# ol<-findOverlaps(anchors,tads_in)
-# anchors<-anchors[-queryHits(ol)]
-#
-# plotList<-list()
-# #grp=useContrasts[3]
-# for (grp in useContrasts){
-#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#
-#   salmongr<-sort(salmongr)
-#
-#   ol<-findOverlaps(salmongr,tads_in,type="within")
-#   insideTads<-salmongr[queryHits(ol)]
-#
-#   ol<-findOverlaps(salmongr,anchors)
-#   atAnchors<-salmongr[queryHits(ol)]
-#
-#   insideTads$TADs<-"TAD"
-#   atAnchors$TADs<-"Anchor"
-#   df<-data.frame(c(insideTads,atAnchors))
-#   df<-df%>%dplyr::group_by(seqnames,TADs)%>%dplyr::mutate(count=n())
-#
-#   plotList[[grp]]<-ggplot(df,aes(x=TADs,y=log2FoldChange,fill=TADs))+
-#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
-#     ggtitle(grp)
-# }
-# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"TADSvAnchors_",
-#                      padjVal,".pdf")),
-#        width=9, height=11, paper="a4",plot=p,device="pdf")
-#
-#
-#
-# ####################-
-# ## new SIP loops -----
-# ####################-
-#
-# # loops<-read.delim(paste0(outPath,"/otherData/10kbLoops.txt"),header=T)
-# # gr1<-GRanges(seqnames=loops$chromosome1,ranges=IRanges(start=loops$x1,end=loops$x2-1))
-# # gr2<-GRanges(seqnames=loops$chromosome2,ranges=IRanges(start=loops$y1,end=loops$y2-1))
-# # mcols(gr1)<-loops[,c(8:15)]
-# # mcols(gr2)<-loops[,c(8:15)]
-# # gr1$loopNum<-paste0("loop",1:length(gr1))
-# # gr2$loopNum<-paste0("loop",1:length(gr2))
-# #
-# # anchors<-c(gr1,gr2)
-# # #anchors<-reduce(anchors,min.gapwidth=0L)
-# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-# #
-# # smcRNAseq<-paste0(outPath,"/tracks/",fileNamePrefix,
-# #                   useContrasts,"_lfc.bw")
-# # names(smcRNAseq)<-useContrasts
-# # for(grp in useContrasts){
-# #   rnaSeq<-import.bw(smcRNAseq[[grp]])
-# #   cov<-coverage(rnaSeq,weight="score")
-# #   anchors<-binnedAverage(anchors,cov,grp)
-# # }
-# #
-# #
-# # pdf(paste0(outPath, "/plots/",outputNamePrefix,"RNAseq_loopsMetrics.pdf"),
-# #            width=11,height=8,paper="a4r")
-# # winSize=10000
-# # metricsOI<-c("APScoreAvg","ProbabilityofEnrichment","RegAPScoreAvg","Avg_diffMaxNeihgboor_1", "Avg_diffMaxNeihgboor_2","avg","std","value")
-# # plotList<-list()
-# # for (colOI in metricsOI){
-# #   df<-data.frame(anchors)
-# #   colnames(df)<-c(colnames(df)[1:5],colnames(mcols(anchors)))
-# #   df<-tidyr::pivot_longer(df,useContrasts,names_to="SMC",values_to="LFC")
-# #   plotList[[colOI]]<-ggplot(df,aes_string(x=colOI,y="LFC",col="SMC")) + geom_point() +
-# #     ylab("Average RNAseq score (10kb window)") + xlab(colOI) +
-# #     ggtitle(paste0("Average RNAseq in ",winSize/1000,"kb window vs ",colOI))
-# # }
-# # p<-ggpubr::ggarrange(plotlist=plotList,ncol=2,nrow=2)
-# # print(p)
-# # dev.off()
-#
-#
-#
 
 #########################-
 ## insulation score ----
@@ -1751,194 +1550,50 @@ ggsave(paste0(outPath, "/plots/",outputNamePrefix,"LFCvsEmbInsulationScore.png")
 
 
 
-
-# ##########################-
-# ########### moustache loops------
-# ##########################-
-#
-# ### new Moustache loops
-# #mustacheBatch="PMW366"
-# mustacheBatch="PMW382"
-#
-# loops<-import(paste0(outPath,"/otherData/",mustacheBatch,"_2k_mustache_filtered.bedpe"),format="bedpe")
-# grl<-zipup(loops)
-# anchor1<-do.call(c,lapply(grl,"[",1))
-# anchor2<-do.call(c,lapply(grl,"[",2))
-# mcols(anchor1)<-mcols(loops)
-# mcols(anchor2)<-mcols(loops)
-#
-# anchor1$loopNum<-paste0("loop",1:length(anchor1))
-# anchor2$loopNum<-paste0("loop",1:length(anchor2))
-#
-# # anchors<-c(anchor1,anchor2)
-# # #anchors<-reduce(anchors,min.gapwidth=0L)
-# # seqlevels(anchors)<-seqlevels(Celegans)[1:6]
-#
-# #make TADs
-# tads<-GRanges(seqnames=seqnames(anchor1),IRanges(start=start(anchor1),end=end(anchor2)))
-# head(tads)
-# sort(width(tads))
-# tads<-reduce(tads)
-# sort(width(tads))
-#
-# # find regions not in tads
-# notads<-gaps(tads)
-# sort(width(notads))
-#
-#
-# plotList<-list()
-# #grp=useContrasts[3]
-# for (grp in useContrasts){
-#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#
-#   salmongr<-sort(salmongr)
-#
-#   ol<-findOverlaps(salmongr,tads,type="within")
-#   genesInTads<-salmongr[queryHits(ol)]
-#
-#   ol<-findOverlaps(salmongr,notads)
-#   genesNotTads<-salmongr[queryHits(ol)]
-#
-#   genesInTads$Loops<-"inside"
-#   genesNotTads$Loops<-"outside"
-#   df<-data.frame(c(genesInTads,genesNotTads))
-#   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
-#
-#   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
-#     ggtitle(grp)
-# }
-# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsInOut_",mustacheBatch,"Mustache_",
-#                      padjVal,".pdf")),
-#        width=9, height=11, paper="a4",plot=p,device="pdf")
-#
-#
-#
-# #separate anchors from inside tads
-# tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-# # tads_in<-reduce(tads_in)
-# tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
-# anchors<-sort(c(anchor1,anchor2))
-# anchors<-resize(anchors,width=20000,fix="center")
-# #anchors<-reduce(anchors)
-# #ol<-findOverlaps(anchors,tads_in)
-# #anchors<-anchors[-queryHits(ol)]
-#
-# width(anchors)
-# dataList<-list()
-# plotList<-list()
-# #grp=useContrasts[3]
-# for (grp in useContrasts){
-#   salmon<-readRDS(file=paste0(paste0(outPath,"/rds/",fileNamePrefix,
-#                                      contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
-#
-#   salmon<-salmon[!is.na(salmon$chr),]
-#   salmongr<-makeGRangesFromDataFrame(salmon,keep.extra.columns = T)
-#
-#   salmongr<-sort(salmongr)
-#
-#   ol<-findOverlaps(salmongr,tads_in,type="within")
-#   insideTads<-salmongr[queryHits(ol)]
-#
-#   ol<-findOverlaps(salmongr,anchors)
-#   atAnchors<-salmongr[queryHits(ol)]
-#
-#   insideTads$Loops<-"inLoop"
-#   atAnchors$Loops<-"Anchor"
-#   df<-data.frame(c(insideTads,atAnchors))
-#   df<-df%>%dplyr::group_by(seqnames,Loops)%>%dplyr::mutate(count=n())
-#   df$SMC<-grp
-#
-#   dataList[[grp]]<-df
-#   plotList[[grp]]<-ggplot(df,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-#     geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#     facet_grid(.~seqnames) +coord_cartesian(ylim=c(-1,1))+
-#     ggtitle(grp)
-# }
-# p<-gridExtra::marrangeGrob(plotList,ncol=1,nrow=3)
-#
-# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchors_",mustacheBatch,"-Mostache_",
-#                      padjVal,".pdf")),
-#        width=9, height=11, paper="a4",plot=p,device="pdf")
-#
-# ## focus on chrX loops
-# dataTbl<-do.call(rbind,dataList)
-# xchr<-dataTbl[dataTbl$seqnames=="chrX",]
-#
-# xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
-# p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
-#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-#   facet_grid(~SMC) +coord_cartesian(ylim=c(-1,1))+
-#   ggtitle(paste0("LFC at ",mustacheBatch," anchors Vs inside loops in chrX")) +
-#   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
-#   theme(axis.text.x=element_text(angle=45,hjust=1))+
-#   xlab(label=element_blank())
-#
-# xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
-# xchr$measure="Expression"
-# p2<-ggplot(xchr,aes(x=Loops,y=log2(baseMean),fill=Loops))+
-#   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T) +
-#   facet_wrap(.~measure) + ggtitle("Base mean counts") +
-#   theme(legend.position = "none",axis.text.x=element_text(angle=45,hjust=1)) +
-#   xlab(label=element_blank())
-#
-# p<-ggarrange(p2,p1,ncol=2,widths=c(1.3,8.7))
-# ggsave(paste0(paste0(outPath,"/plots/",outputNamePrefix,"LoopsvAnchorsXchr_",mustacheBatch,"-Mostache_",
-#                      padjVal,".pdf")),
-#        width=11, height=5, paper="a4r",plot=p,device="pdf")
-#
-#
-#
-# ################-
-# ## compare anchors
-# ################-
-#
-# loops366<-import(paste0(outPath,"/otherData/PMW366_2k_mustache_filtered.bedpe"),format="bedpe")
-#
-# loops382<-import(paste0(outPath,"/otherData/PMW382_2k_mustache_filtered.bedpe"),format="bedpe")
-#
-#
-
 ##########################-
 ## Manual clicked loops------
 ##########################-
 
 ### new clicked loops
 #clickedBatch="366"
-clickedBatch="382"
+#clickedBatch="382"
 
+loopsOrAnchors<-"anchors"
 ceTiles<-tileGenome(seqlengths(Celegans),tilewidth=10000,cut.last.tile.in.chrom = T)
 
-loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
-grl<-zipup(loops)
-anchor1<-do.call(c,lapply(grl,"[",1))
-anchor2<-do.call(c,lapply(grl,"[",2))
-mcols(anchor1)<-mcols(loops)
-mcols(anchor2)<-mcols(loops)
+if(loopsOrAnchors=="loops"){
+  loops<-import(paste0(outPath,"/otherData/Clicked_loops_",clickedBatch,"_merge.bedpe"),format="bedpe")
+  grl<-zipup(loops)
+  anchor1<-do.call(c,lapply(grl,"[",1))
+  anchor2<-do.call(c,lapply(grl,"[",2))
+  mcols(anchor1)<-mcols(loops)
+  mcols(anchor2)<-mcols(loops)
 
-anchor1$loopNum<-paste0("loop",1:length(anchor1))
-anchor2$loopNum<-paste0("loop",1:length(anchor2))
+  anchor1$loopNum<-paste0("loop",1:length(anchor1))
+  anchor2$loopNum<-paste0("loop",1:length(anchor2))
+  anchors<-sort(c(anchor1,anchor2))
 
-#separate anchors from inside tads
-tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
-# tads_in<-reduce(tads_in)
-tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
+  #separate anchors from inside tads
+  tads_in<-GRanges(seqnames=seqnames(anchor1),IRanges(start=end(anchor1)+1,end=start(anchor2)-1))
+  # tads_in<-reduce(tads_in)
+  tads_in<-resize(tads_in,width=width(tads_in)-20000,fix="center")
 
-ol<-findOverlaps(ceTiles,tads_in)
-tenkbInTads<-ceTiles[unique(queryHits(ol))]
+  ol<-findOverlaps(ceTiles,tads_in)
+  tenkbInTads<-ceTiles[unique(queryHits(ol))]
 
-anchors<-sort(c(anchor1,anchor2))
-anchors<-resize(anchors,width=10000,fix="center")
-reduce(anchors)
+  anchors<-resize(anchors,width=10000,fix="center")
+  reduce(anchors)
 
-ol<-findOverlaps(tenkbInTads,anchors)
-tenkbInTads<-tenkbInTads[-queryHits(ol)]
+  ol<-findOverlaps(tenkbInTads,anchors)
+  tenkbInTads<-tenkbInTads[-queryHits(ol)]
+} else {
+  anchors<-import(paste0(outPath,"/otherData/382_X.eigs_cis.vecs_37peaks_p0.65_correct.bed"),format="bed")
+  anchors<-resize(anchors,width=10000,fix="center")
+  ol<-findOverlaps(ceTiles,anchors)
+  tenkbInTads<-ceTiles[-queryHits(ol)]
+  clickedBatch="382"
+}
+
 
 width(tenkbInTads)
 width(anchors)
@@ -1985,11 +1640,14 @@ xchr<-dataTbl[dataTbl$seqnames=="chrX",]
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 p1<-ggplot(xchr,aes(x=Loops,y=log2FoldChange,fill=Loops))+
   geom_boxplot(notch=T,outlier.shape=NA,varwidth=T)+
-  facet_grid(~SMC) +coord_cartesian(ylim=c(-1,1))+
+  facet_grid(~SMC) +coord_cartesian(ylim=c(-0.75,1.8))+
   ggtitle(paste0("LFC at ",clickedBatch," anchors Vs inside loops in chrX")) +
   geom_hline(yintercept=0,linetype="dotted",color="grey20") +
   theme(axis.text.x=element_text(angle=45,hjust=1))+
-  xlab(label=element_blank())
+  xlab(label=element_blank())+
+  ggsignif::geom_signif(test=t.test,comparisons = list(c("Anchor", "inLoop")),
+                        map_signif_level = F,tip_length=0.001,y_position=1.4,vjust=-0.1,
+                        textsize=3,margin_top=0)
 
 xchr$SMC<-factor(xchr$SMC,levels=useContrasts)
 xchr$measure="Expression"
