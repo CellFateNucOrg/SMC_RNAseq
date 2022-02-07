@@ -47,6 +47,8 @@ repeats_ce11.gr$ID<-paste0("rpt",1:length(repeats_ce11.gr),"_",
                            seqnames(repeats_ce11.gr),":",
                            start(repeats_ce11.gr),"-",end(repeats_ce11.gr))
 
+saveRDS(repeats_ce11.gr,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.rds"))
+
 # bedgraph for Todor
 repeats_bg<-repeats_ce11.gr
 mcols(repeats_bg)<-NULL
@@ -123,7 +125,8 @@ inMcmurchy<-gff$Name %in% mcmurchy$Family
 idxMM<-match(gff$Name[inMcmurchy],mcmurchy$Family)
 gff$repType[inMcmurchy]<-mcmurchy$Class[idxMM]
 
-saveRDS(gff,paste0("./repeats_ce11_",dfamVer,"_nr.rds"))
+saveRDS(gff,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.rds"))
 
-write.csv(gff,paste0("./repeats_ce11_",dfamVer,"_nr.csv"), quote=F,
+write.csv(gff,paste0(workDir,"/repeats_ce11_",dfamVer,"_nr.csv"), quote=F,
           row.names=F)
+

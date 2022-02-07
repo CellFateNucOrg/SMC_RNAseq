@@ -2,8 +2,6 @@ library(DESeq2)
 library(Organism.dplyr)
 library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
-#library("TxDb.Celegans.UCSC.ce11.refGene")
-#library("TxDb.Celegans.UCSC.ce11.ensGene")
 library(tximport)
 library(GenomicFeatures)
 library(GenomeInfoDb)
@@ -19,23 +17,13 @@ library(ggpubr)
 
 #library(REBayes)
 # get funciton for converting gene names from WBID to publicID
-source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
-source("functions.R")
+#source("~/Documents/MeisterLab/GenomeVer/geneNameConversion/convertingGeneNamesFunction1.R")
+source("./functions.R")
+source("./variableSettings.R")
+
 ###############################################################-
 ### some variables #####
 ###############################################################-
-plotPDFs=F
-fileNamePrefix="BWA_"
-filterPrefix="BWA_rpt_none_"
-dataset="_none"
-filterData=T
-
-padjVal=0.05
-lfcVal=0.5
-outPath="."
-genomeVer="WS275"
-genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
-
 genomeGR<-GRanges(seqnames=seqnames(Celegans)[1:6], IRanges(start=1, end=seqlengths(Celegans)[1:6]))
 
 wbseqinfo<-seqinfo(Celegans)
@@ -44,7 +32,9 @@ seqnames(wbseqinfo)<-c(gsub("^M$","MtDNA",seqnames(wbseqinfo)))
 genome(wbseqinfo)<-genomeVer
 ce11seqinfo<-seqinfo(Celegans)
 
-makeDirs(outPath,dirNameList=c("rds","plots","txt","tracks"))
+makeDirs(outPath,dirNameList=paste0(c("rds","plots","txt","tracks"),
+        paste0("/p",padjVal,"_lfc",lfcVal,"_",aligner,"_",geneset,"_",
+               multimappers,"/")))
 
 fileList<-read.table(paste0(outPath,"/fastqList.txt"), stringsAsFactors=F, header=T)
 
@@ -71,12 +61,12 @@ groupsOI<-levels(sampleTable$SMC)[-1] # groups of interest to contrast to contro
 ### Create metadata object --------------------------------------------------
 ###############################################################-
 
-if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))){
-  source(paste0(outPath,"/createMetadaObj.R"))
+if(!file.exists(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))){
+  source(paste0(outPath,"/createMetadataObj.R"))
 }
 
-metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
-#metadata<-readRDS(paste0(outPath,"metadataTbl_genes-rpts.rds"))
+metadata<-readRDS(paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
+#metadata<-readRDS(paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
 
 ###############################################################-
@@ -95,6 +85,13 @@ colData(dds)$sampleName<-paste(gsub(paste0("_union", dataset,
                                 ".txt"), "",
                                 sampleTable1$sampleName),
                                sep="_")
+
+# clean up row names
+rownames(dds)<-gsub("^Gene:","",rownames(dds))
+
+# remove rows with less than an average of minReads:
+dds<-dds[rowMeans(counts(dds))>=minReads,]
+
 
 ###############################################################-
 ### DESeq2 differential expression analysis (using negative binomial distribution)
@@ -117,13 +114,25 @@ featureData <- data.frame(gene=rownames(dds),
 
 rowData(dds) <- DataFrame(mcols(dds), featureData)
 
-dds<-DESeq(dds)
 
-# remove non-repeat genes
-if(filterData){
-  dds<-dds[-grep("WBGene",rowData(dds)$gene),]
-  fileNamePrefix<-filterPrefix
+if(grepl("rptOnly",filterPrefix)){
+  # remove non-repeat genes before stats calculation
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    idx<-grep("_chrX",rownames(dds))
+    dds<-dds[-idx]
+    fileNamePrefix<-filterPrefix
+  }
+  dds<-DESeq(dds)
+} else {
+  dds<-DESeq(dds)
+  # remove non-repeat genes after stats calculation
+  if(filterData){
+    dds<-dds[grep("^rpt",rowData(dds)$gene),]
+    fileNamePrefix<-filterPrefix
+  }
 }
+
 
 ######################################################-
 # Basic sample stats ------------------------------------------------------
@@ -269,14 +278,12 @@ if(filterData){
 }
 
 for(grp in groupsOI){
-  res<-results(dds,contrast=c("SMC",grp,controlGrp))
+  res<-results(dds, contrast=c("SMC",grp,controlGrp), alpha=padjVal)
   sink(file=paste0(outPath,"/txt/",fileNamePrefix, grp,
                    "_logfile.txt"), append=TRUE,
        type="output")
   cat(paste0("Number of genes that change expression in ",grp," at different padj cutoffs:\n"))
   print(summary(res))
-  print(summary(res,alpha=0.05))
-  print(summary(res,alpha=0.01))
   sink()
 
   ### add metadata
@@ -287,6 +294,7 @@ for(grp in groupsOI){
   resLFC<-lfcShrink(dds,coef=paste0("SMC_",grp,"_vs_",controlGrp), type="apeglm", res=res)
   class(resLFC)
   ### add metadata
+  #rownames(resLFC)<-gsub("^Gene:","",rownames(resLFC))
   resLFC$ID<-rownames(resLFC)
   idx<-match(rownames(resLFC),metadata$ID)
   resLFC$chr<-factor(seqnames(metadata),levels=paste0("chr",c("I","II","III","IV","V","X")))[idx]
@@ -325,26 +333,14 @@ for(grp in groupsOI){
   resLFC<-resLFC[! is.na(resLFC$padj),]
 
 
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
-                  "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
-
-  #######-
-  # plot results filtering threshold ----------------------------------------
-  #######-
-  plot(metadata(resLFC)$filterNumRej,
-       type="b", ylab="number of rejections",
-       xlab="quantiles of filter",main="Threshold for independant filtering of results")
-  lines(metadata(resLFC)$lo.fit, col="red")
-  abline(v=metadata(resLFC)$filterTheta)
-  legend("topright",legend=paste0("Read count \nthreshold: ",
-                                  round(metadata(resLFC)$filterThreshold,2)))
-
 
   ##########-
   # heirarchical clustering of most significantly changed genes -------------
   ##########-
+  pdf(file=paste0(outPath,"/plots/",fileNamePrefix,grp,
+                  "_hclust_mostChanged.pdf"), width=8,height=11,paper="a4")
   # select gene names based on FDR (5%)
-  gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>0.5]
+  gene.kept <- rownames(resLFC)[resLFC$padj <= padjVal & !is.na(resLFC$padj) & abs(resLFC$log2FoldChange)>lfcVal]
 
   # Retrieve the normalized counts for gene of interest
   countTable.kept <- log2(counts(dds) + epsilon)[gene.kept, ]
@@ -358,7 +354,7 @@ for(grp in groupsOI){
               scale="row",
               hclust=function(x) hclust(x,method="average"),
               distfun=function(x) as.dist((1-cor(t(x)))/2),
-              margin=c(6,0),
+              margin=c(8,0),
               trace="none",
               density="none",
               labRow="",
@@ -406,7 +402,7 @@ for(grp in groupsOI){
   colnames(mcols(forBG))<-c("name","score")
   seqinfo(forBG)<-ce11seqinfo
   export(forBG,paste0(outPath,"/tracks/",fileNamePrefix,grp,
-                      "_wt_lfc.bedGraph"),
+                      "_lfc.bedGraph"),
          format="bedGraph")
 
 
@@ -417,14 +413,14 @@ for(grp in groupsOI){
   score<-oldf %>% group_by(queryHits) %>% summarise(score=mean(scorePerQuery))
   forBW$score<-score$score
   export(forBW,paste0(outPath,"/tracks/",fileNamePrefix,grp,
-                      "_wt_lfc.bw"),
+                      "_lfc.bw"),
          format="bigwig")
 
   #######-
   # bed file for significant genes ------------------------------------------
   #######-
 
-  idx<-which(resGR$padj<0.05)
+  idx<-which(resGR$padj<padjVal)
   forBed<-resGR[idx]
   mcols(forBed)<-mcols(forBed)[,c("ID","score")]
   colnames(mcols(forBed))<-c("name","score")
@@ -432,13 +428,12 @@ for(grp in groupsOI){
   #NaIdx<-is.na(forBed$score)
   #forBed$score[NaIdx]<-0
   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
-                       "_wt_lfc_p",gsub("^0.","",padjVal),".bedGraph"),
+                       "_p",padjVal,"_lfc",lfcVal,".bedGraph"),
          format="bedGraph")
 
 
   export(forBed,paste0(outPath,"/tracks/",fileNamePrefix,grp,
-                       "_wt_lfc_p",gsub("^0.","",padjVal),".bed"),
-         format="bed")
+                       "_p",padjVal,"_lfc",lfcVal,".bed"), format="bed")
 
 
 
@@ -461,21 +456,21 @@ for(grp in groupsOI){
   #############-
   # MAplot X chr genes
   #############-
+  if(! grep("NoX",geneset)){
+    #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
+    chrXgenes<-resLFC$ID[resLFC$chr=="chrX"]
+    chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
 
-  #chrXgenes<-mcols(dds)$gene[mcols(dds)$chr=="chrX"]
-  chrXgenes<-resLFC$ID[resLFC$chr=="chrX"]
-  chrXres<-resLFC[rownames(resLFC) %in% chrXgenes,]
-
-  chrXres05<-chrXres[chrXres$padj<padjVal,]
+    chrXres05<-chrXres[chrXres$padj<padjVal,]
 
 
-  upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
-  write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
-                                           "_upOnX_p",padjVal,".csv"),
-              row.names=FALSE,col.names=FALSE)
+    upOnX<-chrXres05[chrXres05$log2FoldChange>0,]
+    write.table(rownames(upOnX), file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                             "_upOnX_p",padjVal,".csv"),
+                row.names=FALSE,col.names=FALSE)
 
-  plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
-
+    plotMA(chrXres,main=paste0(grp, " chrX genes, threshold= ", padjVal),ylim=c(-4,4),alpha=padjVal)
+  }
 
 
   #############-
@@ -496,51 +491,51 @@ for(grp in groupsOI){
   #############-
   # Fisher test of number of up and down genes on X v autosomes
   #############-
+  if(! grep("NoX",geneset)){
+    sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
+                     "_logfile.txt"),append=TRUE, type="output")
+    upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
+                              sum(chrXres05$log2FoldChange<0),
+                              sum(autosomalRes05$log2FoldChange>0),
+                              sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
 
-  sink(file=paste0(outPath,"/txt/",fileNamePrefix,grp,
-                   "_logfile.txt"),append=TRUE, type="output")
-  upVdownXvA<-matrix(data=c(sum(chrXres05$log2FoldChange>0),
-                            sum(chrXres05$log2FoldChange<0),
-                            sum(autosomalRes05$log2FoldChange>0),
-                            sum(autosomalRes05$log2FoldChange<0)),nrow=2,dimnames=list(group=c("Up","Down"),chr=c("chrX","chrA")))
-
-  cat("\nFisher Test, up v down:\n")
-  print(upVdownXvA)
-  print(fisher.test(upVdownXvA))
-
-
-  #############-
-  # Fisher test of number of differentially expressed genes on X v autosomes
-  #############-
-
-  testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
-                       dim(autosomalRes)[1],
-                       dim(autosomalRes05)[1]),
-                     nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
-  cat("\nFisher Test, enrichment of differentially expressed genes:\n")
-  print(testEnrich)
-  print(fisher.test(testEnrich))
-  sink()
+    cat("\nFisher Test, up v down:\n")
+    print(upVdownXvA)
+    print(fisher.test(upVdownXvA))
 
 
-  # boxplots X vs autosomes -------------------------------------------------
-  #############-
-  # Box plot by X v autosomes
-  #############-
-  pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
-                  "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+    #############-
+    # Fisher test of number of differentially expressed genes on X v autosomes
+    #############-
 
-  chrType<-factor(rownames(resLFC) %in% chrXgenes)
-  levels(chrType)<-c("Autosomal","X chr")
-  geneCounts<-table(chrType)
+    testEnrich<-matrix(c(dim(chrXres)[1],dim(chrXres05)[1],
+                         dim(autosomalRes)[1],
+                         dim(autosomalRes05)[1]),
+                       nrow=2,dimnames=list(group=c("NumTotal","NumSig"),chr=c("chrX","chrA")))
+    cat("\nFisher Test, enrichment of differentially expressed genes:\n")
+    print(testEnrich)
+    print(fisher.test(testEnrich))
+    sink()
 
-  boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
-          main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
-          xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
-  #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
-  abline(h=0,lty=2,col="blue")
-  dev.off()
 
+    # boxplots X vs autosomes -------------------------------------------------
+    #############-
+    # Box plot by X v autosomes
+    #############-
+    pdf(file=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                    "_boxPlots_expnByChrType.pdf"), width=5,height=5,paper="a4")
+
+    chrType<-factor(rownames(resLFC) %in% chrXgenes)
+    levels(chrType)<-c("Autosomal","X chr")
+    geneCounts<-table(chrType)
+
+    boxplot(log2FoldChange~chrType, data=resLFC, varwidth=TRUE, outline=FALSE, notch=TRUE,
+            main=paste0("Expression changes after cleavage of ", grp), col="grey", ylab="Log2 Fold Change",
+            xlab="chromosome type (number of genes)", names=paste(names(geneCounts)," \n(",geneCounts,")",sep=""))
+    #stripchart(log2FoldChange~chrType,data=res,method="jitter",vertical=TRUE,pch=20,col="#11115511",cex=0.5,add=TRUE)
+    abline(h=0,lty=2,col="blue")
+    dev.off()
+  }
 
   #############-
   # Box plot by chromosome
@@ -578,14 +573,14 @@ for(grp in groupsOI){
                       lab=paste0(resLFC$rptfamName),
                       labSize=3,
                       labCol="black",
-                      drawConnectors=T,
+                      #drawConnectors=T,
                       x="log2FoldChange",
                       y="padj",
                       #selectLab=rownames(resLFC)[12366],
                       #xlim=c(-5.5,5.5),
                       #ylim=c(0,65),
-                      title= paste0(gsub("_$","",fileNamePrefix)," ",grp,
-                                    " vs ", controlGrp),
+                      title=paste0(aligner,"_",geneset,"_",multimappers, " ",
+                                   grp," vs ", controlGrp),
                       titleLabSize=14,
                       subtitle=NULL,
                       caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp,
@@ -628,14 +623,14 @@ for(grp in groupsOI){
                                  resLFC$rptfamID,"(",resLFC$overlap,")"),
                       labSize=2,
                       labCol="black",
-                      drawConnectors=T,
+                      #drawConnectors=T,
                       x="log2FoldChange",
                       y="padj",
                       #selectLab=rownames(resLFC)[12366],
                       #xlim=c(-5.5,5.5),
                       #ylim=c(0,65),
-                      title= paste0(gsub("_$","",fileNamePrefix)," ",grp,
-                                    " vs ", controlGrp),
+                      title=paste0(aligner,"_",geneset,"_",multimappers, " ",
+                                           grp," vs ", controlGrp),
                       titleLabSize=14,
                       subtitle=NULL,
                       caption = paste0(nrow(resLFC), ' expressed genes. ',sigUp,
@@ -698,160 +693,146 @@ for(grp in groupsOI){
   print(summaryByChr(resLFC,padjVal=0.01,lfcVal=1))
 
   sink()
-  #summary(resLFC,alpha=0.05)
 
+  ##### summary by family ------
+  md<-readRDS(paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
+  fam<-md[which(md$bioType=="repeatFamily"),]
 
-  ##### create filtered tables of gene names
-  results<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
-                          "_DESeq2_fullResults.rds"))
-  #results<-na.omit(results)
+  resLFC<-readRDS(paste0(outPath,"/rds/",fileNamePrefix, grp,
+                         "_DESeq2_fullResults.rds"))
+  resLFC<-resLFC[! is.na(resLFC$padj),]
+  sigUp<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange>lfcVal,]
+  sigDown<-resLFC[resLFC$padj < padjVal & resLFC$log2FoldChange< -lfcVal,]
 
+  upCounts<-table(sigUp$rptfamName)
+  downCounts<-table(sigDown$rptfamName)
 
-  nrow(filterResults(results,padj=0.05,lfc=0,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.05,lfc=0.5,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.05,lfc=0.75,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.05,lfc=1,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.01,lfc=0,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.01,lfc=0.5,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.01,lfc=0.75,"both","all", writeTable=F))
-  nrow(filterResults(results,padj=0.01,lfc=1,"both","all", writeTable=F))
+  df<-data.frame(rptfamName=sort(unique(c(names(upCounts),
+                                     names(downCounts)))),
+                 up=0, down=0,famSize=0,rptType=NA)
 
+  idx<-match(df$rptfamName,fam$rptfamName)
+  df$rptType<-fam$rptType[idx]
+  df$famSize<-fam$famSize[idx]
 
-  genesdc<-filterResults(results,padj=0.05,lfc=0.5,"gt","chrX", writeTable=F)
-  genesdcgr<-metadata[metadata$ID %in% genesdc$ID]
-  mcols(genesdcgr)<-cbind(mcols(genesdcgr),
-                           genesdc[match(genesdcgr$ID,
-                                          genesdc$ID),c(1:3)])
-  genesdcgr
-  lfcVal=0.5 # >log2(1.4) and <log2(1.5)
-  padjVal=0.05
-  saveRDS(genesdcgr,file=paste0(outPath,"/rds/",fileNamePrefix, grp,
-                                 "_chrXup_lfc",
-                                 formatC(lfcVal,format="e",digits=0),"_p",
-                                 formatC(padjVal,format="e",digits=0),
-                                 "_gr.rds"))
+  j<-df$rptfamName %in% sigUp$rptfamName
+  idx<-match(df$rptfamName[j],names(upCounts),nomatch=F)
+  df$up[j]<-upCounts[idx]
+
+  j<-df$rptfamName %in% sigDown$rptfamName
+  idx<-match(df$rptfamName[j],names(downCounts),nomatch=F)
+  df$down[j]<-downCounts[idx]
+
+  #dflong<-pivot_longer(df[1:4],cols=c(names(df)[2:4]))
+  #ggplot(dflong,aes(x=rptfamName,y=value,fill=name))+geom_bar(stat="identity")
+
+  write.csv(df, file=paste0(outPath,"/txt/", fileNamePrefix,grp,
+                            "_Family_p",padjVal,"_lfc",lfcVal,".csv"),
+            quote=F,row.names=F)
+
 }
 
 
 
-# # Volcano - colour by other datasets --------------------------------------
-#
-#
-#
-# oscillating<-read.delim(paste0(outPath,"/oscillatingGenes.tsv"),header=T,
-#                         stringsAsFactors=F)
-#
-# hsUp<-readRDS("hsUp_garrigues2019.rds")
-# hsDown<-readRDS("hsDown_garrigues2019.rds")
-#
-# padjVal=0.05
-# lfcVal=0.5
-#
-# #grp=groupsOI[3]
-#
-# for(grp in groupsOI){
-#   salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,grp,"_DESeq2_fullResults.rds"))
-#
-#   #### oscillating genes
-#   keyvals<-rep('black', nrow(salmon))
-#   names(keyvals)<-rep('Other',nrow(salmon))
-#   idx<-salmon$ID %in% oscillating$WB_ID
-#   keyvals[idx]<-'red'
-#   names(keyvals)[idx]<-"Oscillating"
-#   sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
-#                            salmon$log2FoldChange>lfcVal,
-#                            keyvals=="red"), na.rm=T)==3, na.rm=T)
-#   sigDown<-sum(rowSums(cbind(salmon$padj< padjVal,
-#                              salmon$log2FoldChange<lfcVal,
-#                              keyvals=="red"), na.rm=T)==3, na.rm=T)
-#   p1<-EnhancedVolcano(salmon,
-#                       lab=salmon$publicID,
-#                       labSize=0.5,
-#                       labCol="#11111100",
-#                       x="log2FoldChange",
-#                       y="padj",
-#                       selectLab=salmon$publicID[12366],
-#                       xlim=c(-5.5,5.5),
-#                       ylim=c(0,65),
-#                       title= paste0(grp," vs ", controlGrp),
-#                       subtitle=NULL,
-#                       caption = paste0(sum(keyvals=="red"), ' oscillating genes (Meeuse 2020). ',sigUp, " up, ",sigDown," down."),
-#                       captionLabSize = 12,
-#                       pCutoff=padjVal,
-#                       FCcutoff=lfcVal,
-#                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
-#                       ylab=bquote(~-Log[10]~adjusted~italic(P)),
-#                       #.legend=c('NS','P & Log2 FC'),
-#                       #legendLabels=c('NS', expression(p-value<padjVal~and~log[2]~FC>1)),
-#                       legendPosition = 'top',
-#                       legendLabSize = 12,
-#                       legendIconSize = 3.0,
-#                       axisLabSize=14,
-#                       colCustom=keyvals,
-#                       #col = c("black", "red"),
-#                       colAlpha=0.5,
-#                       pointSize = 1.0)
-#   #dev.off()
-#   if(plotPDFs==T){
-#     ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-#                            "_volcanoPlot_oscillatingGenes.pdf"), plot=p1,
-#            device="pdf",path=outPath, width=12,height=12,units="cm")
-#   } else {
-#     ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-#                            "_volcanoPlot_oscillatingGenes.png"), plot=p1,
-#            device="png",path=outPath, width=12,height=12,units="cm")
-#   }
-#
-#
-#
-#   #### heat shock genes
-#   myCols<-c("#11111100","red","red") # background, dataset1, dataset2
-#   keyvals<-rep(myCols[1], nrow(salmon))
-#   names(keyvals)<-rep('Other',nrow(salmon))
-#   idx<-salmon$ID %in% hsUp$WormBase.ID | salmon$ID %in% hsDown$WormBase.ID
-#   keyvals[idx]<-myCols[2]
-#   names(keyvals)[idx]<-"Heatshock"
-#   sigUp<-sum(rowSums(cbind(salmon$padj< padjVal,
-#                            salmon$log2FoldChange>lfcVal,
-#                            keyvals==myCols[2]), na.rm=T)==3, na.rm=T)
-#   sigDown<-sum(rowSums(cbind(salmon$padj< padjVal,
-#                              salmon$log2FoldChange< -lfcVal,
-#                              keyvals==myCols[2]), na.rm=T)==3, na.rm=T)
-#   p1<-EnhancedVolcano(salmon,
-#                       lab=salmon$publicID,
-#                       labSize=0.5,
-#                       labCol=myCols[1],
-#                       x="log2FoldChange",
-#                       y="padj",
-#                       selectLab=salmon$publicID[12366],
-#                       xlim=c(-5.5,5.5),
-#                       ylim=c(0,65),
-#                       title= paste0(grp," vs ", controlGrp),
-#                       subtitle=NULL,
-#                       caption = paste0(sum(keyvals==myCols[2]), ' heatshock genes (Garrigues 2019). ',sigUp, " up, ",sigDown," down."),
-#                       captionLabSize = 12,
-#                       pCutoff=padjVal,
-#                       FCcutoff=lfcVal,
-#                       xlab=bquote(~Log[2]~'fold change'~.(grp)~'/'~.(controlGrp)),
-#                       ylab=bquote(~-Log[10]~adjusted~italic(P)),
-#                       #.legend=c('NS','P & Log2 FC'),
-#                       #legendLabels=c('NS', expression(p-value<padjVal~and~log[2]~FC>1)),
-#                       legendPosition = 'top',
-#                       legendLabSize = 12,
-#                       legendIconSize = 3.0,
-#                       axisLabSize=14,
-#                       colCustom=keyvals,
-#                       #col = c("black", "red"),
-#                       colAlpha=0.5,
-#                       pointSize = 1.0)
-#   #dev.off()
-#   if(plotPDFs==T){
-#     ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-#                            "_volcanoPlot_hsGenes.pdf"), plot=p1,
-#            device="pdf",path=outPath, width=12,height=12,units="cm")
-#   } else {
-#     ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
-#                            "_volcanoPlot_hsGenes.png"), plot=p1,
-#            device="png",path=outPath, width=12,height=12,units="cm")
-#   }
-# }
+#######-
+## vary filtering threshold ----------------------------------------
+#######-
+padjVals=c(0.05,0.01)
+lfcDensity<-NULL
+for(grp in groupsOI) {
+  ## Count significant genes at different thresholds and plot
+  thresholds<-varyThreshold(dds, contrastOI=c("SMC",grp,controlGrp),
+                            padjVals=padjVals, lfcVals=c(0,0.25,0.5,1),
+                            direction=c("both","lt","gt"), chr=c("all"),
+                            outPath=outPath,
+                            fileNamePrefix=paste0(fileNamePrefix, grp))
+
+  write.csv(thresholds,file=paste0(outPath,"/txt/",fileNamePrefix, grp,
+                                   "_numSignificant.csv"),quote=F,row.names=F)
+
+  ####### plot percentSignificant
+  p1<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSignificant))+
+    facet_grid(rows=vars(direction),cols=vars(padj))+
+    ggtitle(paste0(grp," all genes"))+geom_bar(stat="identity")+
+    xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+    geom_text(aes(label=paste0(round(percentSignificant,0),"%\n",numSignificant)),
+              vjust=0,size=3,lineheight=0.9)+
+    ylim(0,1.2*max(thresholds$percentSignificant))
+
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "_thresholds_percentSig.png"), plot=p1,
+         device="png",path=outPath,width=9,height=12,units="cm")
+
+  p2<-ggplot(data=thresholds,aes(x=as.factor(lfc),y=percentSigGt10))+
+    facet_grid(rows=vars(direction),cols=vars(padj))+
+    ggtitle(paste0(grp," all genes"))+geom_bar(stat="identity")+
+    xlab("log2 fold change threshold")+ylab("Percent significant genes") +
+    geom_text(aes(label=paste0(round(percentSigGt10,0),"%\n",numSignificant)),
+              vjust=0,size=3,lineheight=0.9)+
+    ylim(0,1.2*max(thresholds$percentSigGt10))
+
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "_thresholds_percentSigGt10.png"), plot=p2,
+         device="png",path=outPath,width=9,height=12,units="cm")
+
+
+  # get distribution of lfc values
+  dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
+                 breaks=c(seq(0,2,0.05),Inf),chr="all",asCounts=F)[[1]]
+  dd$group<-grp
+  if(is.null(lfcDensity)){
+    lfcDensity<-dd
+  } else {
+    lfcDensity<-rbind(lfcDensity,dd)
+  }
+
+  dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
+                 breaks=c(seq(0,2,0.05),Inf), chr="chrX",
+                 direction="gt", asCounts=F)[[1]]
+  #rawX<-dd[[2]]
+  #dd<-dd[[1]]
+  dd$group<-paste0(grp,"_chrX")
+  lfcDensity<-rbind(lfcDensity,dd)
+
+  # dd<-getDensity(dds, contrastOI=c("SMC",grp,controlGrp), padjVals=padjVals,
+  #                breaks=c(seq(0,2,0.05),Inf), chr="autosomes",
+  #                direction="both", asCounts=F)[[1]]
+  # dd$group<-paste0(grp,"_chrA")
+  # lfcDensity<-rbind(lfcDensity,dd)
+}
+
+lfcDensity$breaks<-gsub(",","-",gsub("\\(|\\]","",lfcDensity$breaks))
+lfcDensity$breaks<-factor(lfcDensity$breaks)
+
+p<-ggplot(data=lfcDensity,aes(x=breaks,y=counts)) +
+  facet_grid(rows=vars(group), cols=vars(pvals))+
+  geom_bar(stat="identity") +theme_classic()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  xlab("Absolute log2 fold change bins")+ylab("Density")
+
+p1<-p+geom_vline(aes(xintercept = 10.5),color="red")+
+  annotate("text",label="lfc=0.5",size=3,x=11,y=0.95*max(lfcDensity$counts),
+           hjust=0.1,color="red")
+
+p2<-p+geom_vline(aes(xintercept = 5.5),color="red")+
+  annotate("text",label="lfc=0.25",size=3,x=5.5,y=0.95*max(lfcDensity$counts),
+           hjust=-0.1,color="red")
+
+if(plotPDFs==T){
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                         "lfcValueDistribution_0.5.pdf"), plot=p1,
+         device="pdf",path=outPath, width=25,height=19,units="cm")
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix,
+                         "lfcValueDistribution_0.25.pdf"), plot=p2,
+         device="pdf",path=outPath, width=25,height=19,units="cm")
+} else {
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "lfcValueDistribution_0.5.png"), plot=p1,
+         device="png",path=outPath, width=25,height=19,units="cm")
+  ggsave(filename=paste0(outPath,"/plots/",fileNamePrefix, grp,
+                         "lfcValueDistribution_0.25.png"), plot=p2,
+         device="png",path=outPath, width=25,height=19,units="cm")
+}
+
+
+

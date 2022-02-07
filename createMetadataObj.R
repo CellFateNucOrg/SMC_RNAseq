@@ -1,11 +1,14 @@
 library(rtracklayer)
+library(BSgenome.Celegans.UCSC.ce11)
+library(dplyr)
 
 ## variables ###
-outPath="."
-genomeVer="WS275"
+source("./variableSettings.R")
+
 genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
 david<-read.delim("/Users/semple/Documents/MeisterLab/GenomeVer/annotations/david_wbid2entrez_WS278.txt")
-dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
+dfam<-readRDS(paste0("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_",ucscVer,"_",dfamVer,"_nr.rds"))
+ce11seqinfo<-seqinfo(Celegans)
 
 # Create metadata object --------------------------------------------------
 ###############################################################-
@@ -64,16 +67,15 @@ seqinfo(metadata)<-ce11seqinfo
 metadata<-sort(metadata)
 
 ######## add repeat data
-dfam<-readRDS("/Users/semple/Documents/MeisterLab/otherPeopleProjects/Moushumi/SMC_RNAseq_repeats/repeats_ce11_dfam_nr.rds")
-
 seqlevelsStyle(dfam)<-"ucsc"
 seqinfo(dfam)<-seqinfo(metadata)
 
 # give both objects the same column names
-mcols(dfam)[,c("source","type","score","phase")]<-NULL
-names(mcols(dfam))<-c("rptID","rptfamName","rptfamID","rptType")
+mcols(dfam)[,c("type","score","phase")]<-NULL
+names(mcols(dfam))<-c("source","rptID","rptfamName","rptfamID","rptType")
 mcols(dfam)[,names(mcols(metadata))]<-as.character(NA)
-mcols(metadata)[,c("rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)
+mcols(metadata)[,c("source","rptID","rptfamName","rptfamID","rptType")]<-as.character(NA)
+metadata$source<-genomeVer
 mcols(dfam)<-mcols(dfam)[,match(names(mcols(metadata)),names(mcols(dfam)))]
 dfam$bioType<-"repeat"
 # make sure column types are the same
@@ -94,7 +96,7 @@ mcols(exons)<-mcols(exons)[,c("source","type","Parent")]
 seqlevelsStyle(exons)<-"ucsc"
 rptRows<-which(md$bioType == "repeat")
 toIgnore<-which(md$bioType %in% c("repeat","transposon","transposon_protein_coding",
-                                 "transposon_pseudogene"))
+                                  "transposon_pseudogene"))
 
 
 olstart<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="start")
@@ -104,10 +106,10 @@ olin<-findOverlaps(md[rptRows,],md[-toIgnore,],minoverlap=10L,type="within")
 exons<-exons[which(exons$source=="WormBase")]
 olexons<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="any")
 olexonsEqual<-findOverlaps(md[rptRows,],exons,minoverlap=1L,type="equal") # should be empty
-length(unique(queryHits(olstart))) #18
-length(unique(queryHits(olend))) #17
-length(unique(queryHits(olin))) # 26278
-length(unique(queryHits(olexons))) #4954
+length(unique(queryHits(olstart))) #39
+length(unique(queryHits(olend))) #36
+length(unique(queryHits(olin))) # 26113
+length(unique(queryHits(olexons))) #6399
 
 md$overlap<-NA
 md$overlap[rptRows]<-"OL_none"
@@ -115,8 +117,10 @@ md$overlap[rptRows][unique(c(queryHits(olstart), queryHits(olend),
                              queryHits(olin)))]<-"OL_gene"
 md$overlap[rptRows][unique(queryHits(olexons))]<-"OL_exon"
 
+#OL_exon OL_gene OL_none
+#6399   21551   55261       7.6% overlap exons and 25.9% overlap noncoding part of gene
+saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_",genomeVer,"_",dfamVer,".rds"))
 
-saveRDS(md,paste0(outPath,"/wbGeneGRandRpts_WS275.rds"))
 
 
 ## aggregated repeat families
@@ -138,5 +142,5 @@ mddf<-rbind(mddf,rptdf)
 
 table(mddf$bioType)
 
-saveRDS(mddf,paste0(outPath,"metadataTbl_genes-rpts.rds"))
+saveRDS(mddf,paste0(outPath,"/metadataTbl_genes-rpts_",genomeVer,"_",dfamVer,".rds"))
 
