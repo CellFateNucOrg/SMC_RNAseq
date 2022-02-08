@@ -111,9 +111,9 @@ if(rnaType!="mRNA"){
   gtf<-import(gtfFile,format="gtf")
   seqlevelsStyle(gtf)<-"ucsc"
   seqinfo(gtf)<-seqinfo(Celegans)
-  if(rnaType=="ncRNA" & !(file.exists("ncRNAGR_WS275.rds"))){
+  if(rnaType=="ncRNA" & !(file.exists(paste0(rnaType,"GR_WS275.rds")))){
     ncRNAurl<-paste0("ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/sequence/transcripts/c_elegans.PRJNA13758.",genomeVer,".ncRNA_transcripts.fa.gz")
-    if(!file.exists(gsub("\\.gz","",basename(ncRNAurl))) & (!file.exists(metadata_r))){
+    if(!file.exists(gsub("\\.gz","",basename(ncRNAurl)))){
       download.file(ncRNAurl,destfile=basename(ncRNAurl))
       system(paste0("gunzip ", basename(ncRNAurl)))
     }
@@ -147,5 +147,35 @@ if(rnaType!="mRNA"){
     gr<-sort(gr)
     saveRDS(gr,paste0(rnaType,"GR_WS275.rds"))
     file.remove(gsub("\\.gz","",basename(ncRNAurl)))
+    file.remove(paste0(rnaType,".txt"))
+  }
+
+
+  if(rnaType=="pseudoRNA" & !(file.exists(paste0(rnaType,"GR_WS275.rds")))){
+    ncRNAurl<-paste0("ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/sequence/transcripts/c_elegans.PRJNA13758.",genomeVer,".pseudogenic_transcripts.fa.gz")
+    if(!file.exists(gsub("\\.gz","",basename(ncRNAurl)))){
+      download.file(ncRNAurl,destfile=basename(ncRNAurl))
+      system(paste0("gunzip ", basename(ncRNAurl)))
+    }
+    system(paste0("echo sequenceID wormbaseID  biotype > ",rnaType,".txt"))
+    system(paste0("grep '^>' ",gsub("\\.gz","",basename(ncRNAurl))," >> ",rnaType,".txt"))
+    df<-read.delim(paste0(rnaType,".txt"),sep=" ", header=T, fill=T)
+    df$sequenceID<-gsub("^>","",df$sequenceID)
+    df$wormbaseID<-gsub("^gene=","",df$wormbaseID)
+    df$biotype<-"pseudogene"
+    #dim(df)
+    #1902    3
+    idx<-match(df$wormbaseID,gtf$gene_name)
+    sum(is.na(idx))
+    df<-df[!is.na(idx),] # remove 2 genes that are now considered transposons
+    gr<-gtf[idx[!is.na(idx)]] # get relevant gr
+    mcols(gr)<-df # put in clean metadata
+    table(seqnames(gr))
+    #chrI  chrII chrIII  chrIV   chrV   chrX   chrM
+    #182    325     99    361    784    151      0
+    gr<-sort(gr)
+    saveRDS(gr,paste0(rnaType,"GR_WS275.rds"))
+    file.remove(gsub("\\.gz","",basename(ncRNAurl)))
+    file.remove(paste0(rnaType,".txt"))
   }
 }
