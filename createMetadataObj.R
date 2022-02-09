@@ -167,12 +167,40 @@ if(rnaType!="mRNA"){
     #1902    3
     idx<-match(df$wormbaseID,gtf$gene_name)
     sum(is.na(idx))
-    df<-df[!is.na(idx),] # remove 2 genes that are now considered transposons
+    df<-df[!is.na(idx),]
     gr<-gtf[idx[!is.na(idx)]] # get relevant gr
     mcols(gr)<-df # put in clean metadata
     table(seqnames(gr))
     #chrI  chrII chrIII  chrIV   chrV   chrX   chrM
     #182    325     99    361    784    151      0
+    gr<-sort(gr)
+    saveRDS(gr,paste0(rnaType,"GR_WS275.rds"))
+    file.remove(gsub("\\.gz","",basename(ncRNAurl)))
+    file.remove(paste0(rnaType,".txt"))
+  }
+
+  if(rnaType=="tnRNA" & !(file.exists(paste0(rnaType,"GR_WS275.rds")))){
+    ncRNAurl<-paste0("ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/sequence/transcripts/c_elegans.PRJNA13758.",genomeVer,".transposon_transcripts.fa.gz")
+    if(!file.exists(gsub("\\.gz","",basename(ncRNAurl)))){
+      download.file(ncRNAurl,destfile=basename(ncRNAurl))
+      system(paste0("gunzip ", basename(ncRNAurl)))
+    }
+    system(paste0("echo sequenceID biotype wormbaseID > ",rnaType,".txt"))
+    system(paste0("grep '^>' ",gsub("\\.gz","",basename(ncRNAurl))," >> ",rnaType,".txt"))
+    df<-read.delim(paste0(rnaType,".txt"),sep=" ", header=T, fill=T)
+    df$sequenceID<-gsub("^>","",df$sequenceID)
+    df$biotype<-gsub("^type=","",df$biotype)
+    df$wormbaseID<-gsub("^gene=","",df$wormbaseID)
+    #dim(df)
+    #366    3
+    idx<-match(df$wormbaseID,gtf$gene_name)
+    sum(is.na(idx)) #
+    df<-df[!is.na(idx),] # remove 2 genes that pseudo genes
+    gr<-gtf[idx[!is.na(idx)]] # get relevant gr
+    mcols(gr)<-df # put in clean metadata
+    table(seqnames(gr))
+    #chrI  chrII chrIII  chrIV   chrV   chrX   chrM
+    #62     58     35     70     81     58      0
     gr<-sort(gr)
     saveRDS(gr,paste0(rnaType,"GR_WS275.rds"))
     file.remove(gsub("\\.gz","",basename(ncRNAurl)))

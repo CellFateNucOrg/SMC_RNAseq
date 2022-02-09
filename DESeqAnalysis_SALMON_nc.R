@@ -52,8 +52,7 @@ if(rnaType=="mRNA"){
                       ".annotations.sqlite"))
   k <- keys(txdb, keytype = "TXNAME")
   tx2gene <- AnnotationDbi::select(txdb, k, "GENEID", "TXNAME")
-}
-if(rnaType=="ncRNA"){
+} else {
  metadata<-readRDS(paste0(outPath,"/",rnaType,"GR_WS275.rds"))
  tx2gene<-data.frame(TXNAME=metadata$sequenceID,GENEID=metadata$wormbaseID)
 }
