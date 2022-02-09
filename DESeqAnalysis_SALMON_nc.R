@@ -325,7 +325,7 @@ for(grp in names(contrastNames)){
    resLFC$publicID<-as.vector(metadata$publicID)[idx]
    resLFC$sequenceID<-as.vector(metadata$sequenceID)[idx]
    resLFC$entrezID<-as.vector(metadata$entrezID)[idx]
-
+   resLFC$biotype<-as.vector(metadata$biotype)[idx]
 
    saveRDS(resLFC,file=paste0(outPath,"/rds/", fileNamePrefix, contrastNames[[grp]],
                               "_DESeq2_fullResults_p",padjVal,".rds"))
@@ -1237,6 +1237,13 @@ if(nrow(dd1)>length(unique(sig$SMC))*5){
   }
 }
 
-
-
+chosen<-c("dpy26","kle2","scc1","coh1","scc1coh1")
+grp=chosen[1]
+for(grp in chosen){
+  salmon<-readRDS(paste0(outPath,"/rds/",fileNamePrefix,contrastNames[[grp]],
+                         "_DESeq2_fullResults_p",padjVal,".rds"))
+  sig<-getSignificantGenes(salmon)
+  sig
+  table(sig$biotype)
+}
 
