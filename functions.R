@@ -277,3 +277,21 @@ getDensity<-function(dds, contrastOI, padjVals=c(0.05,0.01),
   }
   return(list(groupCounts,sig))
 }
+
+
+#' Calculate number of significant genes by chormosome
+#'
+#' @param res DESeq2 results table
+#' @param pval Adjusted p value threshold to use
+#' @param lfc Log2 fold change threshold to use
+#' @return A table of the number of significant genes by chromosome
+#' @export
+summaryByChr<-function(resLFC,padj,lfc) {
+  up<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange > lfc,]
+  down<-resLFC[resLFC$padj < padj & resLFC$log2FoldChange < -lfc, ]
+  allChr<-as.data.frame(rbind(up=table(up$chr),down=table(down$chr)))
+  allChr$autosomes<-rowSums(allChr[,1:5])
+  allChr$total<-rowSums(allChr[,1:6])
+  rownames(allChr)<-paste0(rownames(allChr),"_p",padj,"_lfc",lfc)
+  return(allChr)
+}
