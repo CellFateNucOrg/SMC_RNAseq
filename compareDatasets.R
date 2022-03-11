@@ -1,6 +1,5 @@
 library(readxl)
 library(ggplot2)
-library(EnhancedVolcano)
 library(dplyr)
 library(tidyr)
 library(eulerr)
