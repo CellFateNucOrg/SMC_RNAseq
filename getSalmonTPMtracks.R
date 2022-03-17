@@ -63,7 +63,7 @@ if(!file.exists(paste0(outPath,"/wbGeneGR_WS275.rds"))){
 }
 
 metadata<-readRDS(paste0(outPath,"/wbGeneGR_WS275.rds"))
-
+#export.bed(metadata,paste0(outPath,"/wbGeneGR_WS275_ce11.bed"))
 
 # load a txdb of wormbase data and create a tx2gene object
 txdb<-loadDb(paste0(genomeDir, "/annotations/c_elegans.PRJNA13758.", genomeVer,
