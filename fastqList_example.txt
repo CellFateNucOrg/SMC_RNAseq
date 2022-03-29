@@ -1,7 +1,9 @@
-fileName	sampleName	repeatNum
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/493HS1_L1_R1_001_8A90nChpJI4x.fastq.gz	493	HS1
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/493HS2_L1_R1_001_x3NrFUVf7SxU.fastq.gz	493	HS2
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/493HS3_L1_R1_001_it0uCKKLyBwB.fastq.gz	493	HS3
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/500HS1_L1_R1_001_wqu7itYZ5fpk.fastq.gz	500	HS1
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/500HS2_L1_R1_001_46Ab9QpklKk2.fastq.gz	500	HS2
-/home/ubelix/izb/semple/labData/Julie_RNAseq/raw_files/500HS3_L1_R1_001_7nUAnKxVBcwo.fastq.gz	500	HS3
+fileName1	fileName2	sampleName	repeatNum	laneNum	libType
+/storage/research/izb_meister/mdas/20210104_RiboZero/366B2_b_L1_R1_001_OaWuoA0kMK8D.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/366B2_b_L1_R2_001_elzeCFcImvck.fastq.gz	366	B2	L1	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/366B2_b_L2_R1_001_wsYHUMQtud5J.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/366B2_b_L2_R2_001_Q001Yyy6QV9F.fastq.gz	366	B2	L2	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/382B2_b_L1_R1_001_WNUP64d64ukI.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/382B2_b_L1_R2_001_43qNDl2a65TW.fastq.gz	382	B2	L1	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/382B2_b_L2_R1_001_cplXezsmOLz5.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/382B2_b_L2_R2_001_I7qrJ9wbYki5.fastq.gz	382	B2	L2	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/775B2_b_L1_R1_001_k0ah0njuuzyd.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/775B2_b_L1_R2_001_1PQ9dTQRIHxC.fastq.gz	775	B2	L1	ribo0	
+/storage/research/izb_meister/mdas/20210104_RiboZero/775B2_b_L2_R1_001_Ot5s9pEiLMEi.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/775B2_b_L2_R2_001_JUgkZTf2mJ5R.fastq.gz	775	B2	L2	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/784B2_b_L1_R1_001_40YVNWiOJvKk.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/784B2_b_L1_R2_001_lgdKguIwsyT6.fastq.gz	784	B2	L1	ribo0
+/storage/research/izb_meister/mdas/20210104_RiboZero/784B2_b_L2_R1_001_BT9Q3fQowVav.fastq.gz	/storage/research/izb_meister/mdas/20210104_RiboZero/784B2_b_L2_R2_001_tpws4nCPg1yK.fastq.gz	784	B2	L2	ribo0
