@@ -13,11 +13,11 @@ fileList<-read.table(paste0(outPath,"/fastqList_no775B3.txt"),stringsAsFactors=F
 
 rnaType="mRNA"
 remakeFiles=F # remake publicData files?
-combineChrAX=T # artificially combine chrA and X from different datasets?
+combineChrAX=F # artificially combine chrA and X from different datasets?
 filterData=T # filter by certain gene lists
 #filterBy=c("chrX") #names in filterList of gene lists to use
-#filterBy=c("Cycling_Meeuse","Cycling_Latorre")
-filterBy=c("Cycling_Meeuse","Cycling_Latorre","chrX")
+filterBy=c("Cycling_Meeuse","Cycling_Latorre")
+#filterBy=c("Cycling_Meeuse","Cycling_Latorre","chrX")
 customNameTxt=ifelse(rnaType=="mRNA","",rnaType) #some other text you want to add to the filename prefix
 
 
@@ -145,7 +145,7 @@ useContrasts<-groupsOI
 ##### more complex contrasts: ##############
 # for advanced contrast matrix usage. see:
 # https://github.com/tavareshugo/tutorial_DESeq2_contrasts/blob/main/DESeq2_contrasts.md
-# Create the model.matrix (this is similar but not quite the same as betting it from dds)
+# Create the model.matrix (this is similar but not quite the same as getting it from dds)
 advancedContrasts=T
 if(advancedContrasts){
   contrastsOI<-list()
