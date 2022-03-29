@@ -23,6 +23,9 @@ The pipeline performs genomic alignment with STAR to get genome wide bigwig file
 
 The initial read mapping and counting with STAR and salmon is designed to be carried out in parallel on the slurm server. DESeq2 analysis is then carried out in R on the desktop. 
 
+To install, clone the repository from github and set up the conda environment for mapping with _**install_RNAseq_env.sh**_ script.
+To set up the R environment open R and run the _**install_RNAseq_env.R**_ script which will hopefully install all of the R/Bioconductor libraries required.
+
 When running the pipeline for the first time (ubelix or izb cluster), the _**indexGenomeTranscripts.sh**_ needs to be run to index both the genome for STAR and the transcriptome for salmon.
 
 ## Mapping
@@ -45,7 +48,7 @@ Processed files are be given unique identifiers using the sampleName,repeatNum a
 
 ## Differential expression analysis setup
 
-To run the DESeq2 analysis in R, the variableSettings.sh file (see **variableSettings_example.sh**) is required, which sets up how to filter the data, and what contrasts to make (including advanced contrasts).
+To run the DESeq2 analysis in R, the _**variableSettings.sh**_ file (copy from _**variableSettings_example.sh**_) is required, which sets up how to filter the data, and what contrasts to make (including advanced contrasts).
 
 ### Custom variables
 
@@ -75,7 +78,7 @@ Note: replicted 775B3 was removed from the analysis (it is absent from the fastq
 
 The final data in the paper was run filtering out oscillating genes from two datasets ("Cycling_Meeuse","Cycling_Latorre").
 
-In addition, the scripts were run three times, once for the whole genome (using DESeq2analysis_Salmon.R script):
+In addition, the scripts were run three times, once for the whole genome (using _**DESeq2analysis_Salmon.R**_ script):
 
 ```
 combineChrAX=F  # artificially combine chrA and X from different datasets?  (Need to first run full genome and chrX only separately)
@@ -83,7 +86,7 @@ filterData=T    # filter by certain gene lists such as oscillating genes, or onl
 filterBy=c("Cycling_Meeuse","Cycling_Latorre")    # names in filterList of gene lists to use
 ```
 
-Once for the autosomes only (using DESeq2analysis_Salmon.R script):
+Once for the autosomes only (using _**DESeq2analysis_Salmon.R**_ script):
 
 ```
 combineChrAX=F  # artificially combine chrA and X from different datasets?  (Need to first run full genome and chrX only separately)
@@ -91,7 +94,7 @@ filterData=T    # filter by certain gene lists such as oscillating genes, or onl
 filterBy=c("Cycling_Meeuse","Cycling_Latorre", "chrX")    # names in filterList of gene lists to use
 ```
 
-And finally combining the gene counts for the autosomal genes from the autosomal-only run with the gene counts for X-linked genes from the full genome run (using the combine_chrAchrX.R script):
+And finally combining the gene counts for the autosomal genes from the autosomal-only run with the gene counts for X-linked genes from the full genome run (using the _**combine_chrAchrX.R**_ script):
 
 ```
 combineChrAX=T  # artificially combine chrA and X from different datasets?  (Need to first run full genome and chrX only separately)
@@ -120,12 +123,12 @@ We initially performed the analysis separately on different batches: the klesin 
 | PMW844    | scc1coh1cs | wt   | wt      | 0mM   | scc1coh1cs.wt.wt.0mM     |
 
 
-The basic DESeq2 model was built with the PWM366 sample as the reference "control" sample. However for the degron samples this was not always the most appropriate control (e.g. for the PMW821 strain (hs::TEV, *sdc-3*AID, P*eft-3*::TIR1) we wanted to look at the +- auxin conditions. Advanced contrasts also helped us examine marginal effects such as the effect of *sdc-3*AID in the presence of *dpy-26*cs. These contrasts are optionally created towards the end of the variableSetting.R script by subtracting coefficients of models built with the different levels of the SMC variable above. The contrast name scheme uses the same positional variable scheme as the SMC variable above, but an X is placed in the position of the conditions that vary, and the specific subtraction is written after an \_ at the end of the contrast name. Although not all were used in the paper, the following contrasts were examined:
+The basic DESeq2 model was built with the PWM366 sample as the reference "control" sample. However for the degron samples this was not always the most appropriate control (e.g. for the PMW821 strain (hs::TEV, *sdc-3*AID, P*eft-3*::TIR1) we wanted to look at the +- auxin conditions. Advanced contrasts also helped us examine marginal effects such as the effect of *sdc-3*AID in the presence of *dpy-26*cs. These contrasts are optionally created towards the end of the variableSetting.R script by subtracting coefficients of models built with the different levels of the SMC variable above. The contrast naming scheme uses the same positional variable scheme as the SMC variable above, but an X is placed in the position of the conditions that vary, and the specific subtraction/contrast is written after an \_ at the end of the contrast name. Although not all were used in the paper, the following contrasts were examined:
 
-| contrastName                               | shortName       | description                                                                   | In paper |
+| **Contrast name**                           | **Short name**  | **Description**                                                              | **In paper**|
 |--------------------------------------------|-----------------|-------------------------------------------------------------------------------|-------|
 | wt.wt.wt.X\_1mM\_vs\_0mM                   | aux             | Effect of 1mM auxin in wt background                                          | No    |
-| **wt.TIR1.sdc3deg.X\_1mM\_vs\_0mM**        | aux_sdc3BG      | **Effect of SDC-3 degradation +-auxin**                                           | **Yes**   |
+| **wt.TIR1.sdc3deg.X\_1mM\_vs\_0mM**        | **aux_sdc3BG**  | **Effect of SDC-3 degradation +-auxin**                                           | **Yes**   |
 | wt.X.wt.1mM\_TIR1\_vs\_wt                  | TIR1            | Effect of TIR1 in the presence of auxin                                       | No    |
 | wt.X.wt.X\_TIR11mM\_vs\_wt0mM              | TIR1aux         | Effect of TIR1 and auxin                                                      | No    |
 | wt.TIR1.X.1mM\_sdc3deg\_vs\_wt             | sdc3            | Effect of +- *sdc-3*AID transgene (with auxin always preseent)                | No    |
@@ -141,66 +144,74 @@ The basic DESeq2 model was built with the PWM366 sample as the reference "contro
 | X.wt.wt.0mM\_scc1coh1cs-coh1               | scc1coh1cs-coh1 | Effect of SCC-1 cleavage in the presence of cleaved COH-1                     | No    |
 | X.wt.wt.0mM\_scc1coh1cs-scc1               | scc1coh1cs-scc1 | Effect of COH-1 cleavage in the presence of cleaved SCC-1                     | No    |
 
+### Gene metadata
 
+Before running the DESeq2 scripts metadata about genes must be douwnloaded using the _**createMetadataObj.R**_ script.
+
+In order to filter oscillating genes, or run some of the comparisons to other datasets they must be fetched from the public data repositories and processed using the _**processPublished.R**_. Fetching is mostly done automatically, but in some cases it might require some manual intervention.
 
 ## Differential expression analysis
-The output is then analysed in R with DESeq2 using the following script:
 
-**_DESeqAnalysis_SALMON.R_** 
+The output was then analysed in R with DESeq2 using the following script. For preliminary runs for the whole genome or just the autosomes (see above), the **_DESeqAnalysis_SALMON.R_** script was used. For the run combining autosomal counts from the autosomal run, and the chrX counts from the whole genome run, the **_combine_chrAchrX.R**_ script was used that does not rerun the DESeq2 model estimation but rather creates combined results tables from the previous two runs.
 
-This produces the following plots:
+These scripts produce the following plots (in the plots directory):
 
-- basic QC plots: bar plots and density plots of the raw counts,sample-sample clustering heatmap, heatmap of top 500 expressed genes with and without sample clustering, PCA plots coloured by main variables (_./plots/salmon_sampleQC.pdf_)
+- basic QC plots: bar plots and density plots of the raw counts,sample-sample clustering heatmap, heatmap of top 500 expressed genes with and without sample clustering, PCA plots coloured by main variables (_sampleQC.pdf_)
 
-- boxplots of lfc of genes by chr or chr type (_./plots/salmon_xxxx_boxplots_expnByChr.pdf_, _./plots/salmon_xxxx_boxplots_expnByChrType.pdf_)
+- boxplots of lfc of genes by chr or chr type (_xxxx_boxplots_expnByChr.pdf_, _xxxx_boxplots_expnByChrType.pdf_)
 
-- MAplots (_./plots/salmon_xxxx_MAplots_results.pdf_)
+- MAplots (_xxxx_MAplots_results.pdf_)
 
-- Volcano plots (_./plots/salmon_xxxxx_volcanoPlot_xxxxx.pdf_)
+- Volcano plots (_xxxxx_volcanoPlot_xxxxx.pdf_)
 
-- heirarchical clustering of samples by most changed genes (_./plots/salmon_xxxxxx_hclust_mostChanged.pdf_)
+- heirarchical clustering of samples by most changed genes (_xxxxxx_hclust_mostChanged.pdf_)
 
-- barplots of expression of a few individual genes, most changed in each sample (_./plots/salmon_xxxx_topGenes_normCounts.pdf_)
+- barplots of expression of a few individual genes, most changed in each sample (_xxxx_topGenes_normCounts.pdf_)
 
-The script also produces tables of results with the LFC and pvalues for contrasts specified in variableSettings.R
+The script also produces tables of results with the LFC and pvalues for contrasts specified in variableSettings.R (output in the csv or rds directories). Files with fullTable in the name contain both significant an non-significant genes.
 
 ## Further exploratory analysis
 ### Comparison of the different data sets
 
-The significant genes from each data set are compared by:
-_**compareDatasets.R**_
+A lot of other exploratory analysis was performed and their output is in subdirectories with the name of the script that produced them to facilitate back-tracing to the code. The following scripts were used:
 
-This script produces the following plots:
+- _**compareDatasets.R**_ Compares overlap and correlation of significant genes from the different datasets we sequenced
 
-- barplots to campare counts of genes per chromosome (_./plots/bar_countsPerChr_xxxxxx.pdf_)
+  This script produces the following plots:
 
-- venn diagrams to compare overlap between datasets (_./plots/venn_xxxxxx.pdf_)
+  1 barplots to campare counts of genes per chromosome (_bar_countsPerChr_xxxxxx.pdf_)
 
-- correlation of the log2 fold change of genes shared between data sets (_./plots/cor_xxxxx.png_)
+  2 venn diagrams to compare overlap between datasets (_venn_xxxxxx.pdf_)
 
-### Comparison of HiC features
+  3 correlation of the log2 fold change of genes shared between data sets (_cor_xxxxx.png_)
 
-The association of gene expression with different HiC features are compared by:
-_**compareHICfreatures.R**_
+- _**compareHICfreatures.R**_ Compares the association of gene expression with different HiC features such as eigen vectors, compartments, loops, loop anchors.
 
+- _**compareToRexMex.R**_ Looks at gene expression around Rex and Mex sites
 
-### Comparison of Tissue and GO term enrichment
+- _**compareChromatin.R**_ Looks at chromatin states and domains as definied by Evans *et al.* (2016) enriched in significant genes
 
-_**compareTissueAndGO.R**_
+- _**compareGeneLists.R**_ Looks at LFC and log10pval for some manually curated gene lists
 
+- _**compareTissueAndGO.R**_ Compares tissue and GO term enrichment associated with significantly changing genes (output in wormcat/ tissue/ and kegg/ directories) 
 
-### Publically available datasets
+- _**compareKEGG.R**_ Looks for KEGG pathway enrichment among significantly changing genes
 
-These datasets were retrieved manually:
+- _**compareGeneLengths.R**_ Compares observed vs expected gene lengths 
 
-**DCgenes_published.xlsx** 
+- _**compareToDCdatasets.R**_ Compares enriched genes to previously published dosage compensation datasets
 
-**Jans2009_DC_suplTable4.txt**
+- _**compareGermline.R**_ Looks for ennrichment of significant genes among soma or germline genes
 
-**Jans2009_notDC_suplTable5.txt** 
+- _**compareAging.R**_  Looks for enrichment of significant genes in datasets of young/old worms and in aging mutants
 
-**Kramer et al. (2015)** was retrieved automatcally.
+- _**ROCit.R**_ creates roc curves for autosomal vs chrX genes for *dpy-26*cs data to try and determine best LFC cutoff value
 
-All were processed with:
+### Miscellaneous
 
-_**processPublished.R**_
+- _**collectFastQCreadCounts.sh**_ extracts read counts for different stages of the mapping form fastqc files to follow % of mapped reads at various stages of processing. _**collectAllCountData.R**_ add the numbers of salmon and STAR mapped reads.
+- _**makeSTARbw.R**_ makes lfc tracks for each sample from STAR alignments (to look for expression of non protein coding genes) [depracated?]
+- _**makeBWratios.sh**_ and _**makeBWratios.R**_ makes lfc tracks for each sample from STAR alignments [depracated?]
+- _**mergeBWofTechnicalRep.sh**_ makes lfc tracks for each sample from STAR alignments (used to make summary tracks for GEO submission).
+- _**renameQuantSF.sh**_ renames quant.sf files with unique name derived from file path and collects them in a single directory (for GEO submission).
+-  _**DESeqAnalysis_SALMON_nc.R**_ was used to map RNAseq reads to non-coding genes, transposons or pseudogenes by changing the "RNAtype" in the variablesSettings.R file
