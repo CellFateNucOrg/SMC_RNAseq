@@ -134,10 +134,10 @@ The basic DESeq2 model was built with the PWM366 sample as the reference "contro
 | dpy26cs.X.X.X\_TIR1sdc3deg1mM\_vs\_wtwt0mM | sdc3_dpy26BG    | Effect of *sdc-3*AID+TIR1+auxin when DPY-26 is cleaved                        | No    |
 | X.TIR1.X.1mM\_dpy26cssdc3deg\_vs\_wtwt     | dpy26sdc3       | Effect of +- *dpy-26*cs and *sdc-3*AID transgenes in presence of TIR1 & auxin | No    |
 | X.TIR1.sdc3deg.X\_dpy26csaux\_vs\_wt0mM    | **aux_dpy26sdc3**| **Effect of DPY-26 cleavage and SDC-3 degradation (+- auxin)**                | **Yes**   |
-| **X.wt.wt.0mM\_kle2cs\_vs\_wt                | kle2**            | **Effect of KLE-2 cleavage**                                                  | **Yes**   |
-| **X.wt.wt.0mM\_scc16cs\_vs\_wt               | scc1**            | **Effect of SCC-1 cleavage**                                                  | **Yes**   |
-| **X.wt.wt.0mM\_coh1cs\_vs\_wt                | coh1**            | **Effect of COH-1 cleavage**                                                  | **Yes**   |
-| **X.wt.wt.0mM\_scc1coh1cs\_vs\_wt            | scc1coh1**        | **Effect of SCC-1 and COH-1 cleavage**                                        | **Yes**   |
+| **X.wt.wt.0mM\_kle2cs\_vs\_wt**            | **kle2**        | **Effect of KLE-2 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_scc16cs\_vs\_wt**           | **scc1**        | **Effect of SCC-1 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_coh1cs\_vs\_wt**            | **coh1**        | **Effect of COH-1 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_scc1coh1cs\_vs\_wt**        | **scc1coh1**    | **Effect of SCC-1 and COH-1 cleavage**                                        | **Yes**   |
 | X.wt.wt.0mM\_scc1coh1cs-coh1               | scc1coh1cs-coh1 | Effect of SCC-1 cleavage in the presence of cleaved COH-1                     | No    |
 | X.wt.wt.0mM\_scc1coh1cs-scc1               | scc1coh1cs-scc1 | Effect of COH-1 cleavage in the presence of cleaved SCC-1                     | No    |
 
