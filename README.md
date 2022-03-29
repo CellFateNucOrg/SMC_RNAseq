@@ -6,10 +6,10 @@ Code for processing RNAseq data from Moushumi Das with the following _C. elegans
 
 - PMW366 (hs::TEV)
 - PMW382 (*dpy-26*::TEVcs, hs::TEV) 
-- PMW775 (*kle-2_::TEVcs, hs::TEV)
-- PMW784 (*scc-1_::TEVcs, hs::TEV)
-- PMW828 (*coh-1_::TEVcs, hs::TEV)
-- PMW844 (*scc-1_::TEVcs, *coh-1*::TEVcs, hs::TEV)
+- PMW775 (*kle-2*::TEVcs, hs::TEV)
+- PMW784 (*scc-1*::TEVcs, hs::TEV)
+- PMW828 (*coh-1*::TEVcs, hs::TEV)
+- PMW844 (*scc-1*::TEVcs, *coh-1*::TEVcs, hs::TEV)
 - PMW822 (*dpy-26*::TEVcs, hs::TEV, *sdc-3*AID, P*eft-3*::TIR1)
 - PMW821 (hs::TEV, *sdc-3*AID, P*eft-3*::TIR1)
 - PMW823 (hs::TEV, P*eft-3*::TIR1)
@@ -125,19 +125,19 @@ The basic DESeq2 model was built with the PWM366 sample as the reference "contro
 | contrastName                               | shortName       | description                                                                   | In paper |
 |--------------------------------------------|-----------------|-------------------------------------------------------------------------------|-------|
 | wt.wt.wt.X\_1mM\_vs\_0mM                   | aux             | Effect of 1mM auxin in wt background                                          | No    |
-| wt.TIR1.sdc3deg.X\_1mM\_vs\_0mM            | aux_sdc3BG      | Effect of SDC-3 degradation +-auxin                                           | Yes   |
+| wt.TIR1.sdc3deg.X\_1mM\_vs\_0mM            | aux_sdc3BG      | **Effect of SDC-3 degradation +-auxin**                                           | **Yes**   |
 | wt.X.wt.1mM\_TIR1\_vs\_wt                  | TIR1            | Effect of TIR1 in the presence of auxin                                       | No    |
 | wt.X.wt.X\_TIR11mM\_vs\_wt0mM              | TIR1aux         | Effect of TIR1 and auxin                                                      | No    |
 | wt.TIR1.X.1mM\_sdc3deg\_vs\_wt             | sdc3            | Effect of +- *sdc-3*AID transgene (with auxin always preseent)                | No    |
-| X.wt.wt.0mM\_dpy26cs\_vs\_wt               | dpy26           | Effect of DPY-26 cleavage                                                     | Yes   |
+| X.wt.wt.0mM\_dpy26cs\_vs\_wt               | **dpy26**       | **Effect of DPY-26 cleavage**                                                 | **Yes**   |
 | X.TIR1.sdc3deg.1mM\_dpy26cs\_vs\_wt        | dpy26_sdc3BG    | Effect of DPY-26 cleavage when SDC-3 is degraded                              | No    |
 | dpy26cs.X.X.X\_TIR1sdc3deg1mM\_vs\_wtwt0mM | sdc3_dpy26BG    | Effect of *sdc-3*AID+TIR1+auxin when DPY-26 is cleaved                        | No    |
 | X.TIR1.X.1mM\_dpy26cssdc3deg\_vs\_wtwt     | dpy26sdc3       | Effect of +- *dpy-26*cs and *sdc-3*AID transgenes in presence of TIR1 & auxin | No    |
-| X.TIR1.sdc3deg.X\_dpy26csaux\_vs\_wt0mM    | aux_dpy26sdc3   | Effect of DPY-26 cleavage and SDC-3 degradation (+- auxin)                    | Yes   |
-| X.wt.wt.0mM\_kle2cs\_vs\_wt                | kle2            | Effect of KLE-2 cleavage                                                      | Yes   |
-| X.wt.wt.0mM\_scc16cs\_vs\_wt               | scc1            | Effect of SCC-1 cleavage                                                      | Yes   |
-| X.wt.wt.0mM\_coh1cs\_vs\_wt                | coh1            | Effect of COH-1 cleavage                                                      | Yes   |
-| X.wt.wt.0mM\_scc1coh1cs\_vs\_wt            | scc1coh1        | Effect of SCC-1 and COH-1 cleavage                                            | Yes   |
+| X.TIR1.sdc3deg.X\_dpy26csaux\_vs\_wt0mM    | **aux_dpy26sdc3**| **Effect of DPY-26 cleavage and SDC-3 degradation (+- auxin)**                | **Yes**   |
+| **X.wt.wt.0mM\_kle2cs\_vs\_wt                | kle2**            | **Effect of KLE-2 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_scc16cs\_vs\_wt               | scc1**            | **Effect of SCC-1 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_coh1cs\_vs\_wt                | coh1**            | **Effect of COH-1 cleavage**                                                  | **Yes**   |
+| **X.wt.wt.0mM\_scc1coh1cs\_vs\_wt            | scc1coh1**        | **Effect of SCC-1 and COH-1 cleavage**                                        | **Yes**   |
 | X.wt.wt.0mM\_scc1coh1cs-coh1               | scc1coh1cs-coh1 | Effect of SCC-1 cleavage in the presence of cleaved COH-1                     | No    |
 | X.wt.wt.0mM\_scc1coh1cs-scc1               | scc1coh1cs-scc1 | Effect of COH-1 cleavage in the presence of cleaved SCC-1                     | No    |
 
