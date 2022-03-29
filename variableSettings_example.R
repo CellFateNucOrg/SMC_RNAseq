@@ -2,23 +2,23 @@ library(GenomicRanges)
 library(BSgenome.Celegans.UCSC.ce11)
 library(dplyr)
 
-plotPDFs=F
-padjVal=0.05
-lfcVal=0.5
-fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/no775B3_")
-outPath="."
-genomeVer="WS275"
-genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)
-fileList<-read.table(paste0(outPath,"/fastqList_no775B3.txt"),stringsAsFactors=F,header=T)
+plotPDFs=F    # pdfs of correlations can be vary large - can choose to avoid plotting pdfs and only pngs
+padjVal=0.05  # general adjusted p value threshold to use for significance
+lfcVal=0.5    # general log2 fold change threshold to use for significance
+fileNamePrefix=paste0("p",padjVal,"_lfc",lfcVal,"/no775B3_")  # prefix to add to file name to distinguish one run from another
+outPath="."         # working directory
+genomeVer="WS275"   # genome version used for metadata downloaded from wormbase
+genomeDir=paste0("~/Documents/MeisterLab/GenomeVer/",genomeVer)   # directory where genome data is stored
+fileList<-read.table(paste0(outPath,"/fastqList_no775B3.txt"),stringsAsFactors=F,header=T)  # file with list of fastqFiles in the dataset with some metadata
 
-rnaType="mRNA"
-remakeFiles=F # remake publicData files?
-combineChrAX=F # artificially combine chrA and X from different datasets?
-filterData=T # filter by certain gene lists
-#filterBy=c("chrX") #names in filterList of gene lists to use
-filterBy=c("Cycling_Meeuse","Cycling_Latorre")
-#filterBy=c("Cycling_Meeuse","Cycling_Latorre","chrX")
-customNameTxt=ifelse(rnaType=="mRNA","",rnaType) #some other text you want to add to the filename prefix
+rnaType="mRNA"  # perform DESeq2 analysis on reads mapped by salmon to mRNA, tnRNA, ncRNA or pseudoRNA
+remakeFiles=F   # remake publicData files? unless changes are made, it is enough to do this once
+combineChrAX=F  # artificially combine chrA and X from different datasets?  (Need to first run full genome and chrX only separately)
+filterData=T    # filter by certain gene lists such as oscillating genes, or only chrX
+#filterBy=c("chrX")   # names in filterList of gene lists to use
+filterBy=c("Cycling_Meeuse","Cycling_Latorre")    # names in filterList of gene lists to use
+#filterBy=c("Cycling_Meeuse","Cycling_Latorre","chrX")  # names in filterList of gene lists to use
+customNameTxt=ifelse(rnaType=="mRNA","",rnaType)  # some other text you want to add to the filename prefix
 
 
 # get ce11 genome
