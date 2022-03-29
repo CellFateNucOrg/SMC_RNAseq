@@ -31,8 +31,6 @@ fileName1	fileName2	sampleName	repeatNum	laneNum	date
 /storage/research/izb_meister/mdas/RNA_seq_2020/775b1/775B1_L2_R1_001_aY1ESmg57cND.fastq.gz	NA	775	B1	L2	2020
 /storage/research/izb_meister/mdas/RNA_seq_2020/775b2/775B2_L1_R1_001_7cNYJTOgtfMO.fastq.gz	NA	775	B2	L1	2020
 /storage/research/izb_meister/mdas/RNA_seq_2020/775b2/775B2_L2_R1_001_KpQ3uyTDcRn7.fastq.gz	NA	775	B2	L2	2020
-/storage/research/izb_meister/mdas/RNA_seq_2020/775b3/775B3_L1_R1_001_MhTCU4uNQ8pN.fastq.gz	NA	775	B3	L1	2020
-/storage/research/izb_meister/mdas/RNA_seq_2020/775b3/775B3_L2_R1_001_UYIRFgF1LfSl.fastq.gz	NA	775	B3	L2	2020	
 /storage/research/izb_meister/mdas/RNA_seq_2020/775b4/775B4_L1_R1_001_VqnDEIFMH0zU.fastq.gz	NA	775	B4	L1	2020
 /storage/research/izb_meister/mdas/RNA_seq_2020/775b4/775B4_L2_R1_001_Vai70bmYnzo1.fastq.gz	NA	775	B4	L2	2020
 /storage/research/izb_meister/mdas/RNA_seq_2020/784b1/784B1_L1_R1_001_s2C4bcxqbHMV.fastq.gz	NA	784	B1	L1	2020

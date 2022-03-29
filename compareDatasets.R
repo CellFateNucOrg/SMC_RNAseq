@@ -1,6 +1,5 @@
 library(readxl)
 library(ggplot2)
-library(EnhancedVolcano)
 library(dplyr)
 library(tidyr)
 library(eulerr)
@@ -385,7 +384,7 @@ for (grp in useContrasts){
 #
 # yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 # p1<-ggplot(sigPerChr,aes(x=chr,y=log2FoldChange,fill=SMC))+
-#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA)+ ylim(yminmax) +
+#   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA)+ coord_cartesian(ylim=yminmax) +
 #   ggtitle("LFC of significantly changed genes by chromosome") +
 #   theme_minimal() + scale_fill_brewer(palette="Dark2")
 
@@ -418,7 +417,7 @@ rownames(sigTbl)<-NULL
 yminmax=c(0,median(abs(sigTbl$log2FoldChange))+quantile(abs(sigTbl$log2FoldChange))[4]*2)
 p2<-ggplot(sigTbl,aes(x=chr,y=abs(log2FoldChange),fill=SMC)) +
   geom_boxplot(notch=T, varwidth=F, position=position_dodge2(padding=0.2),outlier.shape=NA,lwd=0.1,fatten=3) +
-  facet_grid(cols=vars(updown)) + ylim(yminmax) +
+  facet_grid(cols=vars(updown)) + coord_cartesian(ylim=yminmax) +
   ggtitle("Absolute LFC of significantly changed genes by chromosome") +
   theme_minimal() + scale_fill_brewer(palette="Dark2")
 
@@ -447,7 +446,7 @@ countbychr<-sigTbl %>% group_by(updown,chr,SMC) %>%
 yminmax=c(0,max(countbychr$count))
 p4<-ggplot(countbychr,aes(x=chr,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge()) +
-  facet_grid(cols=vars(updown))+ ylim(yminmax) +
+  facet_grid(cols=vars(updown))+ coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed genes by chromosome") +
   theme_minimal()  + scale_fill_brewer(palette="Dark2")
 
@@ -466,7 +465,7 @@ countbytype<-sigTbl %>% filter(chr!="chrX") %>% group_by(updown,SMC) %>%
 yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
 p6<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
-  ylim(yminmax) +
+  coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed autosomal genes") +
   theme_minimal() +xlab(NULL) +
   scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
@@ -479,7 +478,7 @@ countbytype<-sigTbl %>% filter(chr=="chrX") %>% group_by(updown,SMC) %>%
 yminmax=c(0,countbytype$count[order(countbytype$count,decreasing=T)[1]])
 p6a<-ggplot(countbytype,aes(x=updown,y=count,fill=SMC)) +
   geom_bar(stat="identity",position=position_dodge(),lwd=0.1) +
-  ylim(yminmax) +
+  coord_cartesian(ylim=yminmax) +
   ggtitle("Count of significantly changed chrX genes") +
   theme_minimal() +xlab(NULL) +
   scale_fill_brewer(palette="Dark2") + ylab("Number of genes")
@@ -983,3 +982,70 @@ if(length(contrastNames)>length(useContrasts)){
   }
 }
 
+
+##########-
+# compare to Kranz et al(2013) kle-2 RNAseq  -------------
+##########-
+
+kranzkle2<-read.csv(file=paste0(outPath,"/publicData/kranz2013_kle2RNAseq.csv"),
+          header=T)
+
+geneTable<-kranzkle2[,c("wormbaseID","chromosome","log2FoldChange")]
+names(geneTable)<-c("wormbaseID","chr","kranz-kle2_lfc")
+geneTable$chr<-gsub("CHROMOSOME_","chr",geneTable$chr)
+
+#geneTable<-NULL
+for (grp in useContrasts){
+  salmon<-as.data.frame(readRDS(paste0(outPath,"/rds/",fileNamePrefix,
+                                       contrastNames[[grp]],"_DESeq2_fullResults_p",padjVal,".rds")))
+  colnames(salmon)[colnames(salmon)=="log2FoldChange"]<-paste0(grp,"_lfc")
+  if(is.null(geneTable)){
+    geneTable<-as.data.frame(salmon)[,c("wormbaseID","chr",paste0(grp,"_lfc"))]
+  } else {
+    geneTable<-full_join(geneTable,salmon[,c("wormbaseID","chr",paste0(grp,"_lfc"))], by=c("wormbaseID","chr"))
+  }
+}
+
+
+lfcCols<-grep("_lfc$",names(geneTable))
+minScale<-quantile(as.matrix(geneTable[,lfcCols]),0.001,na.rm=T)*1.1
+maxScale<-quantile(as.matrix(geneTable[,lfcCols]),0.999,na.rm=T)*1.1
+corMethod="pearson"
+#plotPDFs=F
+if(plotPDFs==T){
+  pdf(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_kranz-kle2.pdf"),
+      width=5, height=5, paper="a4")
+}
+
+for (i in c(1,3,4,6,7,8,9)){
+  grp1<-"kranz-kle2"
+  grp2<-useContrasts[i]
+
+  if(plotPDFs==F){
+    png(file=paste0(outPath, "/plots/",outputNamePrefix,corMethod,"Cor_allGenes_",grp1,"_",
+                    grp2,".png"), width=5, height=5, units="in", res=150)
+  }
+  Rval<-round(cor(geneTable[,paste0(grp1,"_lfc")],
+                  geneTable[,paste0(grp2,"_lfc")],method=corMethod,
+                  use="pairwise.complete.obs"),3)
+  #smoothScatter(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],
+  #              xlab=grp1,ylab=grp2,xlim=c(minScale,maxScale), nrpoints=1000,
+  #             col="red", colramp = colorRampPalette(c("white", rev(grey.colors(10)))),
+  #              ylim=c(minScale,maxScale),transformation=function(x) x^.25)
+  plot(geneTable[,paste0(grp1,"_lfc")],geneTable[,paste0(grp2,"_lfc")],pch=16,
+       cex=0.5,col="#11111155",xlab=grp1,
+       ylab=grp2, xlim=c(minScale,maxScale),
+       ylim=c(minScale,maxScale))
+  abline(v=0,h=0,col="grey60",lty=3)
+  bestFitLine<-lm(geneTable[,paste0(grp2,"_lfc")]~geneTable[,paste0(grp1,"_lfc")])
+  abline(bestFitLine,col="red")
+  title(main=paste0("All genes ",grp1," vs ",
+                    grp2," (R=",Rval,")"),
+        sub=paste0(nrow(geneTable)," genes, method: ",corMethod))
+  if(plotPDFs==F){
+    dev.off()
+  }
+}
+if(plotPDFs==T){
+  dev.off()
+}

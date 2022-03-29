@@ -1138,3 +1138,26 @@ tissueSpecificURL<-"https://doi.org/10.1371/journal.pgen.1007559.s018"
 ## chromatin complexes -----
 #########################-
 #list obtained from some review... ?
+
+
+
+
+#########################-
+## kle-2 RNAseq -----
+#########################-
+# there is kle-2 RNAseq in Kranz et al. (2013)
+# "Differential expression analysis (RNA-seq) in kle-2 null heterozygote versus homozygote larval stage 2/3 (L2/L3) larvae. "
+
+kranzkle2URL<-"https://static-content.springer.com/esm/art%3A10.1186%2Fgb-2013-14-10-r112/MediaObjects/13059_2013_3527_MOESM7_ESM.xlsx"
+download.file(kranzkle2URL,destfile=paste0(outPath,"/publicData/",basename(kranzkle2URL)))
+kranzkle2<-read_excel(paste0(outPath,"/publicData/",basename(kranzkle2URL)),sheet=1)
+dim(kranzkle2) #20389
+hist(kranzkle2$log2FoldChange)
+names(kranzkle2)[1]<-"sequenceID"
+names(kranzkle2)[2]<-"wormbaseID"
+
+sum(kranzkle2$wormbaseID %in% metadata$wormbaseID) #19917
+sum(kranzkle2$wormbaseID %in% toFilter) # 4516
+kranzkle2<-kranzkle2[!(kranzkle2$wormbaseID %in% toFilter),] # 15873
+write.csv(kranzkle2,file=paste0(outPath,"/publicData/kranz2013_kle2RNAseq.csv"),
+                                row.names=F)

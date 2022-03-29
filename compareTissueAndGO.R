@@ -441,7 +441,7 @@ bgCounts$upVdown<-factor(bgCounts$upVdown,levels=c("up","down"))
 
 p1<-ggplot2::ggplot(sig, aes(x=category, y=abs(log2FoldChange), fill=upVdown))+
   geom_boxplot(notch=T,varwidth=F,outlier.shape=NA)+
-  facet_wrap(~SMC)+ ylim(c(0,4))+theme_classic()+
+  facet_wrap(~SMC)+ coord_cartesian(ylim=c(0,4))+theme_classic()+
   theme(axis.text.x = element_text(angle = 90))+
   ggtitle("LFC of genes up/down regulated by domain type")
 
