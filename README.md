@@ -26,7 +26,7 @@ The initial read mapping and counting with STAR and salmon is designed to be car
 To install, clone the repository from github and set up the conda environment for mapping with _**install_RNAseq_env.sh**_ script.
 To set up the R environment open R and run the _**install_RNAseq_env.R**_ script which will hopefully install all of the R/Bioconductor libraries required.
 
-When running the pipeline for the first time (ubelix or izb cluster), the _**indexGenomeTranscripts.sh**_ needs to be run to index both the genome for STAR and the transcriptome for salmon.
+When running the pipeline for the first time (ubelix or izb cluster), the _**indexGenomeTranscripts.sh**_ needs to be run to index both the genome for STAR and the transcriptome for salmon. It will be necessary to change the path to the folder containing genome data that are in the script.
 
 ## Mapping
 
