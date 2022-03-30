@@ -146,7 +146,7 @@ The basic DESeq2 model was built with the PWM366 sample as the reference "contro
 
 ### Gene metadata
 
-Before running the DESeq2 scripts metadata about genes must be douwnloaded using the _**createMetadataObj.R**_ script.
+Before running the DESeq2 scripts metadata about genes must be downloaded using the _**createMetadataObj.R**_ script.
 
 In order to filter oscillating genes, or run some of the comparisons to other datasets they must be fetched from the public data repositories and processed using the _**processPublished.R**_. Fetching is mostly done automatically, but in some cases it might require some manual intervention.
 
