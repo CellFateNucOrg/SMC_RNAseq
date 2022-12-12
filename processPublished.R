@@ -1113,12 +1113,85 @@ if(remakeFiles | !file.exists(paste0(outPath,"/publicData/chromDomains_L3_Evans2
   file.remove(paste0(outPath,"/publicData/",basename(chromDomainsURL)))
 }
 
+
+###################-
+## tissue specificity Spencer et al. 2011-----
+###################-
+# https://genome.cshlp.org/content/21/2/325.full
+# A spatial and temporal map of C. elegans gene expression
+# W. Clay Spencer1,7, Georg Zeller2,3,7,8, Joseph D. Watson1,9, Stefan R. Henz3, Kathie L. Watkins1, Rebecca D. McWhirter1, Sarah Petersen1, Vipin T. Sreedharan2, Christian Widmer2, Jeanyoung Jo4, Valerie Reinke4, Lisa Petrella5, Susan Strome5, Stephen E. Von Stetina1,10, Menachem Katz6, Shai Shaham6, Gunnar Rätsch2 and David M. Miller III1,11
+# Genome Res. 2011. 21: 325-341
+
+# different tissues present as separate file in supplementary
+urlList<-data.frame(tissue=c("neuron_Aclass","BWM","coelomocyte","neuron_dopa","neuron_GABA",
+                        "hypodermis","intestine","panneuronal"),
+               urls=c("https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile3A-class-neuron-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile4BWM-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile5Coelomocyte-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile6Dopaminergic-neuron-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile7GABA-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile8hypodermis-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile9intestine-enriched-core.txt",
+                      "https://genome.cshlp.org/content/suppl/2010/12/20/gr.114595.110.DC1/SuppFile10panneural-enriched-core.txt"))
+
+
+spencer<-NULL
+for(i in 1:nrow(urlList)){
+  urlList$url[i]
+  download.file(urlList$url[i],basename(urlList$url[i]))
+  tmp<-read.delim(basename(urlList$url[i]),sep="\t",header=T)
+  colnames(tmp)<-c("wormbaseID","sequenceID","publicID")
+  tmp$tissue<-urlList$tissue[i]
+  if(is.null(spencer)){
+    spencer<-tmp
+  } else {
+    spencer<-rbind(spencer,tmp)
+  }
+  file.remove(basename(urlList$url[i]))
+}
+
+dim(spencer)
+spencer<-right_join(as.data.frame(metadata),by=c("wormbaseID","sequenceID"),spencer[,colnames(spencer)!="publicID"],)
+
+write.table(spencer,file=paste0(outPath,"/publicData/spencer2011_tissueRNASeq.csv"),
+            row.names=F)
+
+
+###################-
+## tissue specificity Cao et al. 2017-----
+###################-
+# https://www.science.org/doi/full/10.1126/science.aam8940?adobe_mc=MCMID%3D08293367888795575222902442808753635223%7CMCORGID%3D242B6472541199F70A4C98A6%2540AdobeOrg%7CTS%3D1653315943
+# Cao, Junyue, Jonathan S. Packer, Vijay Ramani, Darren A. Cusanovich, Chau Huynh, Riza Daza, Xiaojie Qiu, et al. 2017. “Comprehensive Single-Cell Transcriptional Profiling of a Multicellular Organism.” Science 357 (6352): 661–67.
+
+url<-"https://www.science.org/doi/suppl/10.1126/science.aam8940/suppl_file/aam8940_cao_sm_tables_s1_to_s14.xlsx"
+if(!file.exists(paste0(outPath,"/publicData/cao2018_tissueRNASeq.csv"))){
+  #download.file(url, basename(url))
+  # doesn't work, need to do manually
+  # Table S3- expression in different tisuses
+  # Table S4 - expression in different Cell types
+  # Table S6 - tissue enriched genes test results
+  # Table S7 - cell type enriched genes test results
+  cao<-read_excel(paste0("~/Downloads/",basename(url)),sheet="Table S6",skip=1,
+                  col_types=c())
+  cao$qval<-as.numeric(cao$qval)
+  caoSpecific<-cao %>% filter(qval<0.05, ratio>10) # take only singificantly different genes that are at least 10x more expresssed in max tissue vs second tissue
+  # Body_wall_muscle             Glia            Gonad       Hypodermis        Intestine          Neurons
+  # 181              250              436              278              590              578
+  # Pharynx
+  # 340
+  caoSpecific<-right_join(as.data.frame(metadata),caoSpecific[,c("gene_id","max.tissue","max.tissue.expr","ratio","qval")],by=c("wormbaseID"="gene_id"))
+  write.table(caoSpecific,file=paste0(outPath,"/publicData/cao2018_tissueRNASeq.csv"),
+              row.names=F)
+}
+
 ###################-
 ## tissue specificity Kalezsky et al. 2018-----
 ###################-
 # https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1007559#pgen.1007559.s017
 # Transcriptome analysis of adult Caenorhabditis elegans cells reveals tissue-specific gene and isoform expression
 #Rachel Kaletsky , Victoria Yao , April Williams, Alexi M. Runnels, Alicja Tadych, Shiyi Zhou, Olga G. Troyanskaya , Coleen T. Murphy
+
+#tissue specificity in adults. note the intestine dataset contains a lot of ribosomal proteins!?
 
 ### ubiquitously (?) expressed  - Table S1
 ubiqURL<-"https://doi.org/10.1371/journal.pgen.1007559.s010"
@@ -1161,3 +1234,4 @@ sum(kranzkle2$wormbaseID %in% toFilter) # 4516
 kranzkle2<-kranzkle2[!(kranzkle2$wormbaseID %in% toFilter),] # 15873
 write.csv(kranzkle2,file=paste0(outPath,"/publicData/kranz2013_kle2RNAseq.csv"),
                                 row.names=F)
+
