@@ -21,7 +21,7 @@ if(filterData){
   outputNamePrefix<-gsub("\\/",paste0("/",scriptName,"/"),fileNamePrefix)
 }
 
-makeDirs(outPath,dirNameList=paste0(c("plots/"),
+makeDirs(outPath,dirNameList=paste0(c("plots/","txt/"),
                                     paste0(dirname(fileNamePrefix),"/",
                                            scriptName)))
 
@@ -469,4 +469,5 @@ ggplot2::ggsave(filename=paste0(outPath, "/plots/",outputNamePrefix,"broadExpn_"
                                 paste(useContrasts, collapse="_"),"_padj",
                                 padjVal, "_lfc", lfcVal,".pdf"),
                 plot=p, device="pdf",width=19,height=29,units="cm")
+
 

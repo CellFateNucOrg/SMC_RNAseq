@@ -3,6 +3,8 @@ library(ggplot2)
 library(EnhancedVolcano)
 library(plyr)
 library(dplyr)
+library(ggpubr)
+library(tidyr)
 
 
 source("functions.R")
@@ -12,7 +14,10 @@ scriptName <- "compareGeneLists"
 print(scriptName)
 
 #chosenSubset=names(contrastNames) # for all complex contrasts
-chosenSubset=useContrasts #for most biologicall interesting contrasts
+#chosenSubset=useContrasts[c(3,6,7,8)] #for most biologicall interesting contrasts
+chosenSubset=useContrasts
+
+#filterPrefix<-"p0.05_lfc0.5_filtChrAX/filtChrAX_"
 
 if(filterData){
   fileNamePrefix<-filterPrefix
@@ -66,31 +71,35 @@ cellcycle<-read.delim(file=paste0(outPath,"/otherData/cellcycleGenes.txt"),heade
 
 cellcycle<-join(cellcycle,geneTable,by="publicID")
 cellcycle$publicID<-factor(cellcycle$publicID,levels=unique(cellcycle$publicID))
-
+#cellcycle<-cellcycle[grep("^cy",cellcycle$publicID),]
 
 lfcCols<-grep("_lfc",names(cellcycle))
-df<-cbind(cellcycle[c("publicID")],cellcycle[,lfcCols])
-df <-df %>% gather(key="sample",value="Log2FoldChange",2:dim(df)[2])
+df<-cbind(cellcycle[c("publicID","complex","role")],cellcycle[,lfcCols])
+df <-df %>% tidyr::pivot_longer(cols=4:dim(df)[2],names_to="sample",values_to="Log2FoldChange")
 df$sample<-gsub("_lfc","",df$sample)
+df$sample<-factor(df$sample,levels=c("dpy26","kle2","scc1","coh1"))
 colnames(df)[1]<-"gene"
 #roleLab<-rle(df$role[df$sample==df$sample[1]])
-#labPos<-cumsum(c(0,roleLab$lengths[-length(roleLab$lengths)]))+(roleLab$lengths/2)
+#labPos<-cumsum(c(1,roleLab$lengths[-length(roleLab$lengths)]))#+(roleLab$lengths/2)
+#labPos<-cumsum(rle(as.numeric(factor(df$role,levels=unique(df$role))))$lengths)
 
 p1<-ggplot(df,aes(x=gene,y=Log2FoldChange)) +
   geom_bar(aes(fill=sample), stat="identity",position="dodge") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 60, hjust=1)) +
   ggtitle("Cell cycle genes - log2 fold change") +
-  geom_hline(yintercept=c(-0.5,0.5),linetype="dashed", color="grey60") #+
+  geom_hline(yintercept=c(-0.5,0.5),linetype="dashed", color="grey60")#+
   #annotate("text", x=c(labPos), y = - 1, label =roleLab$values, size=2)
 
+p1
 
 padjCols<-grep("_padj",names(cellcycle))
 
 df<-cbind(cellcycle$publicID,cellcycle[,padjCols])
 
-df <-df %>% gather(key="sample",value="padj",2:dim(df)[2])
+df <-df %>% tidyr::gather(key="sample",value="padj",2:dim(df)[2])
 df$sample<-gsub("_padj","",df$sample)
+df$sample<-factor(df$sample,levels=c("dpy26","kle2","scc1","coh1"))
 colnames(df)[1]<-"gene"
 
 p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
@@ -101,10 +110,12 @@ p2<-ggplot(df,aes(x=gene,y=-log(padj,base=10))) +
   geom_hline(yintercept=-log(0.05,base=10),linetype="dashed", color="grey60")
 
 p<-ggarrange(p1,p2,nrow=2)
-
+p
 ggsave(paste0(outPath,"/plots/",outputNamePrefix,"cellcycle.pdf"),height=19,width=29,units="cm",device="pdf")
 
-
+#http://www.wormbook.org/chapters/www_cellcyclereguln/cellcyclereguln.html#sec2_1
+#download.file("http://www.wormbook.org/chapters/www_cellcyclereguln/cellcyclefig1.jpg",
+#              destfile=paste0(outPath,"/plots/cellcycle_cyclins_wormbook.jpg"))
 
 ###################-
 # dna checkpoint genes --------------------------------------------------------
