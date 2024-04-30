@@ -135,7 +135,7 @@ The basic DESeq2 model was built with the PWM366 sample as the reference "contro
 | **X.wt.wt.0mM\_dpy26cs\_vs\_wt**           | **dpy26**       | **Effect of DPY-26 cleavage**                                                 | **Yes**   |
 | X.TIR1.sdc3deg.1mM\_dpy26cs\_vs\_wt        | dpy26_sdc3BG    | Effect of DPY-26 cleavage when SDC-3 is degraded                              | No    |
 | dpy26cs.X.X.X\_TIR1sdc3deg1mM\_vs\_wtwt0mM | sdc3_dpy26BG    | Effect of *sdc-3*AID+TIR1+auxin when DPY-26 is cleaved                        | No    |
-| **X.TIR1.X.1mM\_dpy26cssdc3deg\_vs\_wtwt** | **dpy26sdc3**   | **Effect of DPY-26 cleavage and SDC-3 degradation minus effect of TIR1 & auxin alone**| **Yes**|
+| X.TIR1.X.1mM\_dpy26cssdc3deg\_vs\_wtwt | dpy26sdc3   | Effect of DPY-26 cleavage and SDC-3 degradation minus effect of TIR1 & auxin alone| No |
 | X.TIR1.sdc3deg.X\_dpy26csaux\_vs\_wt0mM    | aux_dpy26sdc3   | Effect of DPY-26 cleavage and SDC-3 degradation (+- auxin)                    | No    |
 | **X.wt.wt.0mM\_kle2cs\_vs\_wt**            | **kle2**        | **Effect of KLE-2 cleavage**                                                  | **Yes**   |
 | **X.wt.wt.0mM\_scc16cs\_vs\_wt**           | **scc1**        | **Effect of SCC-1 cleavage**                                                  | **Yes**   |
